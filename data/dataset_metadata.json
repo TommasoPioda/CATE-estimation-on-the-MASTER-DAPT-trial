@@ -1,8 +1,16 @@
 {
   "n_samples": 4579,
-  "n_features": 70,
+  "n_features": 78,
   "n_targets": 9,
   "feature_names": [
+    "randomized_pop",
+    "mnppid",
+    "mnpaid",
+    "mnpctrid",
+    "mnpctrname",
+    "centre",
+    "mnpcname",
+    "mnp_regimen_gr",
     "fup_other",
     "rand_oac12",
     "cancer",
