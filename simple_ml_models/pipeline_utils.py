@@ -44,3 +44,14 @@ def save_pipeline(project_dir, pipeline, name):
     import joblib
     os.makedirs(os.path.join(project_dir, 'models'), exist_ok=True)
     joblib.dump(pipeline, os.path.join(project_dir, f'models/{name}.joblib'))
+
+
+def get_estimators_and_data(pipeline, X_train, X_test):
+    # Applies the pipeline's preprocessing (e.g. RobustScaler) to X_train/X_test
+    # and returns the per-target fitted estimators from the MultiOutputClassifier,
+    # so explainability tools (SHAP, LIME) can operate directly on the already
+    # scaled features the estimators were actually trained on.
+    X_train_t = pipeline[:-1].transform(X_train)
+    X_test_t = pipeline[:-1].transform(X_test)
+    estimators = pipeline.named_steps['classifier'].estimators_
+    return X_train_t, X_test_t, estimators
