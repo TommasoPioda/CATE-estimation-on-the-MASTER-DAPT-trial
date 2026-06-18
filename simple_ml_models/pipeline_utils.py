@@ -4,8 +4,14 @@ from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
 
-def evaluate_pipeline(X, y, pipeline, cv=5, average='binary'):
-    scoring = 'f1' if average == 'binary' else f'f1_{average}'
+def evaluate_pipeline(X, y, pipeline, cv=5, average='binary', metric='precision'):
+    if metric == 'f1':
+        scoring = 'f1' if average == 'binary' else f'f1_{average}'
+    elif metric in ('precision', 'recall'):
+        scoring = metric if average == 'binary' else f'{metric}_{average}'
+    else:
+        scoring = metric  # e.g. 'roc_auc', 'accuracy', 'balanced_accuracy'
+
     cols = y.columns if hasattr(y, 'columns') else [None]
 
     clf = pipeline.named_steps['classifier']
@@ -23,9 +29,8 @@ def evaluate_pipeline(X, y, pipeline, cv=5, average='binary'):
         scores = cross_val_score(single_pipe, X, y_col, cv=cv, scoring=scoring, error_score=np.nan)
         valid = scores[~np.isnan(scores)]
         print(f'\n--- {label} ---')
-        print(f'F1 scores: {scores}')
-        print(f'Mean F1:   {valid.mean():.4f} ± {valid.std():.4f}')
-
+        print(f'{scoring} scores: {scores}')
+        print(f'Mean {scoring}:   {valid.mean():.4f} ± {valid.std():.4f}')
 
 def predict_with_threshold(pipeline, X, thresholds):
     # RandomForest's averaged predict_proba rarely exceeds 0.5 for rare
