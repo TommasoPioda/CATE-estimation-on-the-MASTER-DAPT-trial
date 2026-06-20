@@ -1,13 +1,57 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from sklearn.base import clone
+from sklearn.base import clone, BaseEstimator, ClassifierMixin
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score, cross_val_predict, KFold, StratifiedKFold
 from sklearn.metrics import (
     ConfusionMatrixDisplay, average_precision_score, roc_auc_score,
-    precision_recall_fscore_support,
+    precision_recall_fscore_support, roc_curve, precision_recall_curve,
 )
+
+
+class BalancedAmplifiedClassifier(BaseEstimator, ClassifierMixin):
+    """Wrap a binary classifier and over-weight the minority (positive) class.
+
+    `class_weight='balanced'` already weights the positive class by
+    ``n_neg / n_pos``; this multiplies that ratio by ``factor``, so ``factor=1``
+    reproduces 'balanced' and ``factor > 1`` pushes the model much harder
+    towards recall on the rare class (e.g. ``factor=10`` => 10x the balanced
+    weight on class 1).
+
+    The weight is recomputed from each target's own ``y`` at fit time, so it
+    stays correct per-target inside a ``MultiOutputClassifier`` and when the
+    base estimator is cloned and refit per fold by ``event_rate_thresholds``.
+    Estimators that expose ``class_weight`` (LogisticRegression, RandomForest)
+    get a ``{0: 1, 1: w_pos}`` dict; those that do not (e.g.
+    GradientBoosting) are fit with an equivalent per-sample ``sample_weight``.
+    """
+
+    def __init__(self, base_estimator, factor=10.0):
+        self.base_estimator = base_estimator
+        self.factor = factor
+
+    def fit(self, X, y):
+        y = np.asarray(y).astype(int)
+        n_pos = int(y.sum())
+        n_neg = len(y) - n_pos
+        # Amplified positive-class weight relative to a weight of 1 for class 0.
+        w_pos = self.factor * (n_neg / n_pos) if n_pos > 0 else 1.0
+        est = clone(self.base_estimator)
+        if 'class_weight' in est.get_params():
+            est.set_params(class_weight={0: 1.0, 1: w_pos})
+            self.estimator_ = est.fit(X, y)
+        else:
+            sample_weight = np.where(y == 1, w_pos, 1.0)
+            self.estimator_ = est.fit(X, y, sample_weight=sample_weight)
+        self.classes_ = self.estimator_.classes_
+        return self
+
+    def predict(self, X):
+        return self.estimator_.predict(X)
+
+    def predict_proba(self, X):
+        return self.estimator_.predict_proba(X)
 
 
 def evaluate_pipeline(X, y, pipeline, cv=5, average='binary', metric='average_precision'):
@@ -132,6 +176,153 @@ def softvote_event_rate_thresholds(estimators, X_train, y_train, cv=5):
         oof[val_idx] = avg / len(estimators)
     rates = y.mean(axis=0)
     return np.array([np.quantile(oof[:, i], 1.0 - rates[i]) for i in range(k)])
+
+
+def _safe_auc(fn, y_true, proba):
+    # roc_auc_score / average_precision_score raise (or are undefined) when a
+    # fold's validation slice happens to contain a single class; return NaN there
+    # so the mean/std over folds simply ignores that fold.
+    try:
+        return fn(y_true, proba)
+    except ValueError:
+        return np.nan
+
+
+def _plot_oof_roc_pr(columns, y_true, oof, fold_auroc, fold_auprc, model_name=''):
+    # Shared plotter for the cross-validated ROC / PR evaluation. The curves are
+    # drawn from the *pooled* out-of-fold probabilities (every sample scored
+    # exactly once, while it was held out), while the AUROC / AUPRC reported in
+    # the legend are the mean +/- std of the *per-fold* AUCs, so the spread
+    # reflects fold-to-fold stability rather than a single pooled point estimate.
+    # Returns a per-target summary table.
+    import pandas as pd
+    fig, (ax_roc, ax_pr) = plt.subplots(1, 2, figsize=(13, 5.5))
+    colors = plt.cm.tab10(np.linspace(0, 1, max(len(columns), 1)))
+    rows = []
+    for i, col in enumerate(columns):
+        yt = y_true[:, i]
+        p = oof[:, i]
+        base = yt.mean()  # positive rate = chance-level average precision
+        auroc_m, auroc_s = np.nanmean(fold_auroc[i]), np.nanstd(fold_auroc[i])
+        auprc_m, auprc_s = np.nanmean(fold_auprc[i]), np.nanstd(fold_auprc[i])
+
+        fpr, tpr, _ = roc_curve(yt, p)
+        ax_roc.plot(fpr, tpr, color=colors[i],
+                    label=f'{col} (AUROC={auroc_m:.3f}±{auroc_s:.3f})')
+
+        prec, rec, _ = precision_recall_curve(yt, p)
+        ax_pr.plot(rec, prec, color=colors[i],
+                   label=f'{col} (AP={auprc_m:.3f}±{auprc_s:.3f}, base={base:.3f})')
+        # Chance level for PR is the positive rate, drawn per target in its colour.
+        ax_pr.axhline(base, color=colors[i], linestyle=':', linewidth=1, alpha=0.6)
+
+        rows.append({
+            'target': col, 'positive_rate': base,
+            'AUROC': auroc_m, 'AUROC_std': auroc_s,
+            'AUPRC': auprc_m, 'AUPRC_std': auprc_s,
+            'AUPRC_lift': auprc_m / base if base > 0 else np.nan,
+        })
+
+    ax_roc.plot([0, 1], [0, 1], 'k--', linewidth=1, alpha=0.6, label='chance')
+    ax_roc.set(xlabel='False positive rate', ylabel='True positive rate',
+               title='ROC — out-of-fold CV', xlim=(0, 1), ylim=(0, 1.02))
+    ax_roc.legend(fontsize=8, loc='lower right')
+    ax_pr.set(xlabel='Recall', ylabel='Precision',
+              title='Precision–Recall — out-of-fold CV', xlim=(0, 1), ylim=(0, 1.02))
+    ax_pr.legend(fontsize=8, loc='upper right')
+    if model_name:
+        fig.suptitle(model_name, y=1.02, fontsize=13)
+    plt.tight_layout()
+    plt.show()
+    return pd.DataFrame(rows).set_index('target')
+
+
+def cv_roc_pr_curves(pipeline, X, y, cv=5, columns=None, model_name='', random_state=42):
+    """Threshold-free, cross-validated ROC and PR curves over the *full* dataset.
+
+    Instead of committing to a single decision threshold chosen on one train/test
+    split (or, worse, on the whole stack of data at once), every sample is scored
+    exactly once with an out-of-fold probability: the pipeline is cloned and refit
+    on each StratifiedKFold training part and predicts only the held-out part, so
+    preprocessing is refit per fold (no leakage) and no row is ever scored by a
+    model that saw it. The pooled out-of-fold probabilities give one ROC / PR
+    curve per target; the per-fold AUROC / AUPRC give the mean +/- std reported
+    alongside. Both metrics rank the probabilities and so are independent of any
+    threshold -- which is exactly the point: model discrimination is judged
+    without fixing an operating point.
+
+    Works on a ``MultiOutputClassifier`` pipeline (one binary target per column),
+    extracting the per-target base estimator the same way as ``evaluate_pipeline``.
+    For the soft-voting ensemble use ``softvote_cv_roc_pr_curves``.
+    """
+    columns = list(columns) if columns is not None else list(
+        getattr(y, 'columns', range(np.asarray(y).shape[1]))
+    )
+    clf = pipeline.named_steps['classifier']
+    base = clf.estimator if hasattr(clf, 'estimator') else clf
+    preproc_proto = pipeline.steps[:-1]
+    Xv = np.asarray(X)
+    Y = np.asarray(y, dtype=int)
+    n, k = Xv.shape[0], len(columns)
+    oof = np.zeros((n, k))
+    fold_auroc = [[] for _ in range(k)]
+    fold_auprc = [[] for _ in range(k)]
+    for i in range(k):
+        yi = Y[:, i]
+        skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
+        for tr, va in skf.split(Xv, yi):
+            single = Pipeline(
+                [(name, clone(step)) for name, step in preproc_proto]
+                + [('classifier', clone(base))]
+            )
+            single.fit(Xv[tr], yi[tr])
+            p = single.predict_proba(Xv[va])[:, 1]
+            oof[va, i] = p
+            fold_auroc[i].append(_safe_auc(roc_auc_score, yi[va], p))
+            fold_auprc[i].append(_safe_auc(average_precision_score, yi[va], p))
+    return _plot_oof_roc_pr(columns, Y, oof, fold_auroc, fold_auprc, model_name)
+
+
+def softvote_cv_roc_pr_curves(estimators, X, y, cv=5, columns=None,
+                              model_name='', random_state=42):
+    """Cross-validated ROC / PR curves for the soft-voting ensemble (full dataset).
+
+    Mirrors ``cv_roc_pr_curves`` but, like ``softvote_event_rate_thresholds``, the
+    ensemble averages full pipelines at the probability level and is not a plain
+    sklearn estimator, so the out-of-fold probabilities are built with an explicit
+    fold loop that refits every base pipeline and averages their per-target
+    positive-class probabilities.
+    """
+    columns = list(columns) if columns is not None else list(
+        getattr(y, 'columns', range(np.asarray(y).shape[1]))
+    )
+    Xv = np.asarray(X)
+    Y = np.asarray(y).astype(int)
+    n, k = Xv.shape[0], len(columns)
+    # Stratify on the joint target pattern so each fold keeps the rare combos;
+    # fall back to a plain shuffled KFold if a pattern is too rare to stratify.
+    combo = (Y * (2 ** np.arange(k))).sum(axis=1)
+    _, counts = np.unique(combo, return_counts=True)
+    if counts.min() >= cv:
+        splitter = StratifiedKFold(n_splits=cv, shuffle=True,
+                                   random_state=random_state).split(Xv, combo)
+    else:
+        splitter = KFold(n_splits=cv, shuffle=True,
+                         random_state=random_state).split(Xv)
+    oof = np.zeros((n, k))
+    fold_auroc = [[] for _ in range(k)]
+    fold_auprc = [[] for _ in range(k)]
+    for tr, va in splitter:
+        avg = np.zeros((len(va), k))
+        for _, pipe in estimators:
+            proba = clone(pipe).fit(Xv[tr], Y[tr]).predict_proba(Xv[va])
+            avg += np.column_stack([proba[j][:, 1] for j in range(k)])
+        avg /= len(estimators)
+        oof[va] = avg
+        for i in range(k):
+            fold_auroc[i].append(_safe_auc(roc_auc_score, Y[va, i], avg[:, i]))
+            fold_auprc[i].append(_safe_auc(average_precision_score, Y[va, i], avg[:, i]))
+    return _plot_oof_roc_pr(columns, Y, oof, fold_auroc, fold_auprc, model_name)
 
 
 def report_test_performance(y_test, proba, thresholds, columns=None):
