@@ -325,6 +325,100 @@ def softvote_cv_roc_pr_curves(estimators, X, y, cv=5, columns=None,
     return _plot_oof_roc_pr(columns, Y, oof, fold_auroc, fold_auprc, model_name)
 
 
+def _oof_proba(pipeline, Xv, Y, cv=5, random_state=42):
+    # Out-of-fold positive-class probabilities, (n_samples, n_targets). Same
+    # extraction/refit-per-fold logic as cv_roc_pr_curves: the per-target base
+    # estimator is cloned into a fresh single-target pipeline and refit on each
+    # StratifiedKFold training part, so every sample is scored exactly once by a
+    # model that never saw it and preprocessing is refit per fold (no leakage).
+    # `base` is whatever sits in the MultiOutputClassifier -- a raw estimator or
+    # a CalibratedClassifierCV wrapping it -- so the same code yields uncalibrated
+    # or calibrated out-of-fold probabilities depending on the pipeline passed in.
+    clf = pipeline.named_steps['classifier']
+    base = clf.estimator if hasattr(clf, 'estimator') else clf
+    preproc_proto = pipeline.steps[:-1]
+    n, k = Xv.shape[0], Y.shape[1]
+    oof = np.zeros((n, k))
+    for i in range(k):
+        yi = Y[:, i]
+        skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
+        for tr, va in skf.split(Xv, yi):
+            single = Pipeline(
+                [(name, clone(step)) for name, step in preproc_proto]
+                + [('classifier', clone(base))]
+            )
+            single.fit(Xv[tr], yi[tr])
+            oof[va, i] = single.predict_proba(Xv[va])[:, 1]
+    return oof
+
+
+def cv_calibration_curves(pipeline, X, y, cv=5, columns=None, model_name='',
+                          n_bins=10, strategy='quantile', calibrated_pipeline=None,
+                          random_state=42):
+    """Out-of-fold reliability diagrams (calibration curves) per target.
+
+    Mirrors ``cv_roc_pr_curves``: every sample is scored exactly once by a model
+    refit on the other folds, so calibration is judged on held-out probabilities
+    -- in-sample reliability diagrams are optimistic because the model has seen
+    the points it is being scored on. One reliability diagram per target; if
+    ``calibrated_pipeline`` is given (e.g. the ``CalibratedClassifierCV``-wrapped
+    version of the same family), its out-of-fold curve is overlaid so the effect
+    of calibration is visible before/after. The Brier score (mean squared error
+    of the probabilities, lower is better) is reported per target and returned.
+
+    ``strategy='quantile'`` bins by equal sample count, which keeps the diagram
+    informative for rare events whose probabilities pile up near zero (uniform
+    bins would leave most of the [0, 1] range empty). Works on a
+    ``MultiOutputClassifier`` pipeline, one binary target per column.
+    """
+    import pandas as pd
+    from sklearn.calibration import CalibrationDisplay
+    from sklearn.metrics import brier_score_loss
+    columns = list(columns) if columns is not None else list(
+        getattr(y, 'columns', range(np.asarray(y).shape[1]))
+    )
+    Xv = np.asarray(X)
+    Y = np.asarray(y, dtype=int)
+    k = len(columns)
+
+    oof = _oof_proba(pipeline, Xv, Y, cv=cv, random_state=random_state)
+    oof_cal = (_oof_proba(calibrated_pipeline, Xv, Y, cv=cv, random_state=random_state)
+               if calibrated_pipeline is not None else None)
+
+    ncols = min(k, 3)
+    nrows = int(np.ceil(k / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4.5 * nrows),
+                             squeeze=False)
+    axes_flat = axes.ravel()
+    rows = []
+    for i, col in enumerate(columns):
+        ax = axes_flat[i]
+        yt = Y[:, i]
+        brier = brier_score_loss(yt, oof[:, i])
+        CalibrationDisplay.from_predictions(
+            yt, oof[:, i], n_bins=n_bins, strategy=strategy, ax=ax, ref_line=True,
+            name=f'uncalibrated (Brier={brier:.4f})',
+        )
+        row = {'target': col, 'positive_rate': yt.mean(), 'Brier_uncal': brier}
+        if oof_cal is not None:
+            brier_c = brier_score_loss(yt, oof_cal[:, i])
+            CalibrationDisplay.from_predictions(
+                yt, oof_cal[:, i], n_bins=n_bins, strategy=strategy, ax=ax,
+                ref_line=False, name=f'calibrated (Brier={brier_c:.4f})',
+            )
+            row['Brier_cal'] = brier_c
+        ax.set(title=str(col), xlim=(-0.02, 1.02), ylim=(-0.02, 1.02))
+        ax.legend(fontsize=8, loc='upper left')
+        rows.append(row)
+    for j in range(k, len(axes_flat)):
+        axes_flat[j].axis('off')  # hide unused grid cells
+    if model_name:
+        fig.suptitle(model_name, y=1.02, fontsize=13)
+    plt.tight_layout()
+    plt.show()
+    return pd.DataFrame(rows).set_index('target')
+
+
 def report_test_performance(y_test, proba, thresholds, columns=None):
     # Per-target test report combining threshold-independent ranking metrics
     # (PR-AUC / ROC-AUC, comparable across models regardless of the operating
