@@ -224,3 +224,6 @@ __marimo__/
 
 #models
 *.joblib
+
+#project utils
+*.toml
