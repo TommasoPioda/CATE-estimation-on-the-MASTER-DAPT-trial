@@ -450,10 +450,11 @@ def report_test_performance(y_test, proba, thresholds, columns=None):
               f"{p:>6.2f} {r:>6.2f} {f:>6.2f}")
 
 
-def save_pipeline(project_dir, pipeline, name):
+def save_pipeline(path, pipeline):
+    """Save `pipeline` to the joblib file at `path`, creating parent dirs as needed."""
     import joblib
-    os.makedirs(os.path.join(project_dir, 'models'), exist_ok=True)
-    joblib.dump(pipeline, os.path.join(project_dir, f'models/{name}.joblib'))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    joblib.dump(pipeline, path)
 
 
 def plot_confusion_matrices(y_test, y_pred, titles=None, normalize=True):
@@ -463,7 +464,7 @@ def plot_confusion_matrices(y_test, y_pred, titles=None, normalize=True):
     titles = titles if titles is not None else list(y_test.columns)
     n = len(titles)
     fig, axes = plt.subplots(1, n, figsize=(5 * n, 4.5), squeeze=False)
-    
+
     if normalize == True:
         for i, (title, ax) in enumerate(zip(titles, axes[0])):
             ConfusionMatrixDisplay.from_predictions(
