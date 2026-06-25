@@ -1,14 +1,17 @@
 {
   "n_samples": 4579,
-  "n_features": 61,
+  "n_features": 64,
   "n_targets": 9,
   "feature_names": [
+    "fup_other",
     "rand_oac12",
     "cancer",
     "prec_priorbleed",
     "p_bleed",
     "rand_ster_nsaid",
     "rand_anemia",
+    "fup_nitrates",
+    "fup_insulin",
     "prior_cabg",
     "prior_mi_12m",
     "cad",
@@ -106,10 +109,5 @@
     "rand_oac12",
     "rand_ster_nsaid"
   ],
-  "categorical_features_encoded": 0,
-  "removed_leaky_variables": [
-    "fup_other",
-    "fup_nitrates",
-    "fup_insulin"
-  ]
+  "categorical_features_encoded": 0
 }
