@@ -227,3 +227,6 @@ __marimo__/
 
 #project utils
 *.toml
+
+#temporary performances
+*.png

@@ -230,7 +230,7 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
                 scorer = RScorer(
                     model_y=self.make_model_y(),
                     model_t=self.make_model_t(),
-                    discrete_treatment=True, cv=2, random_state=42,
+                    discrete_treatment=True, cv=3, random_state=42,
                 )
                 scorer.fit(y_j[valid], T_test[valid], X=X_test_s[valid], W=None)
                 target_scores.append(scorer.score(est))
