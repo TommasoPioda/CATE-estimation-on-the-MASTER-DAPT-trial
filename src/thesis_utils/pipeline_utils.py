@@ -457,7 +457,7 @@ def save_pipeline(path, pipeline):
     joblib.dump(pipeline, path)
 
 
-def plot_confusion_matrices(y_test, y_pred, titles=None, normalize=True):
+def plot_confusion_matrices(y_test, y_pred, titles=None, normalize=True, save_path=None):
     # Plots one normalized confusion matrix per target side by side in a
     # single row of subplots, instead of one figure per target stacked
     # vertically, so the targets can be compared at a glance.
@@ -482,6 +482,9 @@ def plot_confusion_matrices(y_test, y_pred, titles=None, normalize=True):
 
 
     plt.tight_layout()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=300)
     plt.show()
 
 
