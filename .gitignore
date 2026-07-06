@@ -230,3 +230,7 @@ __marimo__/
 
 #temporary performances
 *.png
+
+#optuna tuning artifacts (run_optuna_tuning.py)
+tuning_data.npz
+optuna_cate*.journal*
