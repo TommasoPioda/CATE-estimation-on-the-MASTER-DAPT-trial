@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 
 from sklearn.base import BaseEstimator, TransformerMixin, clone
-from sklearn.pipeline import Pipeline
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import RobustScaler
-from sklearn.model_selection import cross_validate, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from econml.dml import CausalForestDML
-from econml.score import RScorer
+from sklearn.dummy import DummyClassifier
+from econml.validate import DRTester
 from lightgbm import LGBMRegressor, LGBMClassifier
 
 # Default first-stage (nuisance) LGBM configuration, shared by the DML's
@@ -168,12 +168,24 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
         """Fresh propensity classifier E[T|x]: the DML nuisance."""
         return LGBMClassifier(**self._nuisance_kwargs())
 
-    def fit(self, X, Y, T):
+    def fit(self, X, Y, T, targets=None):
+        """Fit one CausalForestDML per outcome column.
+
+        ``targets`` (list of column indices) restricts the fit to those endpoints; the
+        rest stay ``None`` while ``self.models`` keeps its full length so downstream
+        ``models[j]`` indexing is unchanged. This is the tuning fast-path: the RATE
+        scorers score a single endpoint (``target_idx``), so fitting only that column
+        avoids ~``n_outputs - 1`` wasted forests per CV fold. ``targets=None`` (default)
+        fits every outcome -- the behaviour the notebooks' final multi-output fit relies on.
+        """
         X_c, Y_c, T_c = self._preprocess_data(X, Y, T, is_training=True)
-        self.models = []
         self.n_outputs = Y_c.shape[1]
-        
+        fit_cols = set(range(self.n_outputs) if targets is None else targets)
+        self.models = [None] * self.n_outputs
+
         for i in range(self.n_outputs):
+            if i not in fit_cols:
+                continue
             model = CausalForestDML(
                 model_y=self.make_model_y(),
                 model_t=self.make_model_t(),
@@ -187,19 +199,34 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
                 **{k: v for k, v in self.cf_params.items() if k != 'inference'}
             )
             model.fit(Y_c[:, i], T_c, X=X_c, W=None)
-            self.models.append(model)
+            self.models[i] = model
         return self
 
-    def score_cv(self, X, Y, T, cv=3):
-        """Cross-validated R-loss score for Optuna tuning (lower is better).
+    def _score_cv_dr(self, X, Y, T, metric_fn, *, cv=3, z=1.0, target_idx=None):
+        """Shared cross-validated doubly-robust *targeting* loop behind the RATE scorers.
 
-        Returns the mean *negative* R-score (an R^2 analogue for treatment
-        effects, Nie & Wager 2020) across folds and targets, so that
-        ``direction='minimize'`` maximises how well the forest's CATEs explain
-        the residualised outcome. This replaces the previous ``mean(|CATE|)``
-        heuristic which, being minimised, rewarded shrinking effects toward zero
-        and carried no information about estimation quality — it pushed tuning
-        toward models that invent spurious heterogeneity.
+        Splits into ``cv`` stratified folds; on each fold it refits the pipeline on the
+        training part, ranks the held-out patients by predicted CATE, fits a ``DRTester``
+        with a known (randomised-trial) propensity, and calls
+        ``metric_fn(dr, X_val, X_train) -> (estimate, se)`` to read one RATE metric off the
+        fitted tester for a single endpoint. Returns **minus the mean lower confidence
+        bound** (``estimate - z * se``) across folds and targets, so it is a drop-in Optuna
+        objective for ``direction='minimize'`` and lower is better.
+
+        The winner's-curse defences are shared by every metric and live here, not in the
+        callers (heterogeneity is weak/absent in this cohort): (1) the *lower bound* is
+        optimised, so a large-but-uncertain value — a lucky noise draw — cannot win (pass
+        ``z=0`` for the raw estimate); (2) a **collapsed** (constant) CATE has no ranking
+        and scores 0, so a degenerate model cannot hide behind one lucky target. Ranking
+        follows econml's convention (descending CATE = "treat first"); for adverse
+        endpoints a positive metric means the effect is *larger* in the prioritised group,
+        not a clinical-benefit direction.
+
+        ``metric_fn`` is the only per-metric part: it receives the fitted ``DRTester`` and
+        the validation / train design matrices (already imputed+scaled, rows with a valid
+        outcome only) and returns ``(point_estimate, standard_error)``. ``target_idx``
+        restricts scoring to that single outcome column (e.g. bleed at index 4) instead of
+        averaging across all targets, which is also faster (one nuisance fit per fold).
         """
         X_array = np.asarray(X)
         Y_array = np.asarray(Y)
@@ -212,31 +239,144 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
 
         for train_idx, test_idx in skf.split(X_array, T_array):
             pipe_cv = clone(self)
-            pipe_cv.fit(X_array[train_idx], Y_array[train_idx], T_array[train_idx])
+            # Fit only the scored endpoint (huge tuning speedup): when target_idx is set the
+            # loop below skips every other column, so fitting them would be wasted work.
+            pipe_cv.fit(X_array[train_idx], Y_array[train_idx], T_array[train_idx],
+                        targets=None if target_idx is None else [target_idx])
 
-            # Put the held-out fold in the same feature space the forests were
-            # trained on, re-using the fold's fitted imputer/scaler.
-            X_test_df = pd.DataFrame(X_array[test_idx]).apply(pd.to_numeric, errors='coerce')
-            X_test_s = pipe_cv.scaler.transform(pipe_cv.imputer_x.transform(X_test_df))
-            Y_test = Y_array[test_idx]
-            T_test = T_array[test_idx]
+            X_tr_df = pd.DataFrame(X_array[train_idx]).apply(pd.to_numeric, errors='coerce')
+            X_tr_s = pipe_cv.scaler.transform(pipe_cv.imputer_x.transform(X_tr_df))
+
+            X_va_df = pd.DataFrame(X_array[test_idx]).apply(pd.to_numeric, errors='coerce')
+            X_va_s = pipe_cv.scaler.transform(pipe_cv.imputer_x.transform(X_va_df))
+
+            Y_tr, Y_va = Y_array[train_idx], Y_array[test_idx]
+            T_tr, T_va = T_array[train_idx], T_array[test_idx]
 
             target_scores = []
             for j, est in enumerate(pipe_cv.models):
-                y_j = pd.to_numeric(pd.Series(Y_test[:, j]), errors='coerce').to_numpy()
-                valid = ~np.isnan(y_j) & ~pd.isna(T_test)
-                # R-score of the fitted forest, evaluated out-of-sample on the
-                # held-out fold (RScorer cross-fits its own nuisance residuals).
-                scorer = RScorer(
-                    model_y=self.make_model_y(),
-                    model_t=self.make_model_t(),
-                    discrete_treatment=True, cv=3, random_state=42,
-                )
-                scorer.fit(y_j[valid], T_test[valid], X=X_test_s[valid], W=None)
-                target_scores.append(scorer.score(est))
-            fold_scores.append(np.mean(target_scores))
+                if target_idx is not None and j != target_idx:
+                    continue   # single-endpoint scoring (e.g. bleed): skip other targets
+                y_tr = pd.to_numeric(pd.Series(Y_tr[:, j]), errors='coerce').to_numpy()
+                y_va = pd.to_numeric(pd.Series(Y_va[:, j]), errors='coerce').to_numpy()
+                ok_tr = ~np.isnan(y_tr) & ~pd.isna(T_tr)
+                ok_va = ~np.isnan(y_va) & ~pd.isna(T_va)
 
-        return -float(np.mean(fold_scores))
+                if ok_tr.sum() < 20 or ok_va.sum() < 20:
+                    continue   # data scarcity (rare endpoint): unscoreable, skip
+
+                cate_pred = est.effect(X_va_s[ok_va]).ravel()
+                if np.std(cate_pred) < 1e-8:   # CATE costante → nessun ranking possibile
+                    target_scores.append(0.0)  # no targeting signal: penalise, don't hide
+                    continue
+
+                dr = DRTester(
+                    model_regression=pipe_cv.make_model_y(),
+                    model_propensity=DummyClassifier(strategy='prior'),
+                    cate=est,
+                    cv=2,
+                )
+                dr.fit_nuisance(
+                    X_va_s[ok_va], T_va[ok_va], y_va[ok_va],
+                    X_tr_s[ok_tr], T_tr[ok_tr], y_tr[ok_tr],
+                )
+                estimate, se = metric_fn(dr, X_va_s[ok_va], X_tr_s[ok_tr])
+                # Lower confidence bound (winner's-curse defence): reward a metric value
+                # that is large *and* precisely estimated.
+                lb = estimate - z * se if np.isfinite(se) else 0.0
+                target_scores.append(lb)
+
+            if target_scores:
+                fold_scores.append(np.mean(target_scores))
+
+        return -float(np.mean(fold_scores)) if fold_scores else 0.0
+
+    def score_cv(self, X, Y, T, cv=3, top_pct=5.0, z=1, target_idx=None):
+        """Cross-validated *top-group targeting* score for Optuna tuning (lower is better).
+
+        Ranks validation patients by predicted CATE and measures the TOC "gain over
+        random" among the top ``top_pct``% (default 5%): how much larger the realised,
+        doubly-robust treatment effect is in that highest-CATE subgroup than the ATE (via
+        ``DRTester``). This is a **single point** of the TOC curve — clinically it is the
+        group you would treat first, but on a small cohort that point is noisy, so prefer
+        :meth:`score_cv_autoc` as the tuning objective and keep this as a top-of-ranking
+        readout. Shares its cross-fitting, lower-bound (``gain - z * gain_se``) and
+        constant-CATE handling with the other RATE scorers via :meth:`_score_cv_dr`;
+        ``target_idx`` restricts scoring to one endpoint (e.g. the 'bleed' column).
+        """
+        def _top_metric(dr, X_va, X_tr):
+            # curves[1] is ordered 95%->5% treated; pick the row nearest top_pct — its
+            # 'value' is the extra doubly-robust effect in that subgroup vs the ATE, 'err'
+            # its SE.
+            toc_df = dr.evaluate_all(X_va, X_tr).toc.curves[1]
+            top = toc_df.loc[(toc_df['Percentage treated'] - top_pct).abs().idxmin()]
+            return float(top['value']), float(top['err'])
+
+        return self._score_cv_dr(X, Y, T, _top_metric, cv=cv, z=z, target_idx=target_idx)
+
+    def score_cv_autoc(self, X, Y, T, cv=3, z=1.0, n_bootstrap=100, target_idx=None):
+        """Cross-validated **AUTOC** (Area Under the TOC Curve) score — the recommended
+        tuning objective (lower is better, so it is a drop-in Optuna objective for
+        ``direction='minimize'``).
+
+        Where :meth:`score_cv` scores a *single* point of the TOC curve (the top-``top_pct``%
+        gain), this integrates the **whole** curve with econml's ``metric='toc'`` weighting
+        (1/q, top-heavy): the mean doubly-robust "gain over random" across treatment
+        fractions (``DRTester.evaluate_uplift``). Among the RATE metrics it is the most
+        powerful at detecting heterogeneity concentrated in a high-CATE subgroup, and it is
+        far more stable than the top-``top_pct``% point on this cohort, so a null AUTOC is
+        strong evidence of homogeneity. Pair it with :meth:`score_cv_qini` as a
+        weighting-robustness check.
+
+        Returns minus the mean **lower confidence bound** (``AUTOC - z * AUTOC_se``) across
+        folds and targets — see :meth:`_score_cv_dr` for the shared cross-fitting,
+        winner's-curse lower bound and constant-CATE handling. ``z=0`` gives the raw AUTOC
+        (negate the return to read the mean AUTOC directly for reporting); ``target_idx``
+        restricts scoring to one endpoint (e.g. the 'bleed' column).
+
+        ``n_bootstrap`` only sizes econml's uniform-confidence-band bootstrap, which is
+        unused here (the AUTOC point estimate and its SE are analytic), so it is kept small
+        for speed.
+        """
+        def _autoc_metric(dr, X_va, X_tr):
+            # AUTOC = area under the whole TOC curve (econml's uplift coefficient); the
+            # point estimate is `params[0]` and its analytic SE is `errs[0]` (binary T).
+            up = dr.evaluate_uplift(X_va, X_tr, metric='toc', n_bootstrap=n_bootstrap)
+            return float(up.params[0]), float(up.errs[0])
+
+        return self._score_cv_dr(X, Y, T, _autoc_metric, cv=cv, z=z, target_idx=target_idx)
+
+    def score_cv_qini(self, X, Y, T, cv=3, z=1.0, n_bootstrap=100, target_idx=None):
+        """Cross-validated **QINI** (Area Under the Uplift Curve) score — the weighting
+        robustness-check companion to :meth:`score_cv_autoc` (lower is better; drop-in
+        Optuna objective for ``direction='minimize'``).
+
+        Same doubly-robust RATE machinery as :meth:`score_cv_autoc`, but with econml's
+        ``metric='qini'`` weighting (∝ q, i.e. by group size) instead of AUTOC's top-heavy
+        1/q. QINI therefore rewards heterogeneity spread **broadly** across the population
+        rather than concentrated in the extreme top group — the right lens when the
+        responsive subgroup is a large fraction of the cohort (as the negative-CATE bleed
+        subgroup is here, ~45%), where AUTOC's 1/q weight would under-count it. Tune/report
+        both: if the AUTOC *and* QINI lower bounds are both ~0, the homogeneous-effect
+        conclusion is robust to how the CATE ranking is weighted.
+
+        Returns minus the mean **lower confidence bound** (``QINI - z * QINI_se``) across
+        folds and targets; the shared cross-fitting, winner's-curse lower bound and
+        constant-CATE handling live in :meth:`_score_cv_dr`. ``z=0`` gives the raw QINI
+        (negate the return to read it directly for reporting); ``target_idx`` restricts
+        scoring to one endpoint (e.g. the 'bleed' column).
+
+        ``n_bootstrap`` only sizes econml's uniform-confidence-band bootstrap, which is
+        unused here (the QINI point estimate and its SE are analytic), so it is kept small
+        for speed.
+        """
+        def _qini_metric(dr, X_va, X_tr):
+            # QINI = area under the whole uplift curve, weighted by group size (econml's
+            # 'qini' metric); point estimate is `params[0]`, analytic SE `errs[0]`.
+            up = dr.evaluate_uplift(X_va, X_tr, metric='qini', n_bootstrap=n_bootstrap)
+            return float(up.params[0]), float(up.errs[0])
+
+        return self._score_cv_dr(X, Y, T, _qini_metric, cv=cv, z=z, target_idx=target_idx)
 
     def predict_cate(self, X):
         X_df = pd.DataFrame(X).apply(pd.to_numeric, errors='coerce')
