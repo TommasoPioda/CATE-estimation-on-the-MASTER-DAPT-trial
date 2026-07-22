@@ -48,7 +48,6 @@ CF_MODEL_PRESETS = {
             'min_samples_leaf': 40,
             'max_samples': 0.30,
             'min_balancedness_tol': 0.30,
-            'min_impurity_decrease': 0.001,
         },
         'nuisance_params': {
             'n_estimators': 50,
