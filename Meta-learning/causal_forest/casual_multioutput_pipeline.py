@@ -384,6 +384,24 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
         cates = [model.effect(X_scaled) for model in self.models]
         return np.column_stack(cates) if len(cates) > 1 else cates[0].reshape(-1, 1)
 
+    def predict_cate_std(self, X):
+        """Per-patient standard error of the CATE, one column per outcome.
+
+        Same shape and column order as :meth:`predict_cate`, but returning the forest's
+        bootstrap-of-little-bags standard error instead of the point estimate — the
+        *epistemic* spread of each patient's effect, which is what an active-learning
+        acquisition function ranks on.
+
+        Requires the forest to have been fitted with a truthy ``cf_params['inference']``
+        (``True`` / ``'blb'`` / ``'auto'``): econml only accumulates the BLB variance when
+        inference is on, and raises otherwise.
+        """
+        X_df = pd.DataFrame(X).apply(pd.to_numeric, errors='coerce')
+        X_clean = self.imputer_x.transform(X_df)
+        X_scaled = self.scaler.transform(X_clean)
+        ses = [model.effect_inference(X_scaled).stderr for model in self.models]
+        return np.column_stack(ses) if len(ses) > 1 else ses[0].reshape(-1, 1)
+
     def get_feature_importances(self):
         importances = [model.feature_importances_ for model in self.models]
         return np.mean(importances, axis=0)
