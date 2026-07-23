@@ -28,6 +28,7 @@ like-for-like twin of `real`.
 """
 
 import argparse
+import multiprocessing as mp
 import os
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -38,6 +39,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+from tqdm import tqdm
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..'))
@@ -95,11 +100,18 @@ def plane(C):
 
 
 def duel_by_angle(i, j, x, y):
-    """nb 01's rule, vectorised over pair arrays `i`/`j`. Same tie-breaks: `i` wins only on
-    a strict `>`, so ties go to `j`, exactly like the notebook's `return i if a1 > a2 else j`."""
-    a = np.degrees(np.arctan2(y, x))
+    """nb 01's rule, vectorised over pair arrays `i`/`j`: keep the patient nearest the **+45°
+    win-win diagonal** (top-right: high bleed AND high ischaemic benefit of shortening). Same
+    tie-breaks as the notebook (`i` wins only on a strict `>`, so ties go to `j`): among two
+    win-win (Q1) patients keep the one further out; among two anti-win-win (Q3) keep the
+    less-bad (closer to the origin); otherwise keep the one whose angle is closest to 45°."""
+    ai, aj = np.degrees(np.arctan2(y[i], x[i])), np.degrees(np.arctan2(y[j], x[j]))
+    di = np.abs((ai - 45 + 180) % 360 - 180)          # angular distance to the +45° diagonal
+    dj = np.abs((aj - 45 + 180) % 360 - 180)
+    mi, mj = np.hypot(x[i], y[i]), np.hypot(x[j], y[j])
     both_q1 = (x[i] > 0) & (y[i] > 0) & (x[j] > 0) & (y[j] > 0)
-    win_i = np.where(both_q1, x[i] > x[j], a[i] > a[j])
+    both_q3 = (x[i] < 0) & (y[i] < 0) & (x[j] < 0) & (y[j] < 0)
+    win_i = np.where(both_q1, mi > mj, np.where(both_q3, mi < mj, di < dj))
     return np.where(win_i, i, j)
 
 
@@ -170,8 +182,17 @@ def run_arm(arm, seeds, rule, workers, n_jobs, cf_params, nuisance_params, n, pa
     jobs = [(s, arm, rule, n_jobs, cf_params, nuisance_params, pairs) for s in seeds]
     counts = np.zeros(n)
     sets, means = [], []
-    with ProcessPoolExecutor(max_workers=workers) as ex:
-        for k, (sel, mean_cate) in enumerate(ex.map(one_seed, jobs), 1):
+    # 'spawn', not the Linux default 'fork': main() fits the reference forest BEFORE this
+    # pool exists, so the parent already carries dozens of BLAS/joblib/LightGBM threads.
+    # fork-ing that parent copies locked mutexes into each worker, which then deadlocks in
+    # futex_wait on its first fit (observed: orphaned workers, ~100 threads each, 0% CPU).
+    with ProcessPoolExecutor(max_workers=workers, mp_context=mp.get_context('spawn')) as ex:
+        for k, (sel, mean_cate) in enumerate(
+            tqdm(ex.map(one_seed, jobs),
+                total=len(jobs),
+                desc=f"{arm} seeds"),
+            1
+        ):
             counts[np.unique(sel)] += 1
             sets.append(set(np.unique(sel).tolist()))
             if mean_cate:
