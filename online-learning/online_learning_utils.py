@@ -40,23 +40,34 @@ def fit_cate(idx, X, Y, T, pipeline_cls, cf_params, nuisance_params, n_jobs=32, 
         X.values[idx], Y[idx], T[idx])
 
 
+def weighted_isch(source, weights):
+    """Weighted average of the ischaemic endpoints in `weights` (ISCH_WEIGHTS, e.g.
+    {'death': 0.2, 'mi': 0.4, 'stroke': 0.4}). `source` is anything indexable by endpoint
+    name -- a DataFrame, a dict of arrays, a dict of scalars. This is THE ischaemic
+    weighting used everywhere an ischaemic composite is built: conflict_from_model,
+    components_from_origin, and every notebook's uncertainty_from_model / centroid-isch
+    calculation read ISCH_WEIGHTS through this one function so the operation is identical
+    everywhere instead of each call site re-deriving its own hardcoded factors."""
+    return sum(weights[k] * source[k] for k in weights) / sum(weights.values())
+
+
 def conflict_from_model(model, X, endpoints, weights, targets, scale = False):
     """Score every patient with the current online model and rebuild the conflict frame.
     effect = risk(prolonged) - risk(shortened) = benefit of shortening.
-    `endpoints` is the endpoint dict, `weights` the per-endpoint ischaemic weights,
-    `targets` the CATE column order (list(endpoints))."""
+    `endpoints` is the endpoint dict, `weights` the per-endpoint ischaemic weights
+    (ISCH_WEIGHTS), `targets` the CATE column order (list(endpoints))."""
     from sklearn.preprocessing import RobustScaler
 
     cate = model.predict_cate(X.values)
     df   = pd.DataFrame({k: cate[:, targets.index(k)] for k in endpoints})
 
-    cols     = list(endpoints)
+    cols = list(endpoints)
     cols.remove('bleed')  # keep bleed separate for the conflict score
-    isch_cols = [k for k in cols if k != 'bleed']
     if scale:
         print("Robust-scaling the CATEs for the conflict score...")
         df[cols] = RobustScaler().fit_transform(df[cols])
-    df['conflict'] = df['bleed'] + sum(weights[k] * df[k] for k in isch_cols) / sum(weights[k] for k in isch_cols)
+
+    df['conflict'] = weighted_isch(df, weights)
     return df
 
 
@@ -113,14 +124,13 @@ def tune_on_seed(idx, X, Y, T, pipeline_cls, presets, bleed_idx,
     return cf_params, nuisance_params, study
 
 
-def components_from_origin(i, conflict):
-    """Patient i's position on the trade-off plane: x = bleeding benefit, y = weighted ischaemic
-    benefit of shortening (death 0.2, mi 0.4, stroke 0.4 — same weights as the conflict score).
-    Reads the `conflict` frame built by `conflict_from_model`."""
+def components_from_origin(i, conflict, weights):
+    """Patient i's position on the trade-off plane: x = bleeding benefit, y = weighted
+    ischaemic benefit of shortening (ISCH_WEIGHTS, `weights` -- same weighting used by the
+    conflict score itself, via `weighted_isch`). Reads the `conflict` frame built by
+    `conflict_from_model`."""
     x = conflict['bleed'].iloc[i]
-    y = (conflict['death'].iloc[i]*0.2 +
-         conflict['mi'].iloc[i]*0.4 +
-         conflict['stroke'].iloc[i]*0.4)
+    y = weighted_isch({k: conflict[k].iloc[i] for k in weights}, weights)
     return x, y
 
 
@@ -131,7 +141,8 @@ def duel_by_conflict(i, j, conflict):
     return i if (c1 > c2) else j
 
 
-def policy_running_avg(i, j, n_added, rng, uncertainty, conflict, duel, buf, p_unc=None, use_running_avg=True):
+def policy_running_avg(i, j, n_added, rng, uncertainty, conflict, duel, buf, weights,
+                       p_unc=None, use_running_avg=True):
     """Select patients from a pair against a rolling average gate on the y axis.
 
     Flow:
@@ -161,8 +172,8 @@ def policy_running_avg(i, j, n_added, rng, uncertainty, conflict, duel, buf, p_u
         return [w], uncertainty_driven                 # no gate: winner only
 
     rolling_mean = np.mean(buf)
-    _, y_w = components_from_origin(w,     conflict)
-    _, y_l = components_from_origin(loser, conflict)
+    _, y_w = components_from_origin(w,     conflict, weights)
+    _, y_l = components_from_origin(loser, conflict, weights)
 
     # both, one, or neither can pass the gate
     winners = [p for p, y in [(w, y_w), (loser, y_l)] if y > rolling_mean]

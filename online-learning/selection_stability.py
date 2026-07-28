@@ -43,6 +43,8 @@ import warnings
 warnings.filterwarnings('ignore')
 from tqdm import tqdm
 
+from online_learning_utils import weighted_isch
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..'))
@@ -58,6 +60,7 @@ CF_TARGET_COLS = ['cec_barc235_335d', 'cec_cvdeath_335d', 'cec_mi_335d',
                   'cec_stroke_335d', 'cec_bleed_335d']
 ISCH = ['death', 'mi', 'stroke']
 FIT_TARGETS = [CF_TARGETS.index(k) for k in ISCH + ['bleed']]   # skip barc_235: nb 01 never reads it
+ISCH_WEIGHTS = {'death': 0.2, 'mi': 0.4, 'stroke': 0.4}   # same weighting as nb 01's ISCH_WEIGHTS
 
 
 def z(v):
@@ -89,13 +92,14 @@ def cate_by_endpoint(pipe, X):
 
 
 def plane(C):
-    """nb 01's plane: x = raw bleeding benefit, y = z-scored mean ischaemic benefit.
+    """nb 01's plane: x = raw bleeding benefit, y = z-scored weighted ischaemic benefit.
 
     The y-axis is z-scored exactly as nb 01 does (the endpoints live on different scales, so
     a raw mean would be whichever endpoint happens to be largest); x stays raw, as in nb 01.
+    The weighting (ISCH_WEIGHTS) is the same one nb 01 uses via components_from_origin.
     """
     x = C['bleed']
-    y = (z(C['death']) + z(C['mi']) + z(C['stroke'])) / 3
+    y = weighted_isch({k: z(C[k]) for k in ISCH_WEIGHTS}, ISCH_WEIGHTS)
     return x, y
 
 
