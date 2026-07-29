@@ -51,25 +51,55 @@ def weighted_isch(source, weights):
     return sum(weights[k] * source[k] for k in weights) / sum(weights.values())
 
 
-def conflict_from_model(model, X, endpoints, weights, targets, scale = False):
+def conflict_from_model(model, X, endpoints, weights, targets, scale=True):
     """Score every patient with the current online model and rebuild the conflict frame.
     effect = risk(prolonged) - risk(shortened) = benefit of shortening.
     `endpoints` is the endpoint dict, `weights` the per-endpoint ischaemic weights
-    (ISCH_WEIGHTS), `targets` the CATE column order (list(endpoints))."""
+    (ISCH_WEIGHTS), `targets` the CATE column order (list(endpoints)). `scale=True`
+    (default) rescales every endpoint -- bleed included -- by its RobustScaler IQR
+    (`with_centering=False`) so the frequent bleeding endpoint does not dominate the rarer
+    ischaemic ones on raw CATE units (bleed's raw CATE typically runs 5-10x larger than any
+    single ischaemic CATE). Centering is deliberately left off: bleed's raw CATE is positive
+    for virtually the whole cohort (near-universal benefit of shortening), so subtracting its
+    median would flip about half of it negative relative to the cohort's own mid-point,
+    destroying the "positive = benefit, negative = harm" sign every downstream consumer
+    (duel_by_angle's quadrants, the trade-off-plane axis labels) relies on. Dividing by scale
+    only re-balances magnitude and leaves that zero -- the true "no effect" reference --
+    exactly where it was."""
     from sklearn.preprocessing import RobustScaler
 
     cate = model.predict_cate(X.values)
     df   = pd.DataFrame({k: cate[:, targets.index(k)] for k in endpoints})
 
-    cols = list(endpoints)
-    cols.remove('bleed')  # keep bleed separate for the conflict score
     if scale:
-        print("Robust-scaling the CATEs for the conflict score...")
-        df[cols] = RobustScaler().fit_transform(df[cols])
+        cols = list(endpoints)
+        df[cols] = RobustScaler(with_centering=False).fit_transform(df[cols])
 
-    df['conflict'] = weighted_isch(df, weights)
+    df['conflict'] = df['bleed'] + weighted_isch(df, weights)
     return df
 
+def net_benefit_from_model(model, X, endpoints, weights, targets, scale=True):
+    """Score every patient with the current online model and rebuild the net-benefit frame.
+    effect = risk(prolonged) - risk(shortened) = benefit of shortening.
+    Net benefit of shortening = bleeding avoided - weighted ischaemic harm incurred.
+    `endpoints` is the endpoint dict, `weights` the per-endpoint ischaemic weights
+    (ISCH_WEIGHTS), `targets` the CATE column order (list(endpoints)). `scale=True`
+    (default) rescales every endpoint -- bleed included -- by its RobustScaler IQR
+    (`with_centering=False`, no median subtraction) so the frequent bleeding endpoint does
+    not dominate the rarer ischaemic ones on raw CATE units, while keeping raw zero -- the
+    "no effect" reference -- exactly where it was (see `conflict_from_model` for why
+    centering would silently flip the sign of a near-universally-positive endpoint)."""
+    from sklearn.preprocessing import RobustScaler
+
+    cate = model.predict_cate(X.values)
+    df   = pd.DataFrame({k: cate[:, targets.index(k)] for k in endpoints})
+
+    if scale:
+        cols = list(endpoints)
+        df[cols] = RobustScaler(with_centering=False).fit_transform(df[cols])
+
+    df['net_benefit'] = df['bleed'] - weighted_isch(df, weights)
+    return df
 
 def _seed_objective(trial, Xs, Ys, Ts, cv, pipeline_cls, presets, bleed_idx,
                     n_jobs=32, lgbm_n_jobs=16):

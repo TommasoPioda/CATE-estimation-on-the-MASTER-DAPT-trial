@@ -1,5 +1,15 @@
+import warnings
 import numpy as np
 import pandas as pd
+
+# Harmless noise: nuisance LGBM models are fit on a DataFrame (feature names attached
+# during _preprocess_data) but predicted on plain arrays elsewhere in the DML/forest
+# internals, so sklearn complains about the mismatch on every single fit/predict call.
+# `warnings.filterwarnings('ignore')` in the calling notebooks only touches the main
+# process -- joblib/loky re-imports this module fresh in every worker subprocess, so the
+# filter has to live here to actually silence it during the (heavily parallel) forest fits.
+warnings.filterwarnings('ignore', message='X does not have valid feature names',
+                        category=UserWarning)
 
 from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.impute import KNNImputer, SimpleImputer
