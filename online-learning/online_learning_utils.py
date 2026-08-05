@@ -12,8 +12,31 @@ What is NOT here, and why:
   - `seed_fit_tune` / `run_online` : the loops differ substantially per notebook.
 """
 
+import contextlib
+import warnings
+
 import numpy as np
 import pandas as pd
+
+
+@contextlib.contextmanager
+def quiet_toc_warnings():
+    """Silence the NaN RuntimeWarnings every RATE/AUTOC scoring emits.
+
+    econml picks the TOC groups by applying TRAIN-quantile thresholds to OUT-OF-SAMPLE CATEs
+    (``validate/utils.py:83-101``). Out-of-sample predictions are shrunk toward the mean, so at
+    the top percentiles the threshold can sit above every validation CATE and select nobody:
+    ``np.mean(dr_val[[]])`` -> "Mean of empty slice", then ``inds / group_prob`` -> 0/0, then
+    the NaN std propagates into the bootstrap. Harmless -- econml drops the last percentile
+    from the coefficient, and ``_score_cv_dr`` floors a non-finite SE to 0.0 -- but each call
+    emits four of these, and with dozens of workers scoring at once the log is unreadable.
+
+    Filtered by message, so a RuntimeWarning about anything else still gets through. Wrap the
+    scoring call, never a whole run."""
+    with warnings.catch_warnings():
+        for msg in ('Mean of empty slice', 'invalid value encountered'):
+            warnings.filterwarnings('ignore', category=RuntimeWarning, message=msg)
+        yield
 
 
 def z(v):
@@ -65,7 +88,18 @@ def conflict_from_model(model, X, endpoints, weights, targets, scale=True):
     destroying the "positive = benefit, negative = harm" sign every downstream consumer
     (duel_by_angle's quadrants, the trade-off-plane axis labels) relies on. Dividing by scale
     only re-balances magnitude and leaves that zero -- the true "no effect" reference --
-    exactly where it was."""
+    exactly where it was.
+
+    Caveat: `conflict` is a linear sum, not a genuine win-win score. On the tuned-forest
+    cohort it correlates rho=+0.91 with `bleed` alone and only +0.44 with the (weighted)
+    ischaemic side -- bleed's raw CATE keeps roughly double the spread of the ischaemic
+    composite even after this scaling, so ranking by `conflict` mostly re-ranks by bleeding
+    benefit and only incidentally by ischaemia (its top-1500 on this cohort are 58% actual
+    win-win patients, bleed>0 and ischaemic>0, not the ~100% the name implies). `duel_by_angle`
+    does not have this problem -- it keeps a win-win patient over any non-win-win one
+    unconditionally -- and `acquisition_score_angle` below is the whole-pool ranking
+    equivalent, for callers that want the win-win *quadrant* respected rather than a linear
+    proxy for it."""
     from sklearn.preprocessing import RobustScaler
 
     cate = model.predict_cate(X.values)
@@ -101,6 +135,53 @@ def net_benefit_from_model(model, X, endpoints, weights, targets, scale=True):
     df['net_benefit'] = df['bleed'] - weighted_isch(df, weights)
     return df
 
+
+def acquisition_score_angle(conflict, uncertainty, idx, weights, c=1.0):
+    """Whole-pool / whole-sample ranking that reproduces `duel_by_angle`'s win-win-diagonal
+    geometry (01_conflict_selection.ipynb / 02_online_learning_duel.ipynb), for callers that
+    would otherwise rank candidates by `conflict['conflict']` (see the caveat on
+    `conflict_from_model`: that linear sum correlates rho=+0.91 with bleed alone on the
+    tuned-forest cohort and only +0.44 with the ischaemic side, so it mostly re-ranks by
+    bleeding benefit).
+
+    `duel_by_angle` never has that problem: a patient in the win-win quadrant (x=bleed>0 and
+    y=weighted_isch>0) beats a non-win-win one unconditionally, magnitude/angle only breaking
+    ties inside a quadrant. Its pairwise rule is an exact 3-tier lexicographic order (verified
+    to reproduce `duel_by_angle`'s winner on 100% of 50,000 random pairs on this cohort):
+      tier 2 (best):  x>0 and y>0 (win-win)   -- ranked by distance from the origin, farthest first
+      tier 1:         everything else         -- ranked by closeness to the +45 degree diagonal
+      tier 0 (worst): x<0 and y<0 (lose-lose) -- ranked by distance from the origin, closest first
+    This function scores the whole population that way (`TIER_GAP * tier + a z-scored inner
+    term`, clipped so the inner term can never cross a tier boundary), so ranking a batch/
+    sample by it reproduces the top-N a repeated `duel_by_angle` tournament would pick,
+    without running any duels. `c * uncertainty_bonus` is added inside a tier only, the same
+    UCB1-style exploration term `acquisition_score` uses; at `c=0` (`duel_by_angle` itself has
+    no uncertainty term) this is the pure tournament order.
+
+    `conflict` is the frame from `conflict_from_model` (has `bleed` and the raw endpoint CATE
+    columns `duel_by_angle` reads), `weights` is ISCH_WEIGHTS. Scored over the WHOLE
+    population first -- like `acquisition_score`'s `z(conflict['conflict'])` -- so the scale
+    is stable across pools of different composition, then indexed by `idx`.
+    """
+    x = conflict['bleed'].to_numpy()
+    yv = weighted_isch({k: conflict[k] for k in weights}, weights).to_numpy()
+
+    q1 = (x > 0) & (yv > 0)
+    q3 = (x < 0) & (yv < 0)
+    mag    = np.hypot(x, yv)
+    angle  = np.degrees(np.arctan2(yv, x))
+    dist45 = np.abs((angle - 45 + 180) % 360 - 180)
+
+    tier  = np.where(q1, 2.0, np.where(q3, 0.0, 1.0))
+    inner = np.where(q1, z(mag), np.where(q3, -z(mag), -z(dist45)))
+    bonus = np.clip(uncertainty['uncertainty'].to_numpy(), 0, None)
+
+    TIER_GAP = 50.0   # >> any realistic |inner + c*bonus|, so tiers never cross
+    within_tier = np.clip(inner + c * bonus, -TIER_GAP / 2 + 0.01, TIER_GAP / 2 - 0.01)
+    score = TIER_GAP * tier + within_tier
+    return score[np.asarray(idx)]
+
+
 def _seed_objective(trial, Xs, Ys, Ts, cv, pipeline_cls, presets, bleed_idx,
                     n_jobs=32, lgbm_n_jobs=16):
     """One Optuna trial on the SEED cohort: minus the AUTOC lower bound for the bleeding
@@ -128,18 +209,28 @@ def _seed_objective(trial, Xs, Ys, Ts, cv, pipeline_cls, presets, bleed_idx,
 
 
 def tune_on_seed(idx, X, Y, T, pipeline_cls, presets, bleed_idx,
-                 n_trials=100, cv=3, seed=42, optuna_n_jobs=16, n_jobs=32, lgbm_n_jobs=16):
+                 n_trials=100, cv=3, seed=42, optuna_n_jobs=6, n_jobs=32, lgbm_n_jobs=16):
     """Hyper-tune the forest on the seed cohort, then rebuild cf_params / nuisance_params from
     study.best_params exactly as nb 06 (n_estimators = n_subforests * subforest_size;
     min_impurity_decrease / min_samples_split / min_balancedness_tol are NOT carried into the
-    refit forest, mirroring nb 06 which drops them to avoid the tuned CATE collapse)."""
+    refit forest, mirroring nb 06 which drops them to avoid the tuned CATE collapse).
+
+    Keep `optuna_n_jobs` small. Optuna's `n_jobs` spawns THREADS, and `score_cv_autoc` is
+    almost pure Python, so parallel trials mostly contend for the GIL while each of them still
+    spawns its own `n_jobs`/`lgbm_n_jobs` worker processes: the product oversubscribes the
+    machine, all the more so when `tune_on_seed` itself is already running inside a joblib
+    worker (nb 03/04/05 multi-seed drivers, which pass 1). Real trial-level parallelism belongs
+    in separate processes on a shared study -- see
+    ``Meta-learning/causal_forest/run_optuna_tuning.py``. Size `n_jobs`/`lgbm_n_jobs` against
+    the caller's own budget: cores / (outer workers)."""
     import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)     # keep per-trial logs from flooding the notebook
     Xs, Ys, Ts = X.values[idx], Y[idx], T[idx]
     study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=seed))
-    study.optimize(lambda t: _seed_objective(t, Xs, Ys, Ts, cv, pipeline_cls, presets, bleed_idx,
-                                             n_jobs, lgbm_n_jobs),
-                   n_trials=n_trials, n_jobs=optuna_n_jobs, catch=(Exception,))
+    with quiet_toc_warnings():   # every trial scores an AUTOC -> see the context manager
+        study.optimize(lambda t: _seed_objective(t, Xs, Ys, Ts, cv, pipeline_cls, presets, bleed_idx,
+                                                 n_jobs, lgbm_n_jobs),
+                       n_trials=n_trials, n_jobs=optuna_n_jobs, catch=(Exception,))
     bp = study.best_params
     cf_params = {
         'n_estimators':     bp['n_subforests'] * bp['subforest_size'],
