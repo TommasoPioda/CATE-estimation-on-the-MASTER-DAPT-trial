@@ -23,8 +23,8 @@ from lightgbm import LGBMRegressor, LGBMClassifier
 # Default first-stage (nuisance) LGBM configuration, shared by the DML's
 # model_y / model_t and the analysis notebook's factual baseline m(x).
 DEFAULT_NUISANCE_PARAMS = {
-    "n_estimators": 100,
-    "max_depth": 4,
+    "n_estimators": 200,
+    "max_depth": 8,
     'min_child_samples': 5,
     "learning_rate": 0.05,
 }
