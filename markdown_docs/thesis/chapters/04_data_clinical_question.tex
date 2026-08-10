@@ -1,0 +1,197 @@
+% !TEX root = ../Thesis.tex
+\section{The Trial, and the Question That Survives Its Conclusion}
+
+MASTER DAPT randomized 4,579 high bleeding risk patients, after coronary
+stent implantation, between abbreviated and prolonged dual antiplatelet
+therapy. Randomization took place one month after the index procedure, in
+patients who were free of events up to that point: \emph{that visit is the
+temporal landmark of the whole analysis}, and every covariate used in this
+thesis is measured at or before it.
+
+The trial concluded in favour of the abbreviated strategy — noninferior on
+ischemic events, superior on bleeding. That is an average result, and it is
+the concrete instance of the problem posed in Chapter 1: a favourable ATE is
+perfectly compatible with subgroups that gain nothing, or that are actively
+harmed, and the trial on its own does not say which of the two this cohort
+contains. The question that survives the trial's conclusion is therefore not
+\emph{whether} abbreviating is better on average — that is settled — but
+\emph{for whom} it is better, and by how much.
+
+\section{The Cohort}
+
+The analysis dataset contains the 4,579 randomized patients, split almost
+exactly in half by the randomization (2,295 abbreviated, 2,284 prolonged),
+described by 63 baseline covariates plus the treatment indicator. The
+covariates were selected from the full trial case report form through a
+combination of predictive screening and consultation with the study domain
+experts, and cover demographic, clinical, laboratory and procedural
+information: 15 are continuous measurements (age, laboratory values such as
+creatinine, haemoglobin and troponin, procedural quantities such as contrast
+volume) and the remaining 48 are binary or categorical indicators of
+comorbidities, concomitant medications and procedural characteristics.
+
+Missing values are deliberately \emph{not} imputed in the shared dataset.
+Eight covariates carry missing entries — most notably pre-procedural glycemia,
+platelet count and creatinine — and every imputation is deferred to the
+individual modelling pipelines, where it is fitted inside the
+cross-validation folds. Imputing once, up front, on the full dataset would
+leak information across folds and inflate every performance estimate
+downstream; deferring it costs some convenience and buys the guarantee that
+the out-of-fold numbers reported in Chapters 5 to 7 mean what they claim to.
+
+\paragraph{Sign convention.}
+The coding of the treatment is fixed for the entire thesis: $T = 1$ denotes
+\emph{prolonged} therapy and $T = 0$ denotes \emph{abbreviated} therapy. With
+outcomes coded as adverse events, the conditional average treatment effect
+\[
+  \tau(x) \;=\; \mathbb{E}\!\left[\,Y(1) - Y(0) \mid X = x\,\right]
+\]
+is therefore the excess event risk caused by prolonging, which is exactly the
+\emph{benefit of abbreviating}. A positive $\tau(x)$ means that patients with
+profile $x$ are better off with the abbreviated strategy; a negative $\tau(x)$
+means they are better off with the prolonged one; a value near zero means the
+choice is immaterial for that patient type. This convention is used without
+exception in every chapter that follows, so that the sign of an estimate can
+always be read directly as \emph{abbreviate} or \emph{do not abbreviate}.
+
+\paragraph{Endpoints.}
+Of the nine adjudicated binary endpoints available at 335 days, five are
+carried through the thesis; they are reported in Table~\ref{tab:endpoints}.
+Time-to-event information is deliberately discarded in favour of the binary
+status at 335 days, which is the horizon of the trial's own primary analysis:
+follow-up is administratively complete at that point and essentially uniform
+across patients, so the survival machinery would add complexity without
+adding information. These five endpoints are the targets of the risk models
+of Chapter 5 and of the effect estimates of Chapters 6 and 7.
+
+\begin{table}[h]
+\centering
+\caption{Binary endpoints at 335 days.}
+\label{tab:endpoints}
+\begin{tabular}{lrr}
+\toprule
+Endpoint & Events & Rate \\
+\midrule
+Bleeding                    & 506 & 11.1\% \\
+Bleeding (BARC 2/3/5)       & 359 &  7.8\% \\
+Myocardial infarction (MI)  & 109 &  2.4\% \\
+Cardiovascular death        &  81 &  1.8\% \\
+Stroke                      &  35 &  0.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The two bleeding endpoints are by far the most frequent, at 11.1\% and 7.8\%
+respectively; the BARC 2/3/5 definition is the more restrictive of the two,
+which is why it records fewer events than overall bleeding — the difference
+consists of the milder BARC 1 episodes, which do not require medical
+attention. The three ischemic endpoints follow well below, with myocardial
+infarction at 2.4\%, cardiovascular death at 1.8\% and stroke at 0.8\%.
+
+Table~\ref{tab:endpoints} also makes explicit how imbalanced these endpoints
+are: event counts span more than an order of magnitude, from 506 bleeding
+events down to 35 strokes, and three of the five endpoints — myocardial
+infarction, cardiovascular death and stroke — fall below 110 events overall.
+This imbalance is not incidental: because MASTER DAPT enrolled exclusively
+high bleeding risk patients, statistical power is concentrated on the bleeding
+side of the trade-off, while the rarer ischemic endpoints leave comparatively
+little signal to work with. This limitation resurfaces in later chapters, both
+in how reliably each endpoint can be predicted (Chapter 5) and in how
+confidently treatment effect heterogeneity can be detected on it
+(Chapters 6--7).
+
+\paragraph{Two facts stated here because they return later.}
+First, \emph{every} patient in this cohort is at high bleeding risk, because
+that was an eligibility criterion and not an accident of the randomization.
+The cohort is therefore a deliberately restricted slice of the PCI population,
+not a sample of it: the spread of bleeding risk within it is compressed by
+construction. Chapter 7 shows that this range restriction, and not a
+modelling failure, is the reason a bleeding risk model that is perfectly
+sensible in itself discriminates far less well here than the published
+literature would suggest.
+
+Second, ischemic events are an order of magnitude rarer than bleeding events,
+with cardiovascular death and stroke both below one hundred observations. Any
+heterogeneity in the ischemic arm of the trade-off has to be detected from
+that handful of events, which caps in advance how much can honestly be claimed
+about it — a constraint that Chapter 7 makes quantitative.
+
+\section{The \texttt{fup\_} Variables Are Not Leakage}
+
+Three of the 63 covariates carry the prefix \texttt{fup\_} —
+\texttt{fup\_other}, \texttt{fup\_nitrates} and \texttt{fup\_insulin} — which
+suggests \emph{follow-up}, and therefore suggests information recorded after
+treatment assignment. Used as predictors, such variables would be leakage:
+they would let a model see part of what it is supposed to predict, and would
+make every performance and effect estimate optimistic in a way no
+cross-validation scheme can repair.
+
+They are not leakage here. Randomization in MASTER DAPT occurs at the
+one-month visit, and that visit \emph{is} the landmark: the \texttt{fup\_}
+prefix refers to the follow-up schedule of the trial's case report form, but
+the values in question are recorded at that visit, before treatment assignment
+takes effect. They are consequently baseline covariates in the sense that
+matters — measured before the intervention whose effect is being estimated.
+
+The point is worth the space it occupies for two reasons. It fixes, once, the
+criterion applied to all 63 covariates: what determines admissibility is the
+recording date relative to the landmark, not the prefix of the variable name,
+and a mechanical rule based on names would in this dataset discard valid
+information while retaining nothing extra. And it closes in advance the most
+obvious objection to the negative result of Chapters 6 and 7 — namely that the
+absence of detectable heterogeneity is an artefact of having thrown away good
+predictors.
+
+\section{A First Look at the Data}
+
+Before any modelling, two exploratory questions are worth settling: whether
+the cohort visibly separates into subgroups, and whether obvious pairwise
+structure among the covariates exists.
+
+\paragraph{Structure and clustering.}
+Principal component analysis on the standardized covariates shows no dominant
+axis: a substantial number of components is needed to reach 80--90\% of the
+variance, indicating that the covariates are only weakly correlated with each
+other. The leading component of the continuous block is dominated by kidney
+function markers (pre- and post-procedural creatinine) and myocardial injury
+markers (troponin), reflecting the expected comorbidity pattern of a PCI
+population. Projecting patients onto the leading components and colouring them
+by outcome reveals no sharp clustering for any endpoint, and the nonlinear
+embeddings agree: both t-SNE and UMAP, applied to the leading principal
+components, scatter event patients across the entire manifold with no distinct
+region for any endpoint. Treatment assignment likewise shows no separation,
+which is the expected signature of a balanced randomization. Bleeding
+endpoints are marginally better separated than ischemic ones, which is the
+same asymmetry that Table~\ref{tab:endpoints} predicts and that Chapter 5
+recovers quantitatively.
+
+\includegraphics[width=1\textwidth]{Non_linear_embeddings.png}
+
+The absence of clustering also rules out a simpler story for the ischemic
+endpoints: that events concentrate in a small set of multivariate extremes.
+Flagging patients by Hotelling's $T^2$ statistic on the leading ten
+components identifies 162 of 4,579 patients (3.5\%) as extreme outliers at
+the 99.5\% level, and these outliers do carry a higher event rate — death and
+stroke occur roughly 3.4 and 3.5 times more often among them than among the
+rest of the cohort. But the outlier set is too small for that elevated rate
+to matter in aggregate: only 11.4\% of cardiovascular deaths and 11.6\% of
+strokes fall among the outliers, meaning that close to nine in ten ischemic
+events occur in patients whose covariate profile is otherwise unremarkable.
+Whatever drives ischemic risk in this cohort, it is not concentrated in a
+handful of biomarker extremes.
+
+\includegraphics[width=1\textwidth]{Outliers_analysis.png}
+
+\paragraph{Pairwise interactions.}
+A penalized search over pairwise products of a curated set of clinically
+interpretable covariates flags a few interaction terms that survive $L_1$
+shrinkage and improve out-of-fold discrimination for bleeding. These are
+recorded but not pursued, because they answer a different question from the
+one this thesis asks: they are associations \emph{among covariates} in
+predicting an outcome, not modifications of the \emph{treatment effect}. An
+interaction between two baseline characteristics tells us the risk surface is
+not additive; it says nothing about whether the benefit of abbreviating varies
+across patients. That question requires the treatment to enter the
+interaction, and it is the subject of Chapter 6, not of this one.
+
+\includegraphics[width=1\textwidth]{Lasso_Regularization_Path.png}

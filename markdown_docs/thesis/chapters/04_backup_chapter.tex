@@ -1,0 +1,127 @@
+\section{The High Bleeding Risk Population}
+
+A specific subset of patients undergoing PCI is classified as High Bleeding
+Risk (HBR), defined by the presence of one or more clinical factors that
+substantially elevate the probability of a significant bleeding event.
+HBR patients represent a particularly challenging population because:
+\begin{itemize}
+  \item They derive the greatest harm from prolonged DAPT due to their
+    elevated baseline bleeding risk.
+  \item They are frequently excluded or underrepresented in standard PCI
+    trials, which limits the generalizability of existing evidence.
+  \item Their clinical profiles are highly heterogeneous, spanning a wide
+    range of comorbidities, frailty levels, and concomitant medications.
+\end{itemize}
+
+A patient was eligible for MASTER DAPT if at least one of the following ten
+criteria, adapted from the Academic Research Consortium for High Bleeding
+Risk (ARC-HBR) consensus, applied (Valgimigli et al., \emph{NEJM} 2021,
+Supplementary Appendix, Section 1):
+\begin{enumerate}
+  \item Indication for oral anticoagulation (OAC) for at least 12 months.
+  \item A nonaccess-site bleeding episode requiring medical attention within
+    the previous 12 months.
+  \item A previous bleeding episode requiring hospitalization, if the
+    underlying cause had not been definitively treated.
+  \item Age $\geq 75$ years.
+  \item A systemic condition associated with increased bleeding risk (e.g.,
+    thrombocytopenia $<100{,}000/\mathrm{mm}^3$ or a known coagulation
+    disorder).
+  \item Documented anemia (hemoglobin $<11\,\mathrm{g/dL}$, or transfusion
+    within the previous 4 weeks).
+  \item Chronic need for steroids or nonsteroidal anti-inflammatory drugs.
+  \item A malignancy (other than skin) considered at high bleeding risk.
+  \item Stroke or transient ischemic attack within the previous 6 months.
+  \item A PRECISE-DAPT score $\geq 25$.
+\end{enumerate}
+In the MASTER DAPT trial, the mean number of criteria met per patient was
+$2.1 \pm 1.1$, and the most prevalent single criterion was age $\geq 75$
+years (met in isolation by 17\% of patients), reflecting a substantially
+vulnerable population. Note that chronic kidney disease, although a common
+comorbidity in this cohort (reported separately in the baseline
+characteristics), is not itself one of the ten enrollment criteria: renal
+impairment enters indirectly, through its contribution to anemia, the
+PRECISE-DAPT score, or malignancy staging.
+
+\section{The MASTER DAPT Trial Design}
+
+MASTER DAPT was a multicenter, open-label, randomized, noninferiority trial
+with hierarchical superiority testing. Key design features include:
+
+\begin{itemize}
+  \item \textbf{Enrollment period:} February 28, 2017 to December 5, 2019.
+  \item \textbf{Sites:} 140 centers across 30 countries.
+  \item \textbf{Screened patients:} 5,204; randomized: 4,579 (88.0\%).
+  \item \textbf{Randomization:} 1:1, computer-generated, stratified by trial
+    site, history of myocardial infarction in the past 12 months, and
+    indication for oral anticoagulation.
+  \item \textbf{Follow-up:} 335 days with visits at 60, 150, and 335 days
+    post-randomization.
+\end{itemize}
+
+\paragraph{Patient characteristics at baseline.}
+The population enrolled in MASTER DAPT was elderly and clinically complex:
+mean age $76.0$ years, 69.3\% male. Prominent comorbidities included
+diabetes (33.6\%), chronic kidney disease (19.1\%), heart failure (18.9\%),
+history of cerebrovascular events (12.4\%), and peripheral vascular disease
+(10.6\%). Concomitant oral anticoagulation was present in 36.4\% of patients.
+These characteristics reflect a real-world HBR population that is
+substantially more complex than the patients typically studied in earlier
+DAPT trials.
+
+\paragraph{Interventions.}
+\begin{itemize}
+  \item \textbf{Abbreviated therapy group:} Immediate discontinuation of
+    DAPT at randomization (approximately 1 month after the index PCI),
+    followed by single antiplatelet therapy. For patients on oral
+    anticoagulation, single antiplatelet therapy was continued up to 6 months.
+  \item \textbf{Standard therapy group:} Continuation of DAPT for at least
+    5 additional months (6 months total from index PCI), or at least 2
+    additional months for patients on oral anticoagulation.
+\end{itemize}
+
+\paragraph{Primary outcomes.}
+Three hierarchically ranked primary outcomes, assessed as cumulative
+incidences at 335 days:
+\begin{enumerate}
+  \item \textbf{NACE} (Net Adverse Clinical Events): composite of death
+    from any cause, myocardial infarction, stroke, or major bleeding
+    (BARC type 3 or 5).
+  \item \textbf{MACCE} (Major Adverse Cardiac or Cerebral Events): composite
+    of death from any cause, myocardial infarction, or stroke.
+  \item \textbf{Major or CRNM bleeding}: composite of bleeding events of
+    BARC type 2, 3, or 5.
+\end{enumerate}
+
+\paragraph{Primary results.}
+\begin{itemize}
+  \item \textbf{NACE:} 7.5\% (abbreviated) vs. 7.7\% (standard); difference
+    $-0.23$ pp (95\% CI $-1.80$ to $1.33$; $p < 0.001$ for noninferiority).
+  \item \textbf{MACCE:} 6.1\% vs. 5.9\%; difference $0.11$ pp (95\% CI
+    $-1.29$ to $1.51$; $p = 0.001$ for noninferiority).
+  \item \textbf{Bleeding:} 6.5\% vs. 9.4\%; difference $-2.82$ pp (95\% CI
+    $-4.40$ to $-1.24$; $p < 0.001$ for superiority).
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{masterdapt_flow.png}
+\caption{MASTER DAPT patient flow diagram (screening, randomization, follow-up). Reproduced from Valgimigli et al., \emph{NEJM} 2021.}
+\label{fig:masterdapt_flow}
+\end{figure}
+
+\section{The Clinical Decision Problem}
+
+From a statistical decision-making perspective, the MASTER DAPT question is:
+\textit{given the characteristics of a specific patient, which DAPT strategy
+— abbreviated or standard — minimizes their expected net harm?} This question
+is precisely what the CATE formalizes. The CATE $\tau(x)$ for this setting
+can be interpreted as the expected difference in NACE (or MACCE, or bleeding)
+between the abbreviated and standard therapy, conditional on a patient having
+covariate profile $x$.
+
+A positive $\tau(x)$ would indicate that abbreviated therapy leads to a
+\textit{higher} event rate than standard therapy for patients with profile $x$
+(i.e., standard therapy is preferred), while a negative value indicates
+the opposite. A CATE near zero suggests no differential benefit of either
+strategy for that patient type.
