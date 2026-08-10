@@ -244,6 +244,8 @@ markdown_docs/thesis/**/*.pdf
 *.out
 *.fls
 *.fdb_latexmk
-.lot
-.sinctex.gz
-.lof
+*.lot
+*.lof
+*.synctex.gz
+*.xdv
+*.log
