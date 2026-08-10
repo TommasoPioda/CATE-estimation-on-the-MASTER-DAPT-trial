@@ -1,0 +1,8 @@
+% Extra preamble for the markdown -> XeLaTeX builds (see build_pdf.sh).
+% DejaVu Serif carries the accents, Greek and math symbols the outlines use,
+% but not the two dingbats; DejaVu Sans has both, so route them there.
+\newfontfamily\symbolfont{DejaVu Sans}
+\usepackage{newunicodechar}
+\usepackage{booktabs}
+\newunicodechar{✔}{{\symbolfont ✔}}
+\newunicodechar{⚠}{{\symbolfont ⚠}}

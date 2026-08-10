@@ -1,0 +1,94 @@
+% SUPSI DTI thesis class (template.cls sits next to this file, with the
+% logos it expects under images/template/). It already loads inputenc,
+% fontenc, babel, geometry, titlesec, graphicx, amsmath, setspace, fancyhdr.
+\documentclass[twoside]{template}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\graphicspath{ {images/} }
+
+% template.cls's classic PS fonts (Times/Helvetica, T1-encoded) have no
+% Unicode cmap under XeLaTeX, so raw em/en-dashes typed in chapter source
+% render as missing-glyph boxes. Remap them to the TeX dash primitives.
+\usepackage{newunicodechar}
+\newunicodechar{—}{\textemdash}
+\newunicodechar{–}{\textendash}
+% \todo{...} margin notes for open points; \listoftodos prints the index.
+\usepackage[colorinlistoftodos]{todonotes}
+
+% No paragraph indentation.
+\setlength{\parindent}{0pt}
+
+% An unnumbered chapter that still appears in the table of contents.
+\newcommand{\problemchapter}[1]{%
+  \chapter*{#1}%
+  \addcontentsline{toc}{chapter}{#1}%
+  \markboth{#1}{#1}
+}
+
+% Appendix numbering per the DTI norm: A.1, A.1.1, ...
+\addto\appendix{
+\renewcommand{\thesection}{\Alph{chapter}.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}}
+
+\setcounter{secnumdepth}{5}  % deeper numbering in the headings
+\setcounter{tocdepth}{5}     % deeper nesting in the table of contents
+
+% Front page fields — these commands are defined by template.cls.
+\titolo{CATE estimation and use in MASTER DAPT study}
+\studente{Tommaso Pioda}
+\relatore{Laura Azzimonti}
+\correlatore{Gabriele Maroni}
+\committente{EOC}
+\corso{Data Science and Artificial Intelligence}
+\modulo{Diploma Thesis}
+\anno{2026}
+\date{08.08.2026}
+
+\begin{document}
+
+\pagenumbering{alpha}
+\maketitle
+\onehalfspacing
+
+\frontmatter
+\raggedbottom
+
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures  % optional
+\listoftables   % optional
+
+\newpage
+\mainmatter
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\chapter{From the average effect to the individual decision}
+\input{chapters/01_effect_to_decision}
+
+\chapter{How to estimate and validate the individual effect}
+\input{chapters/02_estimate_validate_effect}
+
+\chapter{Choosing whom to enroll, and verifying whether it worked}
+\input{chapters/03_enrollment_verification}
+
+\chapter{The data and the clinical question}
+\input{chapters/04_data_clinical_question}
+
+\chapter{Risk: the predictive models, and an open anomaly}
+\input{chapters/05_risk_predictive_models}
+
+\chapter{Heterogeneity: estimation, the trade-off plane and the decision}
+\input{chapters/06_heterogeneity_tradeoff}
+
+\chapter{The origin of the negative result, and the debt of ch. 5}
+\input{chapters/07_origin_negative_result}
+
+\chapter{Guided enrollment applied to MASTER DAPT: an exploitability test}
+\input{chapters/08_guided_enrollment_feasibility}
+
+\chapter{Discussion and conclusions}
+\input{chapters/09_discussion_conclusions}
+
+\end{document}
