@@ -1,6 +1,193 @@
 % !TEX root = ../Thesis.tex
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{What Is Estimated, and Why It Is Not Validated Like a Prediction}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+The object of interest is the individual treatment effect
+$\tau(x) = \mathbb{E}[Y(1) - Y(0) \mid X = x]$, the difference between the two
+potential outcomes of the same patient, one under each treatment. Of this
+difference only one term is ever observed, because every patient receives
+exactly one of the two treatments: the other outcome, the one that would have
+occurred under the treatment not given, does not exist in the data for anyone,
+not even in a validation set collected specifically for this purpose. This is
+the fundamental problem of causal inference, and it is not a data-quality
+issue that a larger cohort would fix.
+
+It has a direct consequence for how $\tau(x)$ can be checked. A predictive
+model is validated by comparing its prediction with the value that was
+actually observed; here that comparison is unavailable for every single
+patient. One cannot therefore ask an estimator to be right about one person —
+there is nothing to compare its estimate against. What remains verifiable is
+weaker but not empty: an estimator can be asked to be right in aggregate, on
+groups of patients for which the missing counterfactual reappears in the form
+of a group average, estimable from the patients who did receive the
+treatment in question. Every validation strategy used in this thesis is a
+consequence of this one constraint.
+
+\section{Five Families of Estimators, Chosen to Err Differently}
+
+No single method is used, because a result that depends on the internal
+assumptions of one algorithm is not distinguishable from an artefact of that
+algorithm. Five estimator families are used instead, deliberately spanning
+different ways of failing, so that a conclusion which survives all five stops
+being attributable to any one of them.
+
+\paragraph{Two-model meta-learner (T-learner).}
+The simplest of the five: fit one outcome model per treatment arm,
+$\hat\mu_1(x)$ and $\hat\mu_0(x)$, and take their difference as
+$\hat\tau(x) = \hat\mu_1(x) - \hat\mu_0(x)$. Its strength is that any
+regression or classification method can be reused as a component; its weakness
+is the same fact seen from the other side — it inherits every bias of the two
+component models, and small independent errors in each one do not cancel in
+the subtraction, they add.
+
+\paragraph{Causal forest.}
+Targets $\tau(x)$ directly rather than through a difference of two fitted
+surfaces, using double machine learning to remove confounding: nuisance
+models for $\mathbb{E}[Y \mid x]$ and $\mathbb{E}[T \mid x]$ are fitted and
+partialled out before the effect is estimated, so that a covariate correlated
+with treatment assignment does not get credited as if it modified the
+treatment's effect. Splits are \emph{honest} — one subsample decides where to
+split, a disjoint subsample estimates the leaf values used for prediction — a
+constraint that trades away some statistical efficiency in exchange for a
+tree that cannot claim structure it never had the independent data to
+confirm.
+
+\paragraph{Bayesian causal forest (BCF).}
+A Bayesian counterpart that separates the prognostic surface, how sick a
+patient already is regardless of treatment, from the effect surface,
+$\tau(x)$ itself, and puts a separate prior and a separate tree ensemble on
+each. Because a stronger, more differentiated prior can be placed on the
+prognostic side, a residual confounder that produces a large main effect is
+less able to masquerade as heterogeneity; the price is that the effect
+surface can, in turn, be dominated by its own regularization if that prior is
+too tight. It returns a full posterior over $\tau(x)$ rather than a point
+estimate, which is what later sections use to ask not just what the effect
+is but how sure the model is about it.
+
+\paragraph{In-context model.}
+Rather than being fitted to one dataset, this estimator is pre-trained once on
+a large distribution of synthetic causal problems and, at inference time,
+conditions on the new cohort without any further fitting — the same mechanism
+that makes a language model adapt to a prompt it has never seen. Its errors
+therefore have a different origin from the other four: not sampling variance
+from a specific, finite cohort, but a domain bias inherited from the
+distribution of synthetic problems it was pre-trained on. That difference in
+kind is what makes it a genuinely independent check rather than one more
+variant of the same idea.
+
+\paragraph{Interaction forest (S-learner).}
+Fits a single classification forest on the augmented design
+$[X,\,T,\,X\!\cdot\!T]$ — covariates, treatment, and their interaction — and
+recovers the implied CATE by toggling the treatment column and differencing
+the two predictions. Because both arms are fitted jointly, information is
+pooled across them, which helps in the arm with fewer events; the same
+pooling is a liability for heterogeneity specifically, since an interaction
+term has to compete for splits against the treatment's own main effect, and a
+weak interaction is compressed toward zero rather than reported honestly.
+
+None of the five is included because it is the best estimator in the
+abstract — under different data each could plausibly outperform the others.
+They are included because their failure modes do not overlap: two-model
+error compounding, a forest's limited splitting language, a Bayesian model's
+own regularization, a pre-trained model's domain bias, and an interaction
+model's shrinkage toward zero are five different ways of being wrong, and an
+agreement that survives all five is no longer explainable by any single one
+of them.
+
+\section{The Ranking as the Object of Validation}
+
+Since the individual value of $\tau(x)$ cannot be checked, the only property
+of an estimator that remains checkable is whether it \emph{ranks} patients
+correctly by expected benefit — whether the patients it flags as benefiting
+most really do, as a group, benefit more than the patients it flags as
+benefiting least.
+
+The \textbf{TOC curve} (targeting operator characteristic) measures exactly
+this: for a fraction $q$ of the cohort, the one the model ranks as benefiting
+most, how much is gained by treating that fraction relative to treating
+everyone. Because the underlying group averages are themselves estimated
+quantities, the comparison is done \emph{doubly-robustly}: it combines an
+outcome model and a treatment-assignment model in such a way that an error in
+either one alone is not enough to bias the result — only an error in both at
+once would. Alongside the curve, a group calibration test compares the
+average effect actually observed within each band of estimated CATE against
+the average the model predicted for that band, which catches a ranking that
+is directionally right but numerically overconfident.
+
+Two scalar summaries condense the curve into a single number, and they
+disagree on purpose. \textbf{AUTOC} is the area under the TOC curve weighted
+by $1/q$, which concentrates almost all of its weight on the head of the
+ranking — the small fraction of patients for whom a clinical decision would
+actually be made differently. \textbf{QINI} weights each group by its size
+instead of by its rank, and is the statistic to prefer when the population of
+interest is a broad subgroup rather than an extreme tail. Reporting both
+guards against a conclusion that only holds under one particular way of
+weighting the ranking.
+
+\section{The Noise Floor}
+
+A positive AUTOC, or any nonzero dispersion of the estimated $\tau(x)$ across
+patients, is not by itself evidence of heterogeneity: an estimator applied to
+a constant true effect still produces a spread of estimates, because
+estimation error alone has variance, and that spread grows with how flexible
+the model is allowed to be, independently of whether the underlying effect
+varies at all. Comparing against zero therefore answers the wrong question.
+
+The comparison used throughout this thesis is against a \textbf{noise floor}
+obtained by permuting the treatment labels and repeating the identical
+estimation and evaluation pipeline. Permutation destroys any real treatment
+effect while leaving the covariates, the outcome rates, and every modelling
+choice untouched, so the resulting distribution of AUTOC — or of CATE
+dispersion — is exactly what the pipeline manufactures from nothing. A result
+is treated as a signal only if it clears this floor, not if it merely clears
+zero.
+
+\section{From Estimation to Decision: The Value of a Rule}
+
+A ranking can be statistically correct and still not be worth acting on, if
+the gain it identifies is smaller than the cost of departing from the
+simplest fixed strategy. The next step therefore asks a different, more
+consequential question: not whether the model orders patients correctly, but
+whether \emph{following} that order produces a measurable benefit.
+
+Given a candidate treatment rule — for instance, treat the $q\%$ of patients
+with the highest estimated CATE — its expected value is estimated with a
+cross-fitted AIPW (augmented inverse-propensity-weighted) estimator, which
+remains valid even when the nuisance models it relies on are imperfect, as
+long as they are not both wrong in the same direction. That value is then
+compared against the two trivial rules that require no model at all — treat
+everyone, treat no one — with an honest confidence interval on the
+difference. This is the point where the question changes register, from "the
+model ranks well" to "acting on the ranking produces a measurable gain,"
+and a negative answer to the first does not by itself settle the second, nor
+does a positive answer to the second require a striking value of the first.
+
+\section{The Consequence for Model Selection}
+
+If the quantity that matters is the quality of the ranking, the
+hyperparameters of every estimator must be chosen against that same target,
+not against a prediction-error criterion that has no direct bearing on it.
+Tuning therefore optimizes the cross-validated \emph{lower bound} of the
+AUTOC, $\text{AUTOC} - z \cdot \text{SE}$ averaged across folds, rather than
+the point estimate. The choice is a deliberate defence against the winner's
+curse: across many configurations tried, the one that looks best often looks
+so partly by chance, and a criterion that rewards a high score obtained with
+a large standard error would systematically select the luckiest configuration
+rather than the best one.
+
+A second defence handles a specific failure mode directly: a configuration
+that collapses to a constant CATE for every patient is not discarded as
+invalid, it is scored zero. Without this rule such a configuration could hide
+behind whatever validation score it happens to draw by chance, since a
+model with no ranking at all cannot be wrong about one either. The same
+tuning procedure searches over the flexibility of the nuisance models jointly
+with the flexibility of the effect model, because a less noisy doubly-robust
+pseudo-outcome raises the achievable lower bound exactly as much as a more
+expressive forest does, and optimizing one while holding the other fixed
+would credit the wrong component for the gain.
+
+The result is that the measure used to validate an estimator, the criterion
+used to select among tuning configurations, and the criterion used to accept
+or reject a claim of heterogeneity are, by construction, the same quantity.
+No separate notion of accuracy is allowed to override what the ranking-based
+evaluation of Section~2.3 says.
