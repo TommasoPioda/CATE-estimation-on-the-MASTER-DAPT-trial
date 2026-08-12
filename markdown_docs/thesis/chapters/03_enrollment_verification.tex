@@ -1,6 +1,269 @@
 % !TEX root = ../Thesis.tex
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Chapter objective}
+In the previous chapter we have explored the theory behind the ranking of the patients based on their
+estimated CATE. The objective of this chapter instead is to define a process of scoring of the patients in order
+to fulfill our goal of selecting the patients that gain more from the treatment from the cohort 
+basing ourserlf with the ranking theory we have defined in the previous chapter.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+\vspace{5pt} 
+
+\textit{If that ranking is credible, could it be used during the enrollment process to select the patients that are more likely to benefit from the treatment?}
+
+\vspace{5pt}
+
+Even if the ranking is credible and it works it could break during the enrollment process damaging the trial.
+We need to select the right metric and the right policy such to ensure the credibility of the ranking during the enrollment process,
+trying to obtain the best possible outcome from the trial'simulations.
+
+\section{The Trade-off plane}
+As briefly mentioned in the previous chapter, ranking patients for each target is not sufficient to ensure a good outcome of the trial.
+
+In a single-target scenario, the ranking is sufficient to select the patients who are more 
+likely to benefit from the treatment. Since the objective can be defined by a single scalar 
+quantity, selecting patients with the highest estimated CATE is sufficient to guide the trial towards the desired outcome.
+
+In a multi-target scenario, however, ranking patients separately for each target could 
+theoretically optimize the outcome for that specific target, but at the same time be 
+detrimental to the other outcomes.
+
+In this case, it is therefore necessary to define a trade-off between the different 
+targets in order to select the patients who are more likely to benefit from the treatment 
+across all outcomes. The choice of this metric is both arbitrary and crucial for the 
+outcome of the trial. It should therefore be defined by medical experts, who should also 
+provide a clear rationale for the chosen trade-off.
+
+We have decided to structure the trade-off in a two-dimensional plane, where on the X-axis we have the 
+bleeding risk and on the Y-axis we have the weighted sum of 3 ischemic events (Mi, Stroke and CV Death). 
+The weights of the ischemic events have been defined by me consulting my relators on the topic.
+It must be understood that the choice of the weights is arbitrary and it is not the objective of this thesis to define them.
+The bleeding risk is instead defined as a single scalar quantity, which is the probability of experiencing a major bleeding event.
+
+Once both axes carry the effect of \emph{abbreviating} the therapy, the plane
+splits into four zones with fixed clinical meanings
+(Figure~\ref{fig:tradeoff-zones}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{CATE_tradeoff_zones.png}
+\caption{The four zones of the trade-off plane. Both axes carry the CATE of
+\emph{abbreviating} the therapy, so a positive value always means that
+abbreviating helps on that endpoint; the vertical axis is the weighted ischemic
+composite ($0.4$ MI, $0.4$ stroke, $0.2$ cardiovascular death). Top-right is
+win--win (abbreviate: there is nothing to trade), bottom-left is lose--lose
+(keep the prolonged therapy), and the two off-diagonal quadrants are the genuine
+trade-offs. Only in the bottom-right one --- fewer bleeds bought with more
+ischemic events --- does the answer depend on the individual patient, which is
+exactly what a personalized enrollment rule would have to find. The
+$+45^\circ$ diagonal is the direction a win--win-seeking score points at.}
+\label{fig:tradeoff-zones}
+\end{figure}
+
+\section{Five Mechanisms, from the Ideal Ceiling to the Realistic Case}
+
+A score defines a preference order over patients, but it does not say how that
+order is consulted. Two questions remain open once the score is fixed, and
+neither has an answer that follows from the score itself. The first is how many
+candidates are visible at the moment a decision must be taken: the whole
+population, a handful, or a single pair. The second is whether the model that
+produces the score already exists, or has to be learned from the very cohort it
+is being used to build. A \emph{mechanism} is an answer to both.
+
+\vspace{10pt}
+
+Five mechanisms are used in this work. They are not five competing proposals of
+which one is meant to win. They form a ladder: the first assumes everything an
+enrollment could possibly know, the last assumes only what a real one has.
+
+\paragraph{What all five share.}
+Every mechanism runs the same skeleton. A \emph{seed} cohort is drawn uniformly
+at random and the effect model is fitted on it, because before any patient is
+enrolled there is no model with which to choose one. Candidates are then
+presented according to the mechanism's own rule, scored by the model as it
+currently stands, and either accepted into the cohort or rejected. Accepted
+patients enter with the treatment they actually received and the outcome they
+actually had --- no counterfactual is ever invented --- and the model is refitted
+every $r$ enrollments, so that each decision is taken by a model that has already
+learned from every enrollment before it.
+
+\vspace{10pt}
+
+The refit cadence $r$ is a computational parameter rather than a statistical
+one, but it must be reported all the same: a mechanism that refits after every
+single enrollment and one that refits after an $b$ are not the same mechanism,
+because the second takes long runs of decisions with a model that is already
+stale.
+In a real case application we would have refitted the model after every enrollment,
+but the computational cost of this operation is prohibitive so we opted for batched reffitting.
+This is a genuine limitation and not a detail of implementation:
+the model that guides enrollment is weaker than the model that would be fitted
+once, offline, on the same data, and any comparison between guided and random
+enrollment is therefore made with the guided arm carrying a handicap.
+
+\paragraph{The seed, and why nothing is tuned after it.}
+The seed is the last cohort drawn at random. After that, patients are selected
+according to the score. Since the score depends only on the covariates,
+selection does not break identification: treatment remains randomized within
+the enrolled cohort, so the doubly robust methods of Chapter~2 remain valid.
+What changes is the distribution of the covariates. The enrolled patients are
+therefore a valid sample, but from a different population created by the
+selection mechanism itself.
+
+\vspace{10pt}
+
+For this reason, hyperparameter tuning is performed only on the seed. Tuning
+on a later cohort would estimate a valid AUTOC, but not the same AUTOC across
+configurations. Each configuration would be evaluated on the population that
+it had itself selected. One configuration could therefore appear better simply
+because it produced an easier cohort, rather than because it produced a better
+ranking.
+
+\vspace{10pt}
+
+The direction of this effect is not predictable. Selecting patients with high
+scores can reduce the variation in treatment effects within the enrolled
+cohort, which lowers AUTOC. At the same time, the selected cohort may contain
+more patients in regions where the model is well supported by the data, making
+the ranking appear more accurate and increasing AUTOC. Cross-validation does
+not solve this problem because it is performed within the same selected
+cohort: every fold has already passed through the selection mechanism.
+
+\vspace{10pt}
+
+The problem is more serious in the online setting. A poor configuration does
+not only produce a poor model; it also determines which patients are enrolled.
+If that selected cohort is then used for further tuning, the model and the
+population influence each other. There is no later randomly selected cohort
+available to provide an independent reference.
+
+\vspace{10pt}
+
+Tuning is therefore performed once on the seed, using the same budget for every
+mechanism, and the resulting configuration is kept fixed throughout the run.
+This ensures that the mechanisms start from comparable models and that later
+differences are due to their selection rules rather than to different tuning
+procedures. The remaining limitation is that the seed is relatively small, so
+the AUTOC estimate is noisy and the tuning procedure may still select a
+configuration that performs well partly by chance.
+
+
+\paragraph{Mechanism 1: the ideal ceiling.}
+With this mechanism, the model is fitted on the entire population and the score is
+computed for every patient. The enrollment process then selects the patients with
+the highest scores, until the cohort is full. This mechanism is not realistic, but it
+provides an upper bound on the performance of any other mechanism. It is therefore
+used as a reference to evaluate the other mechanisms.
+This mechanism is useful to test the best metrics for the ranking of the patients, 
+since it is not affected by the enrollment process.
+To account for model uncertainty, the selection is not always purely greedy. 
+A temperature parameter controls the probability of deviating from the highest-scoring
+patient, with patients associated with higher model uncertainty being more likely to 
+be selected during these exploratory steps.
+
+\paragraph{Mechanism 2: The partially random enrollment.}
+With this mechanism we sample randomly from the entire population a batch of patients and then
+we rank them according to the score. Then the patient with the highest score is enrolled 
+in the cohort and the process is repeated until all the patients have been either enrolled or rejected.
+This mechanism is more realistic than the previous one, since it does not require to know the score of all the patients in the population,
+but it still far from a real enrollment process, since it requires to sample from the entire population at each enrollment step.
+As in the previous mechanism, a temperature parameter introduces a degree of exploration into the enrollment process. 
+Rather than always selecting the patient with the highest score, the model can occasionally 
+select a different patient, with the probability of doing so depending on the estimated uncertainty.
+
+\paragraph{Mechanism 3: The duel enrollment.}
+With this mechanism we sample couples of patients from the entire population and we choose the patient with 
+the highest score to be enrolled in the cohort. The model is refitted after every $b$ enrollments.
+The selection is not always purely greedy: a temperature parameter allows the model to 
+occasionally select the less favourable patient according to the score. This exploration is 
+driven by model uncertainty, so patients for which the model is less certain can have a 
+higher probability of being selected.
+
+\paragraph{Mechanism 4: UCB enrollment.}
+The first three mechanisms consult the score and nothing else: whoever ranks higher is
+enrolled. This is purely exploitative, and it has a cost that is easy to miss. The model
+that produces the score is fitted on a small cohort and refitted only every $b$
+enrollments, so it is least reliable exactly where it has seen the fewest patients ---
+and a rule that always picks the current best never enrolls anyone from those regions,
+so it never gets the data that would correct it.
+
+\vspace{10pt}
+
+UCB1 keeps the duel of Mechanism~3 and changes only the criterion by which the pair is
+resolved. Each candidate is scored as
+\[
+  \text{score}(x) \;=\; s(x) \;+\; c \cdot u(x),
+\]
+where $s(x)$ is the trade-off score of the current model and $u(x)$ is the model's own
+uncertainty on that patient --- the standard error the forest reports on the estimated
+effect, composited across the endpoints and standardized on the same z-scored scale as
+$s(x)$, so that the two terms are commensurable and $c$ has a readable meaning. The
+higher score is enrolled. The bonus is floored at zero: a patient the model is
+\emph{more} confident about than the cohort average receives no bonus, never a penalty,
+so certainty is not punished. The constant $c$ is the price paid for exploration, and
+$c = 0$ recovers Mechanism~3 exactly.
+
+\vspace{10pt}
+
+One point must be stated plainly, because the name suggests more than the setting
+delivers. This is not a bandit in the textbook sense: an arm is never pulled twice ---
+each patient arrives once --- and the reward is never observed, since the reward would be
+the individual treatment effect, which is precisely the quantity that Chapter~2 has
+established is unobservable. What is being explored is a region of the covariate space
+rather than an arm, and the feedback arrives only indirectly, through the refit: the
+enrolled patient contributes their real outcome to the next model, which then reports a
+smaller uncertainty in that region. The optimism-under-uncertainty rule is therefore
+borrowed as a selection heuristic, not as an algorithm whose regret guarantees carry over.
+
+\paragraph{Mechanism 5: Thompson enrollment.}
+Same duel, same two frames read from the current model, but the trade-off between
+exploration and exploitation is resolved by sampling instead of by an additive bonus. For
+each candidate one value is drawn from $\mathcal{N}\!\left(s(x),\, u(x)\right)$ --- the
+model's belief about the patient's value, with its own uncertainty as the width of that
+belief --- and the candidate with the higher draw is enrolled. The scale is floored at a
+small $\varepsilon$, since a standardized uncertainty can be zero or negative and every
+candidate must still have a valid, if narrow, distribution to sample from.
+
+\vspace{10pt}
+
+The difference with respect to UCB1 is not the amount of exploration but its shape. UCB1
+is deterministic and uniformly optimistic: for a given pair it always resolves the same
+way, and a candidate that trails on the score can only win if its uncertainty bonus is
+large enough to close the gap every single time. Thompson lets that candidate win a
+fraction of the time, proportional to how much the two distributions overlap, so
+exploration is spread over many marginal decisions instead of being concentrated on the
+few candidates with the largest uncertainty. The randomization also means that two runs
+over the same arrival sequence produce different cohorts; this is a property to report
+rather than a defect, and it is one more reason why every mechanism is evaluated over
+many replicated cohorts instead of a single run.
+
+\vspace{10pt}
+
+Two limitations are declared here rather than discovered later. First, the normal
+distribution is a working approximation and not a posterior: the quantity used as its
+width is a frequentist standard error of the forest, and treating it as the spread of a
+belief is a modelling choice, defensible but not derived. Second, whether the mechanism
+actually explores is an empirical question and not a property of the rule --- if the
+sampling scale is small relative to the spread of the scores, the draws almost always
+order the pair the same way the scores already did, and Thompson degenerates towards
+Mechanism~3. The check is direct, and it is carried out with the mechanisms: compare the
+average uncertainty of the enrolled cohort against that of the random control arm. A
+mechanism that claims to explore and enrolls patients no more uncertain than a coin flip
+would is not exploring.
+
+\vspace{10pt}
+
+\paragraph{Methodology of comparison.}
+To evaluate the five models produced by the mechanisms, we must use an independent reference point.
+The model that guides selection updates as new data arrive, so it cannot 
+also be the yardstick by which one judges whether the cohort has moved.
+Even comparing the mechanisms against each other is not enough, because they all share the same
+bias.
+To have a reference point that is independed we decided to use the model fitted and hypertuned
+on the entire cohort, wich is the best model we could obtain from the data.
+
+The performances of the mechanisms are evaluated based on the amount of hemorragic and ischemic events
+present in the enrolled cohort and in the discarded cohort. Our hope is to find a mechanism that is able
+to collect the most amount of patients with hemorragic events and the least amount of patients with ischemic events, 
+since this is the desired outcome of the trial. Due to the very seed and luck based nature of the
+enrollment process only one proof would not be enoug to evaluate the performances of the mechanisms, 
+so we decided to repeat the enrollment process 30 times for each mechanism and then average the results.

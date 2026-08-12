@@ -7,21 +7,16 @@ $\tau(x) = \mathbb{E}[Y(1) - Y(0) \mid X = x]$, the difference between the two
 potential outcomes of the same patient, one under each treatment. Of this
 difference only one term is ever observed, because every patient receives
 exactly one of the two treatments: the other outcome, the one that would have
-occurred under the treatment not given, does not exist in the data for anyone,
-not even in a validation set collected specifically for this purpose. This is
-the fundamental problem of causal inference, and it is not a data-quality
+occurred under the treatment not given, does not exist in the data for anyone.
+This isthe fundamental problem of causal inference, and it is not a data-quality
 issue that a larger cohort would fix.
 
-It has a direct consequence for how $\tau(x)$ can be checked. A predictive
-model is validated by comparing its prediction with the value that was
-actually observed; here that comparison is unavailable for every single
-patient. One cannot therefore ask an estimator to be right about one person —
-there is nothing to compare its estimate against. What remains verifiable is
-weaker but not empty: an estimator can be asked to be right in aggregate, on
-groups of patients for which the missing counterfactual reappears in the form
-of a group average, estimable from the patients who did receive the
-treatment in question. Every validation strategy used in this thesis is a
-consequence of this one constraint.
+A direct consequence of this estimantions is their uncomparability, there is nothing
+to compare them against. A possible way of verifying the estimator is on the aggregate,
+by comparing the treatment effect across subgroups of patients 
+for which the missing counterfactual reappears in the form of a group average estimable 
+from the patients who did receive the treatment in question. Every validation strategy
+used in this thesis is a consequence of this one constraint.
 
 \section{Five Families of Estimators, Chosen to Err Differently}
 
@@ -41,16 +36,19 @@ component models, and small independent errors in each one do not cancel in
 the subtraction, they add.
 
 \paragraph{Causal forest.}
-Targets $\tau(x)$ directly rather than through a difference of two fitted
-surfaces, using double machine learning to remove confounding: nuisance
-models for $\mathbb{E}[Y \mid x]$ and $\mathbb{E}[T \mid x]$ are fitted and
-partialled out before the effect is estimated, so that a covariate correlated
-with treatment assignment does not get credited as if it modified the
-treatment's effect. Splits are \emph{honest} — one subsample decides where to
-split, a disjoint subsample estimates the leaf values used for prediction — a
-constraint that trades away some statistical efficiency in exchange for a
-tree that cannot claim structure it never had the independent data to
-confirm.
+The causal forest estimates the treatment effect $\tau(x)$ directly,
+rather than fitting two separate outcome models and taking their
+difference. It uses double machine learning to account for confounding:
+models for $\mathbb{E}[Y \mid X]$ and $\mathbb{E}[T \mid X]$ are first
+fitted and their effects are removed before estimating the treatment
+effect.
+
+This helps prevent variables that influence treatment assignment from
+being incorrectly interpreted as effect modifiers. The forest also uses
+\emph{honest} splitting: one subset of the data is used to determine the
+tree structure, while a separate subset is used to estimate the
+treatment effects within each leaf. This reduces the risk of finding
+patterns that are specific to the data used to build the tree.
 
 \paragraph{Bayesian causal forest (BCF).}
 A Bayesian counterpart that separates the prognostic surface, how sick a
@@ -75,15 +73,20 @@ distribution of synthetic problems it was pre-trained on. That difference in
 kind is what makes it a genuinely independent check rather than one more
 variant of the same idea.
 
+\vspace{10pt}
+
 \paragraph{Interaction forest (S-learner).}
 Fits a single classification forest on the augmented design
-$[X,\,T,\,X\!\cdot\!T]$ — covariates, treatment, and their interaction — and
+$[X,,T,,X!\cdot!T]$ — covariates, treatment, and their interactions — and
 recovers the implied CATE by toggling the treatment column and differencing
-the two predictions. Because both arms are fitted jointly, information is
-pooled across them, which helps in the arm with fewer events; the same
-pooling is a liability for heterogeneity specifically, since an interaction
-term has to compete for splits against the treatment's own main effect, and a
-weak interaction is compressed toward zero rather than reported honestly.
+the two predictions. Because both treatment arms are fitted jointly,
+information is pooled across them, which can help stabilize estimation in
+the arm with fewer events. This pooling, however, can limit the detection of
+treatment-effect heterogeneity: interaction effects must compete for splits
+with the treatment's main effect and the prognostic signal in $X$, so weak
+interactions may be attenuated toward zero rather than clearly identified.
+
+\vspace{10pt}
 
 None of the five is included because it is the best estimator in the
 abstract — under different data each could plausibly outperform the others.
@@ -96,33 +99,91 @@ of them.
 
 \section{The Ranking as the Object of Validation}
 
-Since the individual value of $\tau(x)$ cannot be checked, the only property
-of an estimator that remains checkable is whether it \emph{ranks} patients
-correctly by expected benefit — whether the patients it flags as benefiting
-most really do, as a group, benefit more than the patients it flags as
-benefiting least.
+Aggregation gives back what the missing counterfactual takes away, but only
+once there are groups to aggregate over, and nothing in the data defines
+them. The estimator itself supplies the grouping: ordering patients by their
+predicted $\tau(x)$ turns a quantity attached to individuals into a family of
+nested subgroups — the top 5\%, the top 10\%, and so on — each of which has a
+group average treatment effect that is estimable. What is tested is then not
+the value assigned to any patient but a property of the ordering: the
+patients the model places at the top must, as a group, actually show a larger
+effect than those it places below. How large that effect is, is a separate
+question, asked and answered separately.
 
-The \textbf{TOC curve} (targeting operator characteristic) measures exactly
-this: for a fraction $q$ of the cohort, the one the model ranks as benefiting
-most, how much is gained by treating that fraction relative to treating
-everyone. Because the underlying group averages are themselves estimated
-quantities, the comparison is done \emph{doubly-robustly}: it combines an
-outcome model and a treatment-assignment model in such a way that an error in
-either one alone is not enough to bias the result — only an error in both at
-once would. Alongside the curve, a group calibration test compares the
-average effect actually observed within each band of estimated CATE against
-the average the model predicted for that band, which catches a ranking that
-is directionally right but numerically overconfident.
+\vspace{10pt}
 
-Two scalar summaries condense the curve into a single number, and they
-disagree on purpose. \textbf{AUTOC} is the area under the TOC curve weighted
-by $1/q$, which concentrates almost all of its weight on the head of the
-ranking — the small fraction of patients for whom a clinical decision would
-actually be made differently. \textbf{QINI} weights each group by its size
-instead of by its rank, and is the statistic to prefer when the population of
-interest is a broad subgroup rather than an extreme tail. Reporting both
-guards against a conclusion that only holds under one particular way of
-weighting the ranking.
+The group averages are built from a \emph{doubly robust} pseudo-outcome, one
+number per patient, formed by taking the prediction of an outcome model and
+correcting it with the inverse-propensity-weighted residual of the arm the
+patient was actually assigned to. Individually this number is far too noisy
+to be read as that patient's treatment effect — it is not an estimate of
+$\tau(x)$ and is never used as one — but its average over any subgroup is a
+consistent estimate of that subgroup's average effect, and it stays
+consistent if either the outcome model or the treatment-assignment model is
+correctly specified. Here the second is correct by construction: treatment
+was allocated at random, so the assignment probability is known rather than
+estimated, and the validity of every group average that follows does not rest
+on the outcome model being right.
+
+\begin{equation}
+\hat{\varphi}_i \;=\; \hat{\mu}(1, X_i) - \hat{\mu}(0, X_i)
+\;+\; \frac{T_i - \hat{e}(X_i)}{\hat{e}(X_i)\big(1 - \hat{e}(X_i)\big)}
+\Big(Y_i - \hat{\mu}(T_i, X_i)\Big)
+\label{eq:aipw-pseudo-outcome}
+\end{equation}
+
+\noindent where
+\begin{description}
+    \item[$X_i$] covariate vector for patient $i$;
+    \item[$T_i \in \{0,1\}$] treatment actually received by patient $i$ (e.g. $1$ = prolonged DAPT, $0$ = abbreviated DAPT);
+    \item[$Y_i$] observed outcome for patient $i$;
+    \item[$\hat{\mu}(t, x)$] outcome model prediction for treatment arm $t$ given covariates $x$;
+    \item[$\hat{e}(x)$] propensity score, $P(T=1 \mid X=x)$; known by design under randomization rather than estimated;
+    \item[$\hat{\varphi}_i$] doubly robust AIPW pseudo-outcome for patient $i$, whose subgroup average is a consistent estimator of the subgroup's average treatment effect.
+\end{description}
+
+\vspace{10pt}
+
+The \textbf{TOC curve} (targeting operator characteristic) reads the ordering
+off at every depth. For each fraction $q$ it takes the patients ranked
+highest and reports the difference between the average effect within that
+group and the average effect over the whole cohort — equivalently, the gain
+over selecting a group of the same size at random. A ranking that carries no
+information gives a curve flat at zero, and every curve is pinned to zero at
+$q=1$, where the selected group is the cohort itself; a ranking that works
+gives a curve that is positive and decreasing, since concentrating on fewer
+patients should concentrate the effect. The thresholds that cut the ranking
+are fixed on the data used to fit the estimator and then applied to held-out
+patients, whose pseudo-outcomes supply the effects, so no part of the curve
+is read off the sample that produced the ranking being tested.
+
+\vspace{10pt}
+
+A second test asks the question the ordering deliberately sets aside.
+Grouping patients into quantiles of predicted CATE, \emph{group calibration}
+compares the effect actually estimated within each group against the effect
+the model predicts for that same group, and scales the discrepancy by how far
+the group effects lie from the overall average effect. The resulting
+calibration $R^2$ falls to zero or below exactly when the model does no
+better than assigning every patient the cohort average. The two tests
+therefore fail in different ways: a model can be well calibrated and still
+order nobody usefully, if the effect it correctly predicts is the same for
+everyone, and it can order patients correctly while overstating by a constant
+factor how much they differ.
+
+\vspace{10pt}
+
+Two scalar summaries integrate the TOC curve, differing only in how they
+weight its depths. \textbf{AUTOC} weights every fraction equally, so a narrow
+high-benefit group at the top contributes as much as a broad one; it is the
+more powerful summary when the benefit is concentrated in a small subgroup.
+\textbf{QINI} weights each point by the size of the group it refers to, which
+suppresses the top of the ranking and rewards an effect spread broadly across
+the population. Which of the two is the appropriate lens depends on whether
+the responsive subgroup is a narrow tail or a large fraction of the cohort —
+precisely what is not known before the analysis — so both are reported, and
+only a conclusion that holds under both weightings is a property of the
+ranking rather than of the choice of weight.
 
 \section{The Noise Floor}
 
@@ -132,6 +193,8 @@ a constant true effect still produces a spread of estimates, because
 estimation error alone has variance, and that spread grows with how flexible
 the model is allowed to be, independently of whether the underlying effect
 varies at all. Comparing against zero therefore answers the wrong question.
+
+\vspace{10pt}
 
 The comparison used throughout this thesis is against a \textbf{noise floor}
 obtained by permuting the treatment labels and repeating the identical
@@ -144,23 +207,31 @@ zero.
 
 \section{From Estimation to Decision: The Value of a Rule}
 
-A ranking can be statistically correct and still not be worth acting on, if
-the gain it identifies is smaller than the cost of departing from the
-simplest fixed strategy. The next step therefore asks a different, more
-consequential question: not whether the model orders patients correctly, but
-whether \emph{following} that order produces a measurable benefit.
+A ranking can be statistically correct and still not be worth acting on if the
+gain it identifies is too small to justify changing the treatment strategy.
+The next step therefore asks a different question: not whether the model ranks
+patients correctly, but whether \emph{following} that ranking leads to a
+meaningful improvement in outcomes.
 
-Given a candidate treatment rule — for instance, treat the $q\%$ of patients
-with the highest estimated CATE — its expected value is estimated with a
-cross-fitted AIPW (augmented inverse-propensity-weighted) estimator, which
-remains valid even when the nuisance models it relies on are imperfect, as
-long as they are not both wrong in the same direction. That value is then
-compared against the two trivial rules that require no model at all — treat
-everyone, treat no one — with an honest confidence interval on the
-difference. This is the point where the question changes register, from "the
-model ranks well" to "acting on the ranking produces a measurable gain,"
-and a negative answer to the first does not by itself settle the second, nor
-does a positive answer to the second require a striking value of the first.
+\vspace{10pt}
+
+This requires a treatment policy that determines which treatment should be
+given to each patient based on the expected balance of gains and losses.
+Ranking patients using only one selected outcome may not be sufficient, since
+improving one outcome can come at the cost of worsening another. The policy
+must therefore consider the relevant outcomes jointly and evaluate whether
+the resulting treatment decisions provide an overall benefit.
+
+\vspace{10pt}
+
+For each candidate policy, its expected value is estimated using a
+cross-fitted AIPW (augmented inverse-propensity-weighted) estimator. The
+estimated value is then compared with simple fixed strategies that do not use
+the model, such as treating everyone with the same treatment. Confidence
+intervals are used to assess whether the difference is meaningful. This
+changes the question from \emph{`Does the model rank patients correctly?''}
+to \emph{`Does following its recommendations actually improve outcomes?''}
+
 
 \section{The Consequence for Model Selection}
 
@@ -175,6 +246,8 @@ so partly by chance, and a criterion that rewards a high score obtained with
 a large standard error would systematically select the luckiest configuration
 rather than the best one.
 
+\vspace{10pt}
+
 A second defence handles a specific failure mode directly: a configuration
 that collapses to a constant CATE for every patient is not discarded as
 invalid, it is scored zero. Without this rule such a configuration could hide
@@ -185,6 +258,8 @@ with the flexibility of the effect model, because a less noisy doubly-robust
 pseudo-outcome raises the achievable lower bound exactly as much as a more
 expressive forest does, and optimizing one while holding the other fixed
 would credit the wrong component for the gain.
+
+\vspace{10pt}
 
 The result is that the measure used to validate an estimator, the criterion
 used to select among tuning configurations, and the criterion used to accept
