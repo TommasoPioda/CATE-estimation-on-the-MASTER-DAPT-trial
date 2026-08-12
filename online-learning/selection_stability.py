@@ -43,7 +43,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from tqdm import tqdm
 
-from online_learning_utils import weighted_isch
+from online_learning_utils import plane_coords
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -92,15 +92,23 @@ def cate_by_endpoint(pipe, X):
 
 
 def plane(C):
-    """nb 01's plane: x = raw bleeding benefit, y = z-scored weighted ischaemic benefit.
+    """The shared decision plane, built exactly as `conflict_from_model` + `plane_coords` build
+    it: every endpoint to IQR 1 first (RobustScaler, no centring), then the weighted ischaemic
+    composite, then BOTH axes median-centred and put back on IQR 1.
 
-    The y-axis is z-scored exactly as nb 01 does (the endpoints live on different scales, so
-    a raw mean would be whichever endpoint happens to be largest); x stays raw, as in nb 01.
-    The weighting (ISCH_WEIGHTS) is the same one nb 01 uses via components_from_origin.
+    This used to be `x = raw bleeding CATE, y = z-scored ischaemic composite`, which is not the
+    plane any notebook decides on and made every angle here meaningless. Raw bleed averages
+    +0.045 with no patient below zero while the z-scored y has unit spread, so the cloud was a
+    near-vertical needle at x ~ 0.045: every vector sat within a fraction of a degree of +/-90,
+    `x > 0` was true by construction (win-win collapses to `y > 0`, Q3 unreachable), and the
+    rule silently ranked on the ischaemic axis alone with the bleeding axis contributing
+    nothing. See `plane_coords` in online_learning_utils for the full argument.
     """
-    x = C['bleed']
-    y = weighted_isch({k: z(C[k]) for k in ISCH_WEIGHTS}, ISCH_WEIGHTS)
-    return x, y
+    from sklearn.preprocessing import RobustScaler
+
+    df = pd.DataFrame({k: np.asarray(C[k], dtype=float) for k in ['bleed', *ISCH]})
+    df[df.columns] = RobustScaler(with_centering=False).fit_transform(df)
+    return plane_coords(df, ISCH_WEIGHTS)
 
 
 def duel_by_angle(i, j, x, y):
@@ -120,7 +128,10 @@ def duel_by_angle(i, j, x, y):
 
 
 def duel_by_conflict(i, j, x, y):
-    c = z(x) + y                       # nb 01's conflict score (y is already the z-scored mean)
+    # The linear-sum comparison arm. On the centred plane both axes carry IQR 1, so this is the
+    # EQUAL-weight conflict score; `conflict_from_model`'s own `bleed + weighted_isch` keeps the
+    # raw IQRs, where bleed's is 2.4x the composite's, and so weights bleeding that much more.
+    c = x + y
     return np.where(c[i] > c[j], i, j)
 
 

@@ -5,8 +5,13 @@ CATE frames and the forest configuration as explicit arguments rather than readi
 globals, so the same code can back all three notebooks without hidden shared state.
 
 What is NOT here, and why:
-  - `duel_by_angle`       : the Q1 tie-break differs between notebooks (nb 01 uses the vector
-                            magnitude, nb 02_duel uses x only). Each keeps its own copy.
+  - `duel_by_angle`       : each notebook keeps its own copy, but they must agree -- both now
+                            break Q1 ties on the vector magnitude and Q3 ties on the SMALLER
+                            magnitude (least harm on both axes). They disagreed on Q3 until the
+                            plane was centred and nobody noticed, because with an uncentred x
+                            the Q3 branch was dead code (bleed > 0 for the whole cohort); it now
+                            covers ~26% of it. The plane itself is shared -- every copy reads
+                            `components_from_origin` -- so the geometry cannot fork again.
   - `uncertainty_from_model` : nb 02 reads `predict_cate_`, nb 02_duel reads `predict_cate_std`.
                             Each keeps its own copy.
   - `seed_fit_tune` / `run_online` : the loops differ substantially per notebook.
@@ -17,6 +22,23 @@ import warnings
 
 import numpy as np
 import pandas as pd
+
+
+# The one online-forest configuration. Every notebook (02, 02_bandits, 03, 04, 05) imports these
+# instead of writing its own copy, so a run of nb 04 and a run of nb 02 are comparable by
+# construction rather than by luck: before this lived here the notebooks had silently drifted to
+# three different forests (200x4 vs 600x10) and three different nuisance sizes (50 / 100 / 500).
+# Change them HERE, never in a notebook cell -- a local redefinition shadows the import and
+# reintroduces exactly that drift.
+#
+# Light on purpose: the online loop refits the whole forest after every enrolment step, so the
+# cost of one fit is multiplied by hundreds of steps x seeds. `inference` must stay True -- it is
+# what makes `predict_cate_std` available, and so the uncertainty score the loops explore with.
+# Where seed hyper-tuning is enabled these act as the fallback the tuned config replaces.
+DEFAULT_CF_PARAMS = {'n_estimators': 200, 'max_depth': 4, 'min_samples_leaf': 10,
+                     'max_samples': 0.45, 'inference': True}
+DEFAULT_NUISANCE_PARAMS = {'n_estimators': 500, 'max_depth': 5, 'num_leaves': 7,
+                           'min_child_samples': 20, 'learning_rate': 0.05}
 
 
 @contextlib.contextmanager
@@ -46,6 +68,73 @@ def z(v):
     return (v - v.mean()) / s if s > 0 else v * 0.0
 
 
+def _iqr(v):
+    """Interquartile range, floored to 1.0 so a collapsed axis divides by 1 instead of 0."""
+    lo, hi = np.percentile(np.asarray(v, dtype=float), [25, 75])
+    return float(hi - lo) if hi > lo else 1.0
+
+
+def plane_coords(conflict, weights):
+    """The trade-off plane the angle rules (`duel_by_angle`, `acquisition_score_angle`) decide
+    on: x = bleeding benefit of shortening, y = weighted ischaemic benefit, each MEDIAN-CENTRED
+    and divided by its own IQR.
+
+    Both operations are here for a reason, and neither is cosmetic:
+
+    CENTRING. The frame's own `bleed`/`isch` columns are deliberately uncentred (see
+    `conflict_from_model`: raw zero has to stay put, or the sign of a near-universally-positive
+    endpoint flips). That is right for the columns and fatal for the geometry. On this cohort
+    bleed runs 3.56 .. 8.43 in IQR units -- positive for 4579/4579 patients -- so the cloud sits
+    ~5.7 IQR to the right of the origin and every patient's vector points within +/-11 degrees of
+    the x axis. Consequences, all of them silent:
+      - the +45 degree win-win diagonal is OUTSIDE the data, so "distance to 45 degrees"
+        degenerates into a monotone function of y/x;
+      - `x > 0` is true by construction, so the win-win test collapses to `y > 0` alone and the
+        lose-lose quadrant is unreachable (0.0% of the cohort);
+      - the rule silently becomes two different rules: above y=0 it ranks by bleed alone
+        (corr(selection freq, bleed) = +0.95, vs +0.14 for ischaemia), below it by ischaemia
+        alone, with a hard step across the line -- a patient with the cohort's LARGEST bleeding
+        benefit loses to one with the smallest as soon as the sign of a noise-level ischaemic
+        CATE differs.
+    Median-centring puts the origin inside the cloud: quadrants fill up (26% win-win, 26%
+    lose-lose, 49% mixed), angles span the full circle, and both axes carry the ranking
+    (corr with bleed +0.66, with ischaemia +0.69).
+
+    RESCALING. `conflict_from_model` scales each ENDPOINT to IQR 1, but y is the weighted
+    average of three of them; averaging weakly-correlated variables shrinks the spread, so the
+    composite lands at IQR 0.41 -- the ischaemic axis is born 2.4x narrower than the bleeding
+    axis, and the 45 degree diagonal is not the equal-trade-off line it is documented to be.
+    Dividing the composite by its own IQR restores that.
+
+    The centring lives HERE and not in the frame on purpose: `conflict_from_model`'s columns,
+    the `conflict` score and every plot keep their raw uncentred units, so the cohort still
+    plots entirely to the right of the clinical zero. Only the origin the duels measure angles
+    from moves. Plot both: `axvline(0)` is "no effect", `plane_origin` is the quadrant vertex.
+
+    Reads the `x_plane`/`y_plane` columns `conflict_from_model` precomputes when they are there,
+    and falls back to computing them (O(n)) for hand-built frames -- fine per call, but do not
+    put the fallback inside a per-duel loop."""
+    if 'x_plane' in conflict and 'y_plane' in conflict:
+        return (conflict['x_plane'].to_numpy(dtype=float),
+                conflict['y_plane'].to_numpy(dtype=float))
+    x = conflict['bleed'].to_numpy(dtype=float)
+    y = (conflict['isch'].to_numpy(dtype=float) if 'isch' in conflict
+         else weighted_isch({k: conflict[k] for k in weights}, weights).to_numpy(dtype=float))
+    return (x - np.median(x)) / _iqr(x), (y - np.median(y)) / _iqr(y)
+
+
+def plane_origin(conflict, weights):
+    """Where `plane_coords` puts the origin, in the frame's own raw (uncentred) units:
+    `(median_bleed, median_isch)`. This is the vertex of the quadrants the duels use, so a
+    trade-off-plane scatter drawn in raw units should mark it -- a crosshair here plus the
+    45 degree diagonal through it -- rather than at (0, 0), which is the clinical "no effect"
+    point and, on this cohort, sits far outside the cloud on the x axis."""
+    x = conflict['bleed'].to_numpy(dtype=float)
+    y = (conflict['isch'].to_numpy(dtype=float) if 'isch' in conflict
+         else weighted_isch({k: conflict[k] for k in weights}, weights).to_numpy(dtype=float))
+    return float(np.median(x)), float(np.median(y))
+
+
 def make_pipeline(pipeline_cls, cf_params, nuisance_params, n_jobs=32, lgbm_n_jobs=16):
     """Build the online CausalMultiOutputPipeline. `pipeline_cls` is CausalMultiOutputPipeline;
     the caller resolves cf_params / nuisance_params (its DEFAULT_* or the seed-tuned config)."""
@@ -71,7 +160,7 @@ def weighted_isch(source, weights):
     components_from_origin, and every notebook's uncertainty_from_model / centroid-isch
     calculation read ISCH_WEIGHTS through this one function so the operation is identical
     everywhere instead of each call site re-deriving its own hardcoded factors."""
-    return sum(weights[k] * source[k] for k in weights) / sum(weights.values())
+    return (sum(weights[k] * source[k] for k in weights) / sum(weights.values()))
 
 
 def conflict_from_model(model, X, endpoints, weights, targets, scale=True):
@@ -99,7 +188,13 @@ def conflict_from_model(model, X, endpoints, weights, targets, scale=True):
     does not have this problem -- it keeps a win-win patient over any non-win-win one
     unconditionally -- and `acquisition_score_angle` below is the whole-pool ranking
     equivalent, for callers that want the win-win *quadrant* respected rather than a linear
-    proxy for it."""
+    proxy for it.
+
+    Columns out: the per-endpoint CATEs, `isch` (their weighted composite), `conflict` (the
+    linear sum) -- all in raw uncentred IQR units, so plots and the clinical zero are unchanged
+    -- plus `x_plane`/`y_plane`, the median-centred, individually-IQR-scaled coordinates the
+    angle rules measure from. See `plane_coords` for why the geometry needs its own origin and
+    why these are separate columns rather than a change to the ones above."""
     from sklearn.preprocessing import RobustScaler
 
     cate = model.predict_cate(X.values)
@@ -109,7 +204,9 @@ def conflict_from_model(model, X, endpoints, weights, targets, scale=True):
         cols = list(endpoints)
         df[cols] = RobustScaler(with_centering=False).fit_transform(df[cols])
 
-    df['conflict'] = df['bleed'] + weighted_isch(df, weights)
+    df['isch']     = weighted_isch(df, weights)
+    df['conflict'] = df['bleed'] + df['isch']
+    df['x_plane'], df['y_plane'] = plane_coords(df, weights)
     return df
 
 def net_benefit_from_model(model, X, endpoints, weights, targets, scale=True):
@@ -147,7 +244,9 @@ def acquisition_score_angle(conflict, uncertainty, idx, weights, c=1.0):
     `duel_by_angle` never has that problem: a patient in the win-win quadrant (x=bleed>0 and
     y=weighted_isch>0) beats a non-win-win one unconditionally, magnitude/angle only breaking
     ties inside a quadrant. Its pairwise rule is an exact 3-tier lexicographic order (verified
-    to reproduce `duel_by_angle`'s winner on 100% of 50,000 random pairs on this cohort):
+    to reproduce `duel_by_angle`'s winner on 100% of 50,000 random pairs on this cohort -- but
+    note that verification predates the centring and so never exercised tier 0, which was
+    unreachable then; re-verify against the notebook copies, not against that number):
       tier 2 (best):  x>0 and y>0 (win-win)   -- ranked by distance from the origin, farthest first
       tier 1:         everything else         -- ranked by closeness to the +45 degree diagonal
       tier 0 (worst): x<0 and y<0 (lose-lose) -- ranked by distance from the origin, closest first
@@ -162,9 +261,12 @@ def acquisition_score_angle(conflict, uncertainty, idx, weights, c=1.0):
     columns `duel_by_angle` reads), `weights` is ISCH_WEIGHTS. Scored over the WHOLE
     population first -- like `acquisition_score`'s `z(conflict['conflict'])` -- so the scale
     is stable across pools of different composition, then indexed by `idx`.
+
+    Quadrants and angles are taken on the median-centred plane (`plane_coords`), the only frame
+    in which they mean anything: on the raw uncentred columns bleed is positive for the entire
+    cohort, which makes tier 0 unreachable and tier 2 a test on the sign of y alone.
     """
-    x = conflict['bleed'].to_numpy()
-    yv = weighted_isch({k: conflict[k] for k in weights}, weights).to_numpy()
+    x, yv = plane_coords(conflict, weights)
 
     q1 = (x > 0) & (yv > 0)
     q3 = (x < 0) & (yv < 0)
@@ -245,13 +347,31 @@ def tune_on_seed(idx, X, Y, T, pipeline_cls, presets, bleed_idx,
     return cf_params, nuisance_params, study
 
 
-def components_from_origin(i, conflict, weights):
+def components_from_origin(i, conflict, weights, plane=True):
     """Patient i's position on the trade-off plane: x = bleeding benefit, y = weighted
     ischaemic benefit of shortening (ISCH_WEIGHTS, `weights` -- same weighting used by the
     conflict score itself, via `weighted_isch`). Reads the `conflict` frame built by
-    `conflict_from_model`."""
+    `conflict_from_model`.
+
+    `plane=True` (default) returns the DECISION coordinates: median-centred and IQR-scaled, the
+    ones the quadrant tests and angles are only meaningful in -- see `plane_coords`. Every
+    `duel_by_angle` reads these.
+
+    `plane=False` returns the raw uncentred columns, which is what a PLOT wants: the cohort
+    keeps its clinically-real position (bleeding benefit positive for everyone, so the whole
+    cloud sits to the right of zero) instead of being re-centred around its own median. A
+    scatter drawn that way should mark `plane_origin(conflict, weights)` as the quadrant vertex,
+    otherwise the decision boundaries it draws at (0, 0) are not the ones being applied."""
+    if plane:
+        # Column lookup, not plane_coords(): this runs twice per duel and millions of times per
+        # multi-seed sweep, so it has to stay O(1). The O(n) fallback is for hand-built frames.
+        if 'x_plane' in conflict and 'y_plane' in conflict:
+            return float(conflict['x_plane'].iloc[i]), float(conflict['y_plane'].iloc[i])
+        x, y = plane_coords(conflict, weights)
+        return float(x[i]), float(y[i])
     x = conflict['bleed'].iloc[i]
-    y = weighted_isch({k: conflict[k].iloc[i] for k in weights}, weights)
+    y = (conflict['isch'].iloc[i] if 'isch' in conflict
+         else weighted_isch({k: conflict[k].iloc[i] for k in weights}, weights))
     return x, y
 
 
