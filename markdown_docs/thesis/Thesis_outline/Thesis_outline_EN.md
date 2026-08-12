@@ -289,14 +289,6 @@ candidate arrives and accepts the best fraction. The last mechanism, the closest
 case, draws a small random sample from the current candidates and accepts only the best one: a
 compromise between seeing the whole pool and deciding candidate by candidate.
 
-**Selecting is not allocating.** A mechanism that decides *who* enters the study is not the
-same as the one that decides *which* arm they receive: if the probability of assignment to
-treatment is allowed to approach 0 or 1 on the basis of the same score used to select, the
-overlap between the arms breaks precisely in the region of greatest interest, and the causal
-effect ceases to be identified there. The remedy is to constrain the assignment probability
-within an interval (for example [0.2, 0.8]) and to use rejection sampling, discarding a
-substantial part of the candidates in order to preserve overlap.
-
 **A still ruler in a moving target.** The model that guides selection updates as new data
 arrive, so it cannot also be the yardstick by which one judges whether the cohort has moved:
 it would use a moving target to measure its own movement. The remedy is a reference model,
