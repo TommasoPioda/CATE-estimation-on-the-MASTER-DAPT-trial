@@ -19,6 +19,7 @@ from the patients who did receive the treatment in question. Every validation st
 used in this thesis is a consequence of this one constraint.
 
 \section{Five Families of Estimators, Chosen to Err Differently}
+\label{sec:five-estimators}
 
 No single method is used, because a result that depends on the internal
 assumptions of one algorithm is not distinguishable from an artefact of that
@@ -34,6 +35,20 @@ regression or classification method can be reused as a component; its weakness
 is the same fact seen from the other side — it inherits every bias of the two
 component models, and small independent errors in each one do not cancel in
 the subtraction, they add.
+
+Two consequences follow for how $\hat\mu_1$ and $\hat\mu_0$ are built. Both
+arms need the same model family, tuned separately on each arm's data:
+differencing two algorithms with different inductive biases, a random forest
+against a logistic regression for instance, produces a surface whose variation
+reflects those biases as much as any treatment effect, and at the level of the
+output that spurious variation is indistinguishable from heterogeneity. Both
+arms' outcome probabilities also need to be calibrated. Calibration is a
+monotone transformation, so it leaves each model's discrimination and its
+ranking of patients unchanged, leaving classification performance unaffected.
+A difference is affected: a distortion common to both arms cancels out of a
+ranking metric such as AUROC but not out of a subtraction, so two
+uncalibrated, well-discriminating models can still produce an apparent effect
+where the true probabilities agree.
 
 \paragraph{Causal forest.}
 The causal forest estimates the treatment effect $\tau(x)$ directly,

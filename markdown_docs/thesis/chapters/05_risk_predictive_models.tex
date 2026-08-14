@@ -1,5 +1,3 @@
-\section{What This Chapter Produces, and for Whom}
-
 This chapter fits one risk model per endpoint on the cohort of Chapter 4 —
 five binary outcomes at 335 days, five models — and reports how well each of
 them discriminates. The models are not an end in themselves. They exist for
@@ -9,8 +7,15 @@ The first use is structural. The two-model meta-learner of Chapter 6 estimates
 the individual effect as the difference between two outcome models, one fitted
 per treatment arm; those two models are exactly the risk models of this
 chapter, refitted arm by arm. Whatever they can and cannot do therefore
-propagates directly into the effect estimate: a T-learner cannot be sharper
-than the two surfaces it differences. The second use is as a benchmark. The
+propagates directly into the effect estimate. Specifically, if either risk model
+fails to capture an important pattern in the data — a region of the covariate
+space where prediction is weak, or a source of variation left unexplained —
+then subtracting two imperfect surfaces yields an effect estimate whose
+heterogeneity cannot be trusted in that same region. Conversely, if both models
+are strong and calibrated, their difference isolates the treatment effect
+cleanly. This is why the quality of the effect estimates depends directly on
+the accuracy of the outcome models. A T-learner cannot be sharper than the
+two surfaces it differences. The second use is as a benchmark. The
 causal forest, the Bayesian causal forest, the in-context model and the
 interaction forest all fit outcome surfaces of their own, and the numbers in
 this chapter are the reference against which their nuisance components are
@@ -35,38 +40,44 @@ voting ensemble that averages the predicted probabilities of the other three.
 The families are deliberately ordinary. The question this chapter answers is
 how much signal the covariates carry, not which learner extracts it best, and
 a spread of four families makes it possible to separate a property of the data
-from a property of one algorithm — the same logic that Chapter 6 applies to
-the five effect estimators.
+from a property of one algorithm.
 
 \paragraph{Pipeline Preprocessing}
-All models are evaluated using a threshold-free 5-fold stratified cross-validation over the
-full cohort of 4,579 patients. Within each fold, missing values are imputed using a k-nearest-neighbour 
-imputer and features are robustly scaled, with both preprocessing steps fitted exclusively 
-on the training data to avoid data leakage. Since event rates range from 0.8% to 11.1%, 
-the default 0.5 classification threshold would almost always predict the majority class, 
-making confusion-matrix-based metrics uninformative. We therefore assess discrimination without 
-fixing an operating threshold, using AUROC and AUPRC. Each patient is scored exactly once by a model 
-that did not see them during training; the out-of-fold probabilities are then pooled to obtain a 
-single ROC and PR curve, while mean and standard deviation across folds are also reported to 
-quantify variability, which is particularly substantial for the rarest endpoints.
+All models are evaluated using a threshold-free 5-fold
+stratified cross-validation with respect to the target data over the full cohort of 4,579 patients. Within each fold, missing
+values are imputed using a k-nearest-neighbour imputer and features are robustly scaled,
+with both preprocessing steps fitted exclusively on the training data to avoid data leakage.
+Since event rates range from 0.8\% to 11.1\%, the default 0.5 classification threshold would almost always
+predict the majority class, making confusion-matrix-based metrics uninformative. We there-fore assess
+discrimination without fixing an operating threshold, using AUROC and and the area under the precision--recall curve (AUPR).
+Each patient is scored exactly once by a model that did not see them during training; 
+the out-of-fold probabilities are then pooled to obtain a single ROC and PR curve, while mean and
+standard deviation across folds are also reported to quantify variability, which is particularly
+substantial for the rarest endpoints.
 
 \paragraph{Hyperparameters}
 Each family is additionally tuned with a Tree-structured Parzen Estimator
 (Optuna), maximising mean average precision across the five endpoints under
-3-fold cross-validation on the training split. The gains are real but small —
-$+0.014$ mean PR-AUC for logistic regression, $+0.026$ for the random forest,
-$+0.006$ for gradient boosting — and they do not change any of the
-conclusions of this chapter. This is the first appearance of a pattern that
-recurs throughout the thesis: on this cohort, tuning moves the numbers by less
-than the choice of endpoint does.
+3-fold cross-validation on the training split. Compared with each family's
+default hyperparameters, tuning yields a small mean AUPR gain: $+0.014$ for
+logistic regression, $+0.026$ for the random forest and $+0.006$ for gradient
+boosting, none of which changes any of the conclusions of this chapter. The
+gain from tuning is smaller than the difference in AUPR between endpoints
+reported below: which endpoint is being predicted affects discrimination more
+than which hyperparameters are used.
 
-\paragraph{Reading AUPRC}
+\paragraph{Reading AUPR}
 Unlike AUROC, whose chance level is 0.5 for every endpoint, the chance level
-of AUPRC is the event rate itself. An AUPRC of 0.06 is therefore excellent for
-an endpoint with 1.8\% events and worthless for one with 11.1\%. Every AUPRC
+of AUPR is the event rate itself. Every AUPR
 below is accompanied by its \emph{lift}, the ratio between the achieved value
 and the event rate, which is what makes the five endpoints comparable on the
 rare positive class.
+
+\paragraph{Calibrating the per-arm models}
+The per-arm outcome models built for the T-learner are additionally wrapped,
+after tuning, in a Platt (sigmoid) calibrator, fitted by internal
+cross-validation on the training fold, rather than an isotonic one, because
+isotonic fitting is unstable at these event rates.
 
 \section{Discrimination}
 
@@ -97,28 +108,31 @@ Stroke               &  35 & $0.60 \pm 0.08$ & $0.62 \pm 0.11$ & $0.67 \pm 0.13$
 \begin{figure}[h]
 \centering
 \includegraphics[width=1\textwidth]{ROC_PR_out_of_fold.png}
-\caption{Pooled out-of-fold ROC and precision--recall curves for the soft
-voting ensemble, all five endpoints. Every patient is scored once by a model
-fitted without them. In the right-hand panel the dotted horizontal lines mark
-the chance level of each curve, which is the endpoint's event rate.}
+\caption{Pooled out-of-fold receiver operating characteristic (left panel)
+and precision-recall (right panel) curves for the soft voting ensemble,
+all five endpoints. Each endpoint is identified by its name from
+Table~\ref{tab:risk-auroc}: bleeding (light blue), bleeding BARC 2/3/5 (green),
+myocardial infarction (dark red), cardiovascular death (dark brown), and stroke
+(light green). Every patient is scored once by a model fitted without them. In
+the right-hand panel the dotted horizontal lines mark the chance level of each
+curve, which is the endpoint's event rate.}
 \label{fig:roc-pr}
 \end{figure}
 
-The models carry genuine signal for every endpoint: all five curves in Figure~\ref{fig:roc-pr}
-sit above the diagonal, and all five AUPRC values sit above their event rate.
-The covariates are informative; they are simply not \emph{very} informative.
-Even though the models carry some signal they should not be considered clinically
-deployable due to their weak-to-moderate performances.
+The models carry a genuine but limited signal for every endpoint: all five curves  in the ROC
+panel of Figure~\ref{fig:roc-pr} sit above the diagonal, and all five AUPR
+values sit above their event rate (shown by the dotted lines in the precision-recall
+panel). However, the discrimination achieved is weak to moderate across all
+endpoints. The covariates are informative, but their predictive capacity is limited.
 
 
 \begin{table}[h]
 \centering
-\caption{Out-of-fold AUPRC for the soft voting ensemble, with its chance level
-(the event rate) and the resulting lift.}
+\caption{Out-of-fold AUPR for the soft voting ensemble, with its event rate and the resulting lift.}
 \label{tab:risk-auprc}
 \begin{tabular}{lccc}
 \toprule
-Endpoint & AUPRC & Chance level & Lift \\
+Endpoint & AUPR & event rate & Lift \\
 \midrule
 Bleeding             & 0.175 & 0.111 & 1.58 \\
 Bleeding BARC 2/3/5  & 0.127 & 0.078 & 1.62 \\
@@ -132,9 +146,9 @@ Stroke               & 0.028 & 0.008 & 3.70 \\
 \section{An Anomaly: More Events, Worse Prediction}
 
 Table~\ref{tab:risk-auroc} shows an unexpected ordering: endpoints with fewer events are predicted better than bleeding, 
-despite having substantially less data. Cardiovascular death (81 events) reaches an AUROC of 0.76 
-and myocardial infarction (109) 0.73, compared with 0.62 for bleeding (506) and 0.63 for BARC 2/3/5 (359). 
-The same pattern appears in the AUPRC lift, where the rarer endpoints show
+despite having substantially less positive samples. Cardiovascular death (81 events) reaches an AUROC of 0.76 
+and myocardial infarction (109 events) 0.73, compared with 0.62 for bleeding (506) and 0.63 for BARC 2/3/5 (359). 
+The same pattern appears in the AUPR lift, where the rarer endpoints show
 stronger enrichment relative to their chance levels.
 
 This contradicts the simple expectation that more events should provide more 
@@ -145,20 +159,23 @@ variables directly related to bleeding risk.
 \paragraph{It is not an artefact of the model family.}
 The same ordering is reproduced by all four model families in Table~\ref{tab:risk-auroc}. 
 The AUROC gap between cardiovascular death and bleeding ranges from 0.11 to 0.14 across models. 
-An independent earlier analysis using gradient-boosted trees and a different validation scheme 
+This is consistent with an independent earlier analysis using gradient-boosted trees and a different validation scheme 
 found the same pattern, with myocardial infarction predicted better than both bleeding definitions. 
 The absolute values differ, but the ordering remains.
 
 \paragraph{Stroke is too unstable to interpret.}
 Stroke, with only 35 events, provides no reliable evidence. With roughly seven 
-events per fold, its AUROC varies substantially across folds, with standard 
+events per fold 35 events in total, its AUROC varies substantially across folds, with standard 
 deviations between 0.03 and 0.13 and means between 0.60 and 0.67. 
-The estimate is therefore too unstable to support a meaningful conclusion. 
-Stroke illustrates the distinction between finding no predictive signal and 
-having too little information to detect one.
+The estimate is therefore too unstable to support a meaningful conclusion.
+If we observe the Figure \ref{fig:roc-pr} curves, the stroke ROC curve is very
+unstable and almost overlaps with the diagonal. With this many
+positive events is really hard to get a stable estimate of the model's performance.
 
 \paragraph{What the models look at.}
-The feature attributions are consistent with the anomaly rather than
+The average absolute SHAP feature attributions computed on logistic regression, random forest and gradient boosting
+ are consistent with the anomaly presented 
+at the beginning of this section rather than
 explaining it away. For cardiovascular death (Figure~\ref{fig:shap-cvdeath})
 the leading contributors are continuous physiological measurements —
 haemoglobin, ejection fraction, creatinine, heart rate, contrast volume — plus
@@ -166,9 +183,7 @@ recent myocardial infarction, all of which vary widely across the cohort. For
 bleeding (Figure~\ref{fig:shap-bleeding}) the leading contributors are age,
 oral anticoagulation, renal function and the
 acute-coronary-syndrome presentation: variables that overlap heavily with the
-eligibility criteria through which the cohort was assembled. The two lists
-differ in kind, not only in content, and Chapter 7 argues that this difference
-is the anomaly's mechanism.
+eligibility criteria through which the cohort was assembled.
 
 \begin{figure}[h]
 \centering
@@ -194,26 +209,19 @@ high-bleeding-risk eligibility criteria.}
 
 The models above are fitted on the whole cohort. The two-model meta-learner of
 Chapter 6 needs something slightly different: one outcome model per treatment
-arm, so that their difference estimates the effect of the treatment. Two
-requirements follow, and they are met here because
-they are properties of the risk models, not of the effect estimator.
+arm, so that their difference estimates the effect of the treatment. Chapter 2
+sets out what this requires of the two arm-specific models: the same model
+family on both arms, and calibrated probabilities. Both are met here, by
+construction, since they are properties of how the risk models of this
+chapter are fitted rather than of the effect estimator applied to them
+afterwards.
 
 \paragraph{The same family on both arms.}
-Both arms are fitted with a single model family, tuned separately per arm. The
-constraint matters more than it looks: differencing a random forest against a
-logistic regression produces a surface whose variation reflects the two
-algorithms' differing inductive biases as much as any treatment effect, and
-that spurious variation is indistinguishable, at the level of the output, from
-heterogeneity. Fixing the family removes that failure mode by construction.
+Both arms are fitted with a single model family, tuned separately on each
+arm's training data.
 
 \paragraph{Calibrated probabilities.}
-Each arm's tuned pipeline is wrapped in a Platt (sigmoid) calibrator, fitted by
-internal cross-validation and chosen over isotonic regression because isotonic
-fitting is unstable at these event rates. Calibration is irrelevant to
-everything in the previous section — it is a monotone transformation, so it
-leaves AUROC and AUPRC untouched — and essential here, because the T-learner
-does not rank the two probabilities, it \emph{subtracts} them. A systematic
-distortion that cancels out of a ranking does not cancel out of a difference.
+Each arm's tuned pipeline is calibrated as described in the protocol above.
 The out-of-fold Brier score improves substantially on every endpoint and in
 both arms, for instance from 0.189 to 0.118 for bleeding under prolonged
 therapy and from 0.167 to 0.081 under abbreviated therapy.
@@ -249,15 +257,14 @@ Stroke               &  1.0\% & $0.73 \pm 0.03$ &  0.5\% & $0.56 \pm 0.18$ \\
 \end{table}
 
 The event-rate columns of Table~\ref{tab:per-arm} are worth a moment on their
-own, because they are the trial's own result stated without any model. Under
-the sign convention of Chapter 4, the unadjusted difference between the arms
-is $+4.5$ percentage points on bleeding and $+2.8$ on BARC 2/3/5 — prolonging
-causes more bleeding — against differences of $-0.5$, $+0.3$ and $+0.5$
-percentage points on MI, cardiovascular death and stroke, which is
-noninferiority on the ischemic side within the resolution these event counts
-allow. Chapter 6 shows that four of the five effect estimators recover exactly
-these magnitudes. That agreement is the positive control that makes the negative
-result of the same chapter interpretable: the estimators see what is there.
+own, because they are the trial's own result stated without any model. Subtracting the abbreviated-arm 
+event rate from the prolonged-arm event rate gives an
+unadjusted between-arm difference of $+4.5$ percentage points on overall bleeding and $+2.8$ on BARC 2/3/5 indicating a higher bleeding incidence
+under prolonged therapy. For ischemic targets the the corresponding differences are $-0.5$, $+0.3$ and $+0.5$
+percentage points on MI, cardiovascular death and stroke, respectively. These differences
+are small relative to the observed event counts and do not provide evidence
+of a detectable treatment effect, consistent with the conclusions of the
+original trial report.
 
 \section{The Anomaly, Left Open}
 
@@ -266,7 +273,8 @@ it cannot explain on its own. Bleeding — the endpoint with the most events,
 the one the trial was designed around, and the one whose predictors are best
 represented in the covariate set — is the endpoint predicted worst, in every
 model family, in both treatment arms, and in an independent earlier modelling
-pass. Cardiovascular death, with a sixth as many events, is predicted best.
+pass. Cardiovascular death in is predicted best even if the provided positive samples are much
+fewer than the one present for the bleeding endpoints.
 
 Three readings are available at this point. The covariate set might simply
 lack the variables that determine bleeding, which the feature attributions
@@ -275,9 +283,4 @@ would name. The bleeding endpoint might be intrinsically less predictable than
 death, which is not what the wider literature reports, where bleeding risk
 scores routinely achieve higher discrimination than the values in
 Table~\ref{tab:risk-auroc}. Or the cohort itself might have been assembled in
-a way that removes the variation a bleeding model would need. Chapter 7 takes
-the third reading, shows that it is testable, and shows that the same property
-of the cohort accounts for both this predictive anomaly and the absence of
-detectable treatment effect heterogeneity that Chapter 6 is about to report.
-Holding the question open until then costs two chapters of suspense and buys
-an explanation that owes nothing to the causal estimates in between.
+a way that removes the variation a bleeding model would need.
