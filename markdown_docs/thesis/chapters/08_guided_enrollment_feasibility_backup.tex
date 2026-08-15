@@ -1,0 +1,308 @@
+% !TEX root = ../Thesis.tex
+
+\section{The Premise Removed by Chapter 6}
+
+Chapter 6 leaves two facts standing together. Five independent estimators
+recover the
+trial's average effect, and none of them finds a per-patient dispersion of usable magnitude. 
+Its closing section also gives a
+mechanism for the second fact: MASTER DAPT enrolls only patients already flagged at high
+bleeding risk, so the bleeding-risk axis is compressed before any model sees a single
+patient, and the aggregate ischemic score sums a MI effect and a stroke effect of
+opposite sign, so a real cancellation looks identical to a real absence. The same
+compression is why bleeding, with 506 events, is predicted worse (AUROC 0.62) than
+cardiovascular death, with 81 (AUROC 0.76) in Chapter 5: enrollment flattened precisely
+the dimension a bleeding model would need.
+
+\vspace{10pt}
+
+This removes the premise of the strategy Chapter 3 was built for. An enrollment
+mechanism aims to select the cohort with the best combined gain in bleeding and ischemic
+risk; if the conflict between the two axes is mostly compression and cancellation rather
+than a real signal, there is nothing left for the mechanism to select on. The question
+this chapter asks is not whether guided enrollment would help MASTER DAPT, but whether
+the machinery of Chapter 3, applied with the same criteria, can still be distinguished
+from a machinery that selects at random. The estimated CATE is taken at face value,
+cohorts are built from it, and what is measured is whether those cohorts differ in
+\textbf{observed} bleeding and ischemic events.
+
+\section{Six Policies on the Trade-off Plane}
+
+\paragraph{The mechanism.}
+The enrollment mechanism follows the same skeleton as Chapter 3: a seed cohort of 1,000
+patients drawn at random, hyperparameters tuned once on that seed by the same
+cross-validated AUTOC lower-bound criterion as Chapter 2 and left fixed for the rest of
+the run, and periodic refitting on the patients enrolled so far. It differs from every
+mechanism introduced there in how a round is decided: rather than sampling a batch and
+keeping its single best candidate, every not-yet-enrolled patient is scored with the
+current model, the 100 highest-scoring are enrolled, the model is refit on the enlarged
+cohort, and the round repeats. Enrollment stops at 4,200 of the 4,579 patients.
+
+\vspace{10pt}
+
+\paragraph{Five policies.}
+As previously anticipated, the trade-off plane is built from two indipendent components,
+The bleeding CATE and the weighted ischemic CATE.
+This multidimensionality allows for several ways to combine them into a single scalar score.
+The five policies and the control are explained below.
+
+\begin{itemize}
+    \item The \emph{\textbf{win-win score}} combines the two components, prioritising patients in the top-right quadrant, where both bleeding and ischemic outcomes are expected to improve.
+    
+    \item The \emph{\textbf{trade-off score}} subtracts the ischemic component from the bleeding component, prioritising patients in the bottom-right quadrant, where a reduction in bleeding risk is accompanied by an increase in ischemic risk.
+    
+    \item The \emph{\textbf{diagonal scores}} uses the geometry of the treatment-effect plane directly. Patients in the win-win quadrant are ranked above those outside it; within each quadrant, ties are resolved according to distance from the origin or proximity to the $+45^\circ$ diagonal.
+    
+    \item The \emph{\textbf{pure ischemic score}} rank patients according to the ischemic component alone, using the opposite direction as control.
+    
+    \item The \emph{\textbf{random policy}} enrolls patients without using their estimated CATEs, this policy is our "0" value.
+\end{itemize}
+
+\vspace{10pt}
+
+The diagonal-score uses raw coordinates rather than a linear combination
+to rank the patients, so it is not a scalar score in the same sense as the others.
+Each policy is run over 100 independent seed cohorts, under two batch-sampling
+temperatures: one that occasionally accepts a candidate other than the top-scoring one
+within a batch, following the exploration rule of Chapter 3's Mechanism 1.
+
+\section{Drift on the Reference Plane}
+
+Whether a policy moves the cohort at all is measured against the frozen reference model
+of Chapter 3: the tuned forest of Chapter 6, fitted once on the whole population and
+never used to guide selection, scores every policy's final enrolled cohort so that the
+yardstick does not move with the thing it measures. Table~\ref{tab:ch8-drift} reports the
+result at the 4,200-patient checkpoint, greedy configuration, averaged over 100 seeds.
+
+\begin{table}[h]
+\centering
+\caption{Mean reference-plane coordinates of the enrolled cohort at $n=4{,}200$, greedy
+configuration, averaged over 100 seed cohorts, scored by the frozen tuned forest of
+Chapter 6. \texttt{Bleed} and \texttt{isch} are the cohort mean of the bleeding and
+weighted-ischemic CATE in IQR-scaled units; win--win share is the fraction of the enrolled
+cohort with both raw CATEs positive.}
+\label{tab:ch8-drift}
+\begin{tabular}{lccc}
+\toprule
+Policy & Bleed & Isch & Win--win share \\
+\midrule
+Win--win score      & 4.462 & 0.338 & 79.4\% \\
+Trade-off score      & 4.451 & 0.319 & 78.6\% \\
+Diagonal geometry     & 4.460 & 0.340 & 79.6\% \\
+$-$isch (control)    & 4.417 & 0.303 & 78.0\% \\
+$+$isch (control)    & 4.438 & 0.340 & 79.7\% \\
+Random               & 4.430 & 0.320 & 78.6\% \\
+\midrule
+Full cohort           & 4.430 & 0.322 & 78.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Every policy moves in the direction its own objective points: the ischemic axis is
+highest under $+$isch and the diagonal rule, lowest under $-$isch, and the random arm sits
+on the full-cohort baseline in every column, which is the check that validates the
+reference model rather than a result in its own right. The movement is nonetheless
+small. The ischemic axis spans $0.303$ to $0.340$ against a baseline of $0.322$, a range
+of about $\pm6\%$; the bleeding axis and the win--win share move by about one percentage
+point at most. At a 4,200-patient checkpoint, 92\% of the cohort is already enrolled by
+construction, which leaves little room for any policy to diverge from the population it
+is drawn from — a limitation returned to below, not a property of the policies
+themselves.
+
+\section{The Mirror Test}
+
+The two single-axis controls exist to answer a question the diagonal rule and the two
+composite scores cannot: if the ischemic axis genuinely ranks patients by ischemic
+vulnerability, pushing it in one direction should symmetrically move how many real
+ischemic-event patients are enrolled early versus deferred. For each of the five
+non-random policies, the drift on the ischemic axis ($\Delta_{\text{isch}}$) is regressed
+against the shift in the mean enrollment position of the 205 patients who actually had an
+ischemic event ($\Delta_{\text{pos}}$), read at an intermediate round of 3,100 enrolled
+patients so the checkpoint is not already exhausted. Table~\ref{tab:ch8-mirror} reports
+the five points.
+
+\begin{table}[h]
+\centering
+\caption{Ischemic-axis drift and shift in the mean enrollment position of the 205
+real ischemic-event patients, at $n=3{,}100$, tempered configuration, 30-seed average.
+A negative $\Delta_{\text{isch}}$ pairs with a positive $\Delta_{\text{pos}}$ if pushing
+the axis down genuinely defers ischemic patients.}
+\label{tab:ch8-mirror}
+\begin{tabular}{lrr}
+\toprule
+Policy & $\Delta_{\text{isch}}$ & $\Delta_{\text{pos}}$ (patients) \\
+\midrule
+Win--win score      & $+0.028$ & $+7.5$ \\
+Trade-off score      & $-0.014$ & $+63.6$ \\
+Diagonal geometry     & $+0.031$ & $-0.9$ \\
+$-$isch              & $-0.035$ & $+49.7$ \\
+$+$isch              & $+0.036$ & $-33.2$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The tempered configuration gives a Pearson correlation of $r = -0.894$ ($p = 0.016$)
+between the two columns, with the sign a mirror test should have: a more negative
+ischemic drift pairs with real ischemic patients entering later. The same regression on
+the greedy configuration gives $r = -0.114$ ($p = 0.829$), and the fitted intercept
+changes sign between the two, $+28$ patients against $-45$. With only five policies
+feeding the regression, the sign and the significance of the mirror test depend on which
+exploration setting produced the cohort, and neither should be treated as a stable
+result.
+
+\vspace{10pt}
+
+What can be said is only the qualitative direction in the tempered configuration, not a
+stable magnitude.
+
+\section{Real Outcomes}
+
+The reference plane is built from the same tuned forest as Chapter 6, so agreement with
+it is not independent evidence that anything real changed. The observed bleeding and
+ischemic events are read directly from the trial's adjudicated outcomes and never pass
+through a CATE estimate. For each policy and each of the two temperature
+settings, the ischemic event rate of the enrolled cohort is compared with that of the
+patients left out, paired over 30 seeds (Table~\ref{tab:ch8-outcomes}).
+
+\begin{table}[h]
+\centering
+\caption{Paired difference in ischemic event rate, enrolled minus left-out, at
+$n=4{,}200$, 30-seed average, standard error of the mean and two-sided $p$-value from a
+paired $t$-test. Positive values mean the enrolled cohort has \emph{more} ischemic
+events than the patients left out.}
+\label{tab:ch8-outcomes}
+\begin{tabular}{lrrr|rrr}
+\toprule
+& \multicolumn{3}{c|}{Tempered} & \multicolumn{3}{c}{Greedy} \\
+Policy & diff (pp) & SEM & $p$ & diff (pp) & SEM & $p$ \\
+\midrule
+$+$isch              & $+0.40$ & 0.25 & 0.116 & $-0.20$ & 0.29 & 0.506 \\
+Diagonal geometry     & $+0.19$ & 0.28 & 0.509 & $-0.14$ & 0.30 & 0.644 \\
+Win--win score       & $+0.05$ & 0.27 & 0.857 & $-0.34$ & 0.27 & 0.211 \\
+Random               & $+0.03$ & 0.24 & 0.903 & $+0.14$ & 0.21 & 0.524 \\
+Trade-off score       & $-0.93$ & 0.24 & \textbf{0.0006} & $-1.00$ & 0.22 & \textbf{0.0001} \\
+$-$isch              & $-1.14$ & 0.32 & \textbf{0.0012} & $-0.66$ & 0.23 & \textbf{0.0069} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The trade-off score and $-$isch are the only two arms that separate from noise, and both
+in the same direction, in both temperature settings: their enrolled cohorts carry
+\emph{fewer} ischemic events than the patients left out, not more. This is the opposite
+of what a mechanism meant to concentrate on the trade-off quadrant would need to show,
+and it is consistent with the small, unstable movement of Table~\ref{tab:ch8-drift}
+rather than with a real enrichment. The win--win score, the diagonal rule and random
+never separate from zero at either temperature.
+Figure~\ref{fig:ch8-ischaemic-trajectory} shows the same comparison over the whole
+enrollment run rather than at one checkpoint: the enrolled and left-out ischemic rates
+track each other closely, within their own standard-error bands, for every policy.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{GuidedEnrollment_ischaemic_patients.png}
+\caption{Cumulative count and rate of real ischemic events in the enrolled cohort
+(crimson) against the patients still left out (orange), as enrollment proceeds from the
+1,000-patient seed to the 4,200-patient checkpoint, greedy configuration, mean of 30
+seed cohorts with standard-error bands. The dotted line marks the cohort's own ischemic
+event rate. The two bands overlap for every policy at every stage of enrollment.}
+\label{fig:ch8-ischaemic-trajectory}
+\end{figure}
+
+\vspace{10pt}
+
+A second, model-internal check reaches the same place from inside the estimation itself.
+Scoring the withheld arrivals at every round with a doubly-robust AUTOC lower bound, none
+of the five non-random policies clears zero in any of the 30 seeds at the 4,000-patient
+checkpoint: the best of them, $-$isch and the trade-off score, average $-0.006$, and the
+win--win score and the diagonal rule average $-0.007$. The same estimator that Chapter 6
+could never separate from its own noise floor does not separate from it here either, even
+when it is the one steering enrollment.
+
+\vspace{10pt}
+
+\paragraph{The correlation behind the collapse.}
+The win--win score's own construction explains why it moves so little. On the tuned
+forest of Chapter 6 it correlates $\rho = +0.91$ with the bleeding CATE alone and only
+$\rho = +0.44$ with the weighted ischemic CATE: bleeding's raw effect keeps roughly
+double the spread of the ischemic composite even after both are rescaled to a common IQR,
+so ranking by the sum mostly re-ranks by bleeding. Of the 1,500 patients it ranks
+highest, 58\% fall in the true win--win quadrant, not the near totality the name
+suggests. It is the same mechanism Chapter 6 found in the aggregate ischemic score,
+looked at from the selection side rather than the estimation side: a linear combination
+of two quantities of unequal variance collapses toward the larger one.
+
+\section{The Bandit Mechanisms Against Their Own Ceiling}
+
+Mechanisms 4 and 5 of Chapter 3, UCB1 and Thompson sampling, are also run on this cohort,
+over a duel of arriving pairs rather than a whole-pool sweep, with the exploration bonus
+active. Two things beyond the enrolled cohort's own view of itself are needed to judge
+them honestly: a \emph{referee}, the same frozen tuned forest used above, scoring the
+final enrolled cohort with a model that took no part in selecting it; and a
+\emph{ceiling}, the identical sequence of arrival pairs scored with the referee instead of
+the online model, which is the best either bandit could have done with a perfect forest
+and no learning delay.
+
+\begin{table}[h]
+\centering
+\caption{Referee-scored conflict of the bandit-enrolled cohort against its own ceiling
+(same arrival pairs, offline tuned forest) and against a matched random cohort of equal
+size ($n = 2{,}789$), plus Fisher's exact test on real bleeding, death, MI and stroke
+event rates between the guided cohort and its random match.}
+\label{tab:ch8-bandits}
+\begin{tabular}{lccc|c}
+\toprule
+Policy & Online-guided & Ceiling & Fraction of ceiling & Fisher exact, worst $p$ \\
+\midrule
+UCB1     & $+0.091$ & $+0.303$ & 30\% & 0.349 (death) \\
+Thompson & $+0.105$ & $+0.330$ & 32\% & 0.281 (MI) \\
+Random   & $\approx 0.000$ & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both bandits reach a real, positive gap over random, about a third of the ceiling
+reachable on the identical arrivals if the referee itself had been doing the choosing.
+The gap is not the bottleneck's whole story: UCB1 is deterministic across all 30 replicate
+runs, since its exploration bonus is a fixed function of the current model's uncertainty
+with no random component, while Thompson's sampling step gives it run-to-run variation.
+
+\vspace{10pt}
+
+None of it moves real outcomes. Fisher's exact test on the guided cohort against a
+matched random cohort of the same size finds no endpoint distinguishable at conventional
+significance for either policy; the smallest $p$-value, for Thompson on MI, is $0.281$.
+The online model that guides these two mechanisms is deliberately light, refit every 100
+enrollments without its own hyperparameter search past the seed, and the gap to the
+ceiling is consistent with that: the bottleneck is the forest's own noise under a small,
+frequently-refit sample, not a defect specific to either exploration rule.
+
+\section{What This Chapter Establishes}
+
+Every mechanism moves the estimated-CATE plane in the direction its objective points,
+and the movement survives a reference model that never sees the selection. It is also
+small at the checkpoint examined, at most a few percentage points on any axis, in a
+cohort where 92\% of the patients are already enrolled by the time the comparison is
+made. On real, adjudicated outcomes, the picture does not improve on a larger checkpoint
+or a different exploration setting: the two arms that do separate from a random control
+move in the wrong direction for a mechanism meant to concentrate on the trade-off
+quadrant, the win--win score and the diagonal rule never separate from noise at either
+temperature, the model-internal AUTOC lower bound never clears zero for any of them, and
+the bandit mechanisms enrich their own referee-scored score by a real but partial margin
+without moving a single real event rate.
+
+\vspace{10pt}
+
+The reference-plane result and the real-outcome result are not two independent
+confirmations of the same thing; only the second is. Chapter 6's tuned forest supplies
+both the scores that steer enrollment and the yardstick that measures the drift, so
+agreement between them shows the machinery is internally consistent, not that it found
+something real. What is independent is the observed event counts, which never pass
+through an estimated CATE, and they show the same absence of signal Chapter 6 already
+established. \emph{The machinery selects well on a signal that is mostly noise.}
+
+\todo{Re-run the whole-pool comparison at an earlier checkpoint (for instance
+$n=2{,}500$--$3{,}000$): at 92\% enrollment the policies have too little of the cohort left
+to diverge from, which biases the comparison toward the null already reported here.}
+\todo{Build a matched-size, non-adaptive randomized-arrival baseline so that precision, not
+only cohort composition, can be compared between guided and plain enrollment at equal
+enrolled $n$; no such comparison currently exists for this cohort.}
