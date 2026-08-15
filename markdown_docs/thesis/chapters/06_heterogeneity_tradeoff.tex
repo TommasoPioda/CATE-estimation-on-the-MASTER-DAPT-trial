@@ -1,59 +1,38 @@
 % !TEX root = ../Thesis.tex
 \section{Five Estimators on the Cohort}
 
-In this chapter we apply the machinery the risk estimation to the MASTER DAPT cohort
-and reports the findings.
-The main point is answering four questions:
+This chapter applies the machinery introduced in Chapter~2 to estimate
+treatment-effect heterogeneity in the MASTER DAPT cohort. The main point is
+answering four questions:
 
 \begin{itemize}
-  \item Is there evidence of risk difference in the Treatments effects across patients?
-  \item If yes, does it apply best to some patients and not to others?
-  \item Can we derive decisions from the estimated heterogeneity that improve on the best fixed arm?
-  \item How large of a Variation would have been needed to be detected by the protocol?
+  \item Is there evidence of treatment-effect heterogeneity across patients?
+  \item If so, does the treatment benefit some patients more than others?
+  \item Can we derive decisions ranking the patients by their predicted benefit, 
+  exploiting the estimated heterogeneity with an online learning approach?
+  \item How large would have the hetorogeneity needed to be in order to be detected by the five eistimators of Chapter~2 (\S~\ref{sec:five-estimators})
+        (\S~\ref{sec:delta})?
 \end{itemize}
 
-\paragraph{The five estimators.}
-Five effect estimators are fitted on the same 4,579 patients, the same
-covariate set and the same five endpoints of Chapter 4, each belonging to a
-different methodological family:
-
-\begin{itemize}
-  \item a \textbf{two-model meta-learner} (T-learner), the difference of the two
-        calibrated per-arm random forests of Section~\ref{sec:per-arm};
-  \item a \textbf{causal forest} (\texttt{CausalForestDML}), which targets the
-        effect directly through double machine learning with honest splitting,
-        with gradient-boosted first stages for both nuisance functions
-        $\mathbb{E}[Y \mid x]$ and $\mathbb{E}[T \mid x]$;
-  \item a \textbf{Bayesian causal forest} (BCF), which places separate priors and
-        separate tree ensembles on the prognostic surface $\mu(x)$ and on the
-        effect surface $\tau(x)$, fixes the propensity at the known $0.5$, and
-        returns a full posterior rather than a point estimate;
-  \item an \textbf{in-context model} (CausalPFN), a transformer pre-trained on
-        synthetic causal problems that conditions on the cohort at inference
-        time and is never fitted to it in the usual sense;
-  \item an \textbf{interaction forest} (S-learner), a single classification
-        forest on the augmented design $[\,X,\;T,\;X \!\cdot\! T\,]$, whose
-        implied CATE is obtained by toggling the treatment column.
-\end{itemize}
-
-None of the five is included because it is the best estimator in the abstract.
-They are included because their failure modes are different: the T-learner
-inherits the errors of two outcome models, the causal forest can only find
-structure its splitting criterion can express, the BCF can be dominated by its
-own regularization, the in-context model carries a domain bias from its
-pre-training distribution rather than sampling variance from this cohort, and
-the S-learner pools the two arms and shrinks weak interactions toward zero. A
-result common to all five is therefore hard to attribute to any one of them.
+\paragraph{Implementation on this cohort.}
+The five estimator families of Chapter~2 (\S~\ref{sec:five-estimators}) are
+fitted on the same 4,579 patients, the same covariate set and the same five
+endpoints of Chapter 4: the two-model meta-learner, using the calibrated
+per-arm random forests of Section~\ref{sec:per-arm}; a causal forest
+(\texttt{CausalForestDML}) with gradient-boosted first stages for both
+nuisance functions $\mathbb{E}[Y \mid x]$ and $\mathbb{E}[T \mid x]$; a
+Bayesian causal forest (BCF) with the propensity fixed at the known $0.5$;
+an in-context model (CausalPFN); and an interaction forest (S-learner). As
+established in Chapter~2, their failure modes do not overlap, so a result
+common to all five is hard to attribute to any single one of them.
 
 \paragraph{The common protocol.}
 All estimators use the same preprocessing pipeline, with k-NN imputation and
 robust scaling fitted only on the training data. Heterogeneity is evaluated
 by fitting the model on 70\% of the data, ranking the held-out 30\% by
-predicted CATE, and applying EconML's doubly-robust tester with the known
-randomization propensity. Performance is assessed using the BLP slope,
-AUTOC, and QINI. AUTOC emphasizes the top of the ranking, whereas QINI
-weights groups by size, so both are reported to ensure that negative
-heterogeneity results are robust to the choice of weighting.
+predicted CATE, and applying the doubly robust tester of Chapter~2
+(\S~\ref{sec:validation}) with the known randomization propensity, reporting
+the BLP slope, AUTOC, and QINI defined there.
 
 \section{The Positive Control: The Average Effect Is Recovered}
 \label{sec:positive-control}
@@ -90,8 +69,8 @@ prolonging the therapy costs roughly four to five percentage points
 of bleeding risk, which is the trial's own published conclusion, reached here
 by five estimators that share no code path beyond the preprocessing. 
 
-On the ischemic side, all estimators return effects within 0.5 percentage
-points of zero, with MI consistently favouring prolonged therapy. The BCF
+On the ischemic side, all estimators except the interaction forest return effects within $[-0.005,\,+0.005]$
+, with MI consistently favouring prolonged therapy. The BCF
 also gives credible intervals: $[+0.030,\,+0.067]$ for bleeding, excluding
 zero, compared with $[-0.011,\,+0.005]$ for MI and $[-0.004,\,+0.010]$ for
 cardiovascular death, both spanning zero.
@@ -110,8 +89,7 @@ distribution has non-zero width. That width, on its own, means nothing: a
 constant true effect estimated with error also produces a spread of estimates,
 and the width of that spread grows with the flexibility of the model, not with
 the amount of heterogeneity in the data. The question is therefore never
-whether the dispersion is positive, but whether it exceeds what noise alone
-would produce, and whether the resulting \emph{ranking} of patients tracks
+whether the dispersion is positive, but whether it exceeds the noise floor, and whether the resulting \emph{ranking} of patients tracks
 anything real.
 
 \paragraph{Dispersion, and a noise floor to compare it against.}
@@ -155,7 +133,7 @@ nothing. On bleeding the BCF's observed spread is $0.039$ against a floor of
 $0.035$; on BARC 2/3/5 it is $0.027$ against $0.023$. The excess is $0.004$ in
 both cases.
 Calculating the posterior probability that the observed spread exceeds the mean
-of the placebo distribution trhough the formula:
+of the placebo distribution trough the formula:
 \[
 P(\mathrm{obs}>\mathrm{placebo\ mean})
 =
@@ -217,19 +195,8 @@ under the causal forest the largest QINI is $-0.007$ on bleeding
 result is not an artefact of a weighting that over-emphasises the head of the
 ranking. 
 
-The BLP (\textbf{Best Linear Prediction slope}) measures whether the model's 
-predicted CATE ranks patients by their true treatment effect. It is computed by 
-linear regression:
-
-\[
-\hat{\psi}_i = \beta_0 + \beta_1 \widehat{\text{CATE}}_i + \epsilon_i,
-\]
-
-\noindent where $\hat{\psi}_i$ is the doubly-robust effect estimate for patient $i$ 
-and $\widehat{\text{CATE}}_i$ is the model's predicted effect. A slope $\beta_1$ 
-significantly different from zero indicates the ranking captures real heterogeneity; 
-a slope near or negative zero indicates noise. The BLP results provide a similarly 
-weak indication of treatment-effect heterogeneity.
+The BLP slope (\S~\ref{sec:validation}) provides a similarly weak indication
+of treatment-effect heterogeneity.
 \vspace{10pt}
 
 For all endpoints except stroke, the regression of the

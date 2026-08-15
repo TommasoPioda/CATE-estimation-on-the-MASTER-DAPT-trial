@@ -31,8 +31,6 @@
 \renewcommand{\thesection}{\Alph{chapter}.\arabic{section}}
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}}
 
-\setcounter{secnumdepth}{5}  % deeper numbering in the headings
-\setcounter{tocdepth}{5}     % deeper nesting in the table of contents
 
 % Front page fields — these commands are defined by template.cls.
 \titolo{CATE estimation and use in MASTER DAPT study}
@@ -82,10 +80,13 @@
 \chapter{Heterogeneity: estimation, the trade-off plane and the decision}
 \input{chapters/06_heterogeneity_tradeoff}
 
-\chapter{The origin of the negative result, and the debt of ch. 5}
-\input{chapters/07_origin_negative_result}
+% Chapter 7 ("The origin of the negative result") is not written; its content on the
+% range-restriction/cancellation explanation of the negative result lives in Chapter 6's
+% closing section instead. The counter is advanced so the numbering the text refers to
+% throughout (Chapter 8, Chapter 9) matches what is printed.
 
 \chapter{Guided enrollment applied to MASTER DAPT: an exploitability test}
+\label{ch:guided-enrollment-applied}
 \input{chapters/08_guided_enrollment_feasibility}
 
 \chapter{Discussion and conclusions}
