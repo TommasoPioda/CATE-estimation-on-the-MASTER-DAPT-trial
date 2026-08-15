@@ -440,28 +440,37 @@ def policy(i, j, n_added, rng, uncertainty, duel, p_unc=None):
 
     return winner, uncertainty_driven
 
-def policy_ucb(i, j, rng, uncertainty, conflict, c=1.0):
-    """UCB1-style pairwise selection: score = conflict (the model's current value estimate,
-    exploitation) + `c` * uncertainty (the exploration bonus). The bonus is floored at 0 -- a
-    patient the forest is more confident about than the cohort average (negative z-scored
-    uncertainty) gets no bonus, never a penalty. Picks the higher score; ties go to j.
+def policy_ucb(i, j, rng, uncertainty, conflict, c=1.0, *, score_col='conflict'):
+    """UCB1-style pairwise selection: score = conflict[score_col] (the model's current value
+    estimate, exploitation) + `c` * uncertainty (the exploration bonus). The bonus is floored
+    at 0 -- a patient the forest is more confident about than the cohort average (negative
+    z-scored uncertainty) gets no bonus, never a penalty. Picks the higher score; ties go to j.
     `rng` is unused (the rule is deterministic) but kept so this drops in wherever `policy` /
-    `policy_thompson` are called."""
+    `policy_thompson` are called.
+
+    `score_col` is keyword-only, default `'conflict'` reproduces the original behaviour
+    exactly -- every existing positional call site (`policy_ucb(i, j, rng, uncertainty,
+    conflict)`) keeps working unchanged. Pass `score_col='net_benefit'` with a frame built by
+    `net_benefit_from_model` to read the trade-off score instead of the win-win one; `conflict`
+    is really just "the frame the duel reads its score from", whichever regime is active."""
     bonus_i = max(uncertainty["uncertainty"].iloc[i], 0.0)
     bonus_j = max(uncertainty["uncertainty"].iloc[j], 0.0)
-    score_i = conflict["conflict"].iloc[i] + c * bonus_i
-    score_j = conflict["conflict"].iloc[j] + c * bonus_j
+    score_i = conflict[score_col].iloc[i] + c * bonus_i
+    score_j = conflict[score_col].iloc[j] + c * bonus_j
     return i if score_i > score_j else j
 
 
-def policy_thompson(i, j, rng, uncertainty, conflict, eps=1e-3):
+def policy_thompson(i, j, rng, uncertainty, conflict, eps=1e-3, *, score_col='conflict'):
     """Thompson-sampling pairwise selection: draw one sample per candidate from
-    N(conflict, uncertainty) -- the model's belief about its value and how sure it is of that
-    belief -- and keep the higher draw. `uncertainty` is floored at `eps` (it is a z-score and
-    can be negative or zero) so every candidate gets a valid, if narrow, posterior to sample
-    from. Ties go to j."""
+    N(conflict[score_col], uncertainty) -- the model's belief about its value and how sure it
+    is of that belief -- and keep the higher draw. `uncertainty` is floored at `eps` (it is a
+    z-score and can be negative or zero) so every candidate gets a valid, if narrow, posterior
+    to sample from. Ties go to j.
+
+    `score_col` is keyword-only, default `'conflict'` reproduces the original behaviour
+    exactly; see `policy_ucb` for the net-benefit-regime usage."""
     scale_i = max(uncertainty["uncertainty"].iloc[i], eps)
     scale_j = max(uncertainty["uncertainty"].iloc[j], eps)
-    draw_i = rng.normal(conflict["conflict"].iloc[i], scale_i)
-    draw_j = rng.normal(conflict["conflict"].iloc[j], scale_j)
+    draw_i = rng.normal(conflict[score_col].iloc[i], scale_i)
+    draw_j = rng.normal(conflict[score_col].iloc[j], scale_j)
     return i if draw_i > draw_j else j
