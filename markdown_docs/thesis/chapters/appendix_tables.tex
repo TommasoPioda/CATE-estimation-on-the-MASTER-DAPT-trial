@@ -1,0 +1,59 @@
+% !TEX root = ../Thesis.tex
+
+This appendix collects supplementary tables referenced from the main text.
+
+\section{Mechanism 3: per-endpoint duel results}
+
+Table~\ref{tab:ch8-duel-rate-comparison} reports the endpoint-by-endpoint breakdown
+behind the ischaemic-composite comparison in Chapter~\ref{ch:guided-enrollment-applied}
+(Table~\ref{tab:ch8-duel-composite-comparison}): bleeding, cardiovascular death,
+myocardial infarction and stroke, each shown separately rather than combined into the
+weighted ischaemic composite used elsewhere in that chapter.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{llrrrrr}
+        \toprule
+        Duel rule & Endpoint & Included (\%) & Excluded (\%) & Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Conflict    & Bleeding & 11.09 & 11.03 & $+0.06$ & 0.09 & 0.505 \\
+        Conflict    & Death    & 1.78  & 1.73  & $+0.05$ & 0.04 & 0.222 \\
+        Conflict    & MI       & 2.48  & 2.31  & $+0.18$ & 0.04 & $<0.001$ \\
+        Conflict    & Stroke   & 0.76  & 0.75  & $+0.02$ & 0.02 & 0.506 \\
+        \midrule
+        Net-benefit & Bleeding & 11.00 & 11.12 & $-0.13$ & 0.08 & 0.130 \\
+        Net-benefit & Death    & 1.77  & 1.75  & $+0.01$ & 0.04 & 0.739 \\
+        Net-benefit & MI       & 2.46  & 2.32  & $+0.14$ & 0.04 & 0.002 \\
+        Net-benefit & Stroke   & 0.73  & 0.78  & $-0.05$ & 0.03 & 0.064 \\
+        \midrule
+        Angle       & Bleeding & 11.15 & 10.97 & $+0.18$ & 0.09 & 0.048 \\
+        Angle       & Death    & 1.78  & 1.73  & $+0.05$ & 0.04 & 0.199 \\
+        Angle       & MI       & 2.48  & 2.31  & $+0.16$ & 0.05 & $<0.001$ \\
+        Angle       & Stroke   & 0.82  & 0.69  & $+0.13$ & 0.02 & $<0.001$ \\
+        \midrule
+        $-$isch     & Bleeding & 10.95 & 11.17 & $-0.23$ & 0.08 & 0.004 \\
+        $-$isch     & Death    & 1.79  & 1.73  & $+0.07$ & 0.03 & 0.052 \\
+        $-$isch     & MI       & 2.43  & 2.36  & $+0.07$ & 0.04 & 0.106 \\
+        $-$isch     & Stroke   & 0.72  & 0.78  & $-0.06$ & 0.03 & 0.016 \\
+        \midrule
+        $+$isch     & Bleeding & 11.22 & 10.90 & $+0.31$ & 0.08 & $<0.001$ \\
+        $+$isch     & Death    & 1.82  & 1.70  & $+0.12$ & 0.04 & $<0.001$ \\
+        $+$isch     & MI       & 2.49  & 2.30  & $+0.18$ & 0.05 & $<0.001$ \\
+        $+$isch     & Stroke   & 0.82  & 0.69  & $+0.14$ & 0.02 & $<0.001$ \\
+        \midrule
+        Random      & Bleeding & 11.02 & 11.10 & $-0.08$ & 0.08 & 0.322 \\
+        Random      & Death    & 1.79  & 1.72  & $+0.07$ & 0.04 & 0.065 \\
+        Random      & MI       & 2.37  & 2.42  & $-0.05$ & 0.04 & 0.194 \\
+        Random      & Stroke   & 0.76  & 0.75  & $+0.01$ & 0.02 & 0.757 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Observed event rate among duel winners (included) and duel losers
+    (excluded) at the end of Mechanism 3's run, by endpoint and duel rule. Results are
+    averaged over 100 independent seed-cohort replications, each enrolling 1,789
+    winners against 1,789 losers. A negative difference indicates a lower event rate
+    among duel winners than duel losers; SEM combines the two groups' standard errors
+    of the mean in quadrature; $p$ is from a two-sided $z$-test on the difference.}
+    \label{tab:ch8-duel-rate-comparison}
+\end{table}

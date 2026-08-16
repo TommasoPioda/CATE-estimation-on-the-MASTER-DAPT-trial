@@ -234,17 +234,18 @@ work.
 \vspace{10pt}
 
 \emph{Decaying exploration probability} (Mechanism~3, and Mechanism~1's stochastic
-variant) controls how often the score is overridden with a schedule that starts
-exploratory and decays toward zero as enrollment proceeds. Applied to a pair
-(Mechanism~3), with the current probability the pair is resolved by keeping whichever
-candidate carries the larger $u(x)$ instead of the higherruns score; the rest of the time the
-score decides. Applied to the whole visible pool at once (Mechanism~1's stochastic
-variant), the same schedule acts as a temperature on the ranking: while it is high,
+variant) overrides the score with a schedule that starts exploratory and decays toward
+zero as enrollment proceeds. Applied to a pair (Mechanism~3), with probability
+$p(n) = \max(e^{-n/300}, 0.05)$, where $n$ counts patients enrolled past the seed, the
+pair is resolved by keeping whichever candidate carries the larger $u(x)$ instead of the
+higher-scoring one; the rest of the time the score decides. Applied to the whole visible
+pool at once (Mechanism~1's stochastic variant), an analogous schedule acts as a
+temperature on the ranking instead of an override probability: while it is high,
 patients enter the batch with a chance related to their score rather than strictly by
 rank, so a lower-scoring candidate can still be enrolled; as the temperature decays to
 zero the batch converges to Mechanism~1's default, greedy ranking. Both forms converge to
-pure exploitation as enrollment proceeds; only the size of the visible group changes how
-that convergence is carried out.
+pure exploitation as enrollment proceeds; only the size of the visible group, and the
+exact form the decay takes, changes how that convergence is carried out.
 
 \vspace{10pt}
 
