@@ -1,22 +1,72 @@
-\section{Dual Antiplatelet Therapy after Percutaneous Coronary Intervention}
+Clinical trials are the cornerstone of evidence-based medicine. By randomly assigning
+patients to competing treatment strategies and comparing their outcomes, randomized
+controlled trials (RCTs) provide the most rigorous framework for establishing causal
+claims about treatment efficacy. However, this statistical rigor comes at a significant
+cost: large, expensive, and time-consuming experiments that often enroll thousands of
+patients over several years. The ethical and logistical implications are substantial —
+patients allocated to an inferior treatment bear avoidable harm, and delays in reaching
+conclusions slow down the translation of effective therapies into clinical practice.
+These limitations have motivated the development of adaptive trial designs, which
+allow pre-planned modifications to the trial protocol as data accumulate. Adaptive
+designs can include early stopping rules, sample size re-estimation, allocation ratio
+changes, and patient enrichment strategies, all of which aim to extract the same
+statistical information with fewer resources. Regulatory agencies, including the FDA
+and EMA, have issued guidance documents supporting the use of adaptive designs when
+they are scientifically rigorous and transparently pre-specified.
 
-Percutaneous Coronary Intervention (PCI) is a widely used procedure for
-treating coronary artery disease. It involves the mechanical widening of
-a narrowed coronary artery, typically followed by the deployment of a
-drug-eluting stent (DES) to maintain vessel patency. After stent
-implantation, patients are at risk of stent thrombosis — a potentially
-life-threatening acute occlusion — that is mitigated by Dual Antiplatelet
-Therapy (DAPT), combining aspirin with a P2Y12 inhibitor (such as clopidogrel,
-ticagrelor, or prasugrel).
+\section{Why Heterogeneous Treatment Effects Matter}
 
-The optimal duration of DAPT after PCI is one of the most debated topics in
-interventional cardiology. Longer DAPT reduces ischemic risk (particularly
-stent thrombosis and myocardial infarction) but simultaneously increases the
-risk of bleeding complications. Major bleeding events are not merely
-nuisance side effects: they are independently associated with increased
-mortality, rehospitalization, and quality-of-life impairment. The trade-off
-between ischemic protection and bleeding harm is therefore central to the
-clinical decision.
+A fundamental limitation of the classical RCT paradigm is its focus on the Average
+Treatment Effect (ATE) — the mean difference in outcomes between the treated and
+control groups across the entire population. ATE is useful to understand the difference
+between the treated and control groups, but it conceals a clinically critical dimension: not
+every patient benefits equally from the same intervention. Two patients with opposite
+bleeding and ischemic risk profiles, enrolled in the same trial and assigned to the same
+treatment arm, may experience vastly different outcomes. A therapy that is beneficial
+on average may be harmful for a specific subgroup, and vice versa.
+The shift towards precision medicine demands methods that move beyond population-
+average estimates and instead characterize how effects vary across individual patient
+characteristics. This is precisely what the Conditional Average Treatment Effect (CATE)
+\[
+\tau(x) = \mathbb{E}\left[Y(1) - Y(0) \mid X = x\right]
+\]
+formalizes: the expected causal effect of treatment
+relative to control, given that a patient has covariate profile $x$. Identifying patients
+with large versus small (or even negative) CATE values is the goal of treatment effect
+heterogeneity (HTE) analysis, which is increasingly recognized as essential for both
+clinical practice and efficient trial design.
+
+\section{The MASTER DAPT Trial as the Clinical Reference}
+
+The \textit{MASTER DAPT} trial (\textit{Management of High Bleeding Risk
+Patients Post Bioresorbable Polymer Coated Stent Implantation with an
+Abbreviated versus Standard DAPT Regimen}, SISTEMARE CITAIZONE %\citealt{valgimigli2021masterdapt})
+provides the primary clinical reference for this thesis. MASTER DAPT was a
+multicenter, open-label, randomized noninferiority trial coordinated by the
+European Cardiovascular Research Institute (ECRI) and funded by Terumo. A
+total of 4,579 patients at high bleeding risk (HBR) were enrolled across
+140 sites in 30 countries between February 2017 and December 2019. Patients
+who had received a biodegradable-polymer sirolimus-eluting stent during
+percutaneous coronary intervention (PCI) were randomized, one month after
+the index procedure, to either an abbreviated Dual Antiplatelet Therapy
+(DAPT) strategy (immediate discontinuation) or a standard DAPT strategy
+(continuation for at least 2 additional months).
+
+Three hierarchically ranked primary outcomes were assessed at 335 days: (1)
+Net Adverse Clinical Events (NACE), a composite of death, myocardial
+infarction, stroke, or major bleeding; (2) Major Adverse Cardiac or Cerebral
+Events (MACCE), a composite of death, myocardial infarction, or stroke; and
+(3) major or clinically relevant non-major (CRNM) bleeding. The trial
+demonstrated noninferiority of the abbreviated strategy for NACE and MACCE,
+and superiority with respect to bleeding reduction.
+
+While MASTER DAPT established average-level conclusions, it enrolled a
+clinically heterogeneous population in which the optimal DAPT duration
+is likely to vary substantially across patients. Patients with primarily
+ischemic risk profiles may benefit from longer protection, while those with
+dominant bleeding risk may suffer more harm from prolonged therapy. This
+clinical heterogeneity motivates reanalyzing and redesigning the trial through
+a CATE-lens.
 
 \section{Why Not Every Patient Benefits Equally}
 
@@ -38,9 +88,3 @@ captured by ATE analysis but is the target of CATE estimation. Moreover, the
 HBR population of MASTER DAPT is particularly heterogeneous: the mean number
 of HBR criteria was $2.1 \pm 1.1$ per patient, spanning elderly frail patients,
 patients on anticoagulation, and patients with multiple comorbidities.
-Whether this hypothesis holds in practice is tested formally in Chapters 6–7.
-
-\todo{Confirm which baseline covariates are available in the MASTER DAPT
-dataset for CATE estimation.}
-\todo{Confirm whether the thesis uses the real MASTER DAPT individual patient
-dataset, a simulated surrogate, or a pre-processed anonymized version.}

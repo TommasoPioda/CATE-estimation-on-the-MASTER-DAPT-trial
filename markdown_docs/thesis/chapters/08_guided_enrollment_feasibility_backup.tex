@@ -26,20 +26,6 @@ from a machinery that selects at random. The estimated CATE is taken at face val
 cohorts are built from it, and what is measured is whether those cohorts differ in
 \textbf{observed} bleeding and ischemic events.
 
-\section{Six Policies on the Trade-off Plane}
-
-\paragraph{The mechanism.}
-The enrollment mechanism follows the same skeleton as Chapter 3: a seed cohort of 1,000
-patients drawn at random, hyperparameters tuned once on that seed by the same
-cross-validated AUTOC lower-bound criterion as Chapter 2 and left fixed for the rest of
-the run, and periodic refitting on the patients enrolled so far. It differs from every
-mechanism introduced there in how a round is decided: rather than sampling a batch and
-keeping its single best candidate, every not-yet-enrolled patient is scored with the
-current model, the 100 highest-scoring are enrolled, the model is refit on the enlarged
-cohort, and the round repeats. Enrollment stops at 4,200 of the 4,579 patients.
-
-\vspace{10pt}
-
 \paragraph{Five policies.}
 As previously anticipated, the trade-off plane is built from two indipendent components,
 The bleeding CATE and the weighted ischemic CATE.
@@ -65,6 +51,24 @@ to rank the patients, so it is not a scalar score in the same sense as the other
 Each policy is run over 100 independent seed cohorts, under two batch-sampling
 temperatures: one that occasionally accepts a candidate other than the top-scoring one
 within a batch, following the exploration rule of Chapter 3's Mechanism 1.
+
+
+\section{Mechanism 1 on the Trade-off Plane}
+
+\paragraph{The mechanism.}
+The enrollment mechanism follows the same skeleton as Chapter 3: a seed cohort of 1,000
+patients drawn at random, hyperparameters tuned once on that seed by the same
+cross-validated AUTOC lower-bound criterion as Chapter 2 and left fixed for the rest of
+the run, and periodic refitting on the patients enrolled so far. It differs from every
+mechanism introduced there in how a round is decided: rather than sampling a batch and
+keeping its single best candidate, every not-yet-enrolled patient is scored with the
+current model, the 100 highest-scoring are enrolled, the model is refit on the enlarged
+cohort, and the round repeats. Enrollment stops at 4,200 of the 4,579 patients.
+
+\paragraph{Results.}
+
+
+
 
 \section{Drift on the Reference Plane}
 

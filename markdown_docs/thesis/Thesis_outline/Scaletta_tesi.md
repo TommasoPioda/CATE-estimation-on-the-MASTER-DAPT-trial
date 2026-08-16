@@ -435,39 +435,6 @@ riportati **conservativi**; e sull'ictus il protocollo degenera — al nullo il 
 il pavimento nell'85% dei semi invece che nel 50% atteso, con soli ~14 eventi simulati
 contro 35 reali — quindi quella riga non è ancora interpretabile.
 
-## 7. L'origine del risultato negativo, e il debito del cap. 5 *(medio)*
-
-**Tre spiegazioni, non una sola.** Un risultato negativo senza un meccanismo che lo
-produce lascia il dubbio di aver semplicemente cercato male. La tesi ne offre tre,
-indipendenti fra loro e verificate una a una sulla stessa coorte:
-
-1. **Cancellazione dentro il composito.** Il punteggio ischemico aggregato somma
-   endpoint con effetto di segno opposto — MI e ictus vanno in direzioni diverse — e la
-   somma li nasconde entrambi: lo stesso difetto algebrico dei punteggi di acquisizione
-   lineari del cap. 3, qui scoperto sul lato della stima invece che su quello della
-   selezione.
-2. **Restrizione di range.** È l'anomalia del cap. 5, spiegata: arruolando solo pazienti
-   già ad alto rischio emorragico, la varianza del rischio emorragico *dentro* la coorte
-   è compressa prima che qualunque modello veda un dato. È per questo che il
-   sanguinamento, con 506 eventi, si predice peggio (0.62) della morte cardiovascolare,
-   che ne ha 81 (0.76): il criterio di arruolamento ha schiacciato proprio la dimensione
-   su cui ci si aspetterebbe di trovare eterogeneità di risposta. Stessa causa, due
-   sintomi — uno predittivo (cap. 5), uno causale (cap. 6).
-3. **Eventi troppo rari.** Solo sanguinamento e BARC 2/3/5 hanno numeri sufficienti;
-   morte, MI e ictus stanno fra 35 e 109 eventi. Da distinguere da «non c'è
-   eterogeneità»: su tre endpoint su cinque la risposta corretta è *non misurabile qui*,
-   non *non c'è*. Il δ minimo rilevabile del cap. 6 rende questa distinzione quantitativa
-   invece che dichiarata: su MI e morte cardiovascolare servirebbe un odds ratio fra 3 e 5
-   perché il protocollo veda qualcosa, un'ampiezza che nessuno si aspetta in cardiologia.
-   L'affermazione «non misurabile» smette così di essere una cautela e diventa una misura.
-
-**Perché il capitolo vale la posizione che occupa.** Senza questa spiegazione la tesi
-direbbe «non ho trovato niente»; con questa dice «so quale caratteristica del dataset lo
-produce, ed è la stessa che rende alcuni modelli predittivi migliori di altri per una
-ragione che sembrava innocua». È il contributo interpretativo del lavoro, ed è anche la
-premessa che il cap. 8 eredita: se l'eterogeneità mancante è un effetto della selezione
-del trial, nessun meccanismo di arruolamento *dentro la stessa coorte* può ricrearla.
-
 ## 8. Arruolamento guidato applicato a MASTER DAPT: un test di sfruttabilità *(medio)*
 
 **La premessa, e la sua caduta.** Il cap. 6 dice che la coorte rende la domanda

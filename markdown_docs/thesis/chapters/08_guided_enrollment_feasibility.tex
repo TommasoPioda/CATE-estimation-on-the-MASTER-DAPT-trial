@@ -26,23 +26,9 @@ from a machinery that selects at random. The estimated CATE is taken at face val
 cohorts are built from it, and what is measured is whether those cohorts differ in
 \textbf{observed} bleeding and ischemic events.
 
-\section{Six Policies on the Trade-off Plane}
-
-\paragraph{Common Procedure}
-The enrollment mechanism is Chapter 3's Mechanism 1, the ideal ceiling, run here to do
-what Chapter 3 already earmarks it for: comparing candidate ranking rules against each
-other. A seed cohort of 1,000 patients is drawn at random and hyperparameters are tuned
-once on that seed, by the same cross-validated AUTOC lower-bound criterion as Chapter 2,
-then left fixed for the rest of the run. At every round, every not-yet-enrolled patient
-is scored with the current model, the 100 highest-scoring are enrolled, the model is
-refit on the enlarged cohort, and the round repeats. Enrollment stops at 4,200 of the
-4,579 patients.
-
-\vspace{10pt}
-
 \paragraph{Five policies.}
-As previously anticipated, the trade-off plane is built from two independent components,
-the bleeding CATE and the weighted ischemic CATE.
+As previously anticipated, the trade-off plane is built from two indipendent components,
+The bleeding CATE and the weighted ischemic CATE.
 This multidimensionality allows for several ways to combine them into a single scalar score.
 The five policies and the control are explained below.
 
@@ -62,141 +48,341 @@ The five policies and the control are explained below.
 
 The diagonal-score uses raw coordinates rather than a linear combination
 to rank the patients, so it is not a scalar score in the same sense as the others.
-Each policy is run over 100 independent seed cohorts, following the exploration rule of
-Chapter 3's Mechanism 1: within a batch, the model occasionally accepts a candidate other
-than the top-scoring one.
+Each policy is run over 100 independent seed cohorts, under two batch-sampling
+temperatures: one that occasionally accepts a candidate other than the top-scoring one
+within a batch, following the exploration rule of Chapter 3's Mechanism 1.
+
+\paragraph{The Starting point.}
+All the mechanisms in this chapter start from the same amount of 1.000 patients drawn 
+at random from the full cohort of 4,579-patients. Once the seed is sampled the 
+forest is tuned 20 times on the seed cohort, by the same cross-validated AUTOC lower-bound criterion
+on the bleeding endpoint used throughout this chapter; the tuned configuration is then
+kept fixed for the rest of the run.
 
 \section{The Mirror Test}
+The two single-axis controls exist to answer a question the diagonal rule and the two
+composite scores cannot: if the ischemic axis genuinely ranks patients by ischemic
+vulnerability, pushing it in one direction should symmetrically move how many real
+ischemic-event patients are enrolled early versus deferred. The idea is to prove that if
+the ischemic axis is used to select patients with fewer ischemic events, if the axis is reversed,
+it should select patients with more ischemic events.
 
-Whether a policy moves the cohort at all is measured against a frozen reference forest,
-fitted once on the whole population at the same untuned default configuration used
-everywhere else in this chapter (not the Optuna-tuned forest of Chapter 6) and never
-used to guide selection, so that the yardstick does not move with the thing it measures.
-The two single-axis controls exist
-to answer a question the diagonal rule and the two composite scores cannot: if the
-ischemic axis genuinely ranks patients by ischemic vulnerability, pushing it in one
-direction should symmetrically move how many real ischemic-event patients are enrolled
-early versus deferred. For each of the five non-random policies, the drift on the
-ischemic axis ($\Delta_{\text{isch}}$) is regressed against the shift in the mean
-enrollment position of the 205 patients who actually had an ischemic event
-($\Delta_{\text{pos}}$), read at an intermediate round of 3,100 enrolled patients so the
-checkpoint is not already exhausted. Table~\ref{tab:ch8-mirror} reports the five points.
+\section{Mechanism 1 on the Trade-off Plane}
 
-\begin{table}[h]
-\centering
-\caption{Ischemic-axis drift and shift in the mean enrollment position of the 205
-real ischemic-event patients, at $n=3{,}100$, 100-seed average.
-A negative $\Delta_{\text{isch}}$ pairs with a positive $\Delta_{\text{pos}}$ if pushing
-the axis down genuinely defers ischemic patients.}
-\label{tab:ch8-mirror}
-\begin{tabular}{lrr}
-\toprule
-Policy & $\Delta_{\text{isch}}$ & $\Delta_{\text{pos}}$ (patients) \\
-\midrule
-Win--win score      & $+0.023$ & $+8.1$ \\
-Trade-off score      & $-0.014$ & $+49.2$ \\
-Diagonal geometry     & $+0.027$ & $+8.2$ \\
-$-$isch              & $-0.032$ & $+44.4$ \\
-$+$isch              & $+0.036$ & $-16.4$ \\
-\bottomrule
-\end{tabular}
+\paragraph{The mechanism.}
+The enrollment mechanism follows the same skeleton as Chapter 3. It differs from every
+mechanism introduced there in how a round is decided: rather than sampling a batch and
+keeping its single best candidate, every not-yet-enrolled patient is scored with the
+current model, the 100 highest-scoring are enrolled, the model is refit on the enlarged
+cohort, and the round repeats. Enrollment stops at 4,200 of the 4,579 patients.
+To avoid a completely greedy selection, the ranking is exploited 
+through an annealed selection strategy that progressively shifts from exploration 
+to exploitation decribed in Chapter 3. 
+
+\paragraph{Policies.}
+The mechanism is evaluated using the five non-random policies, with random enrollment 
+used as a control. The temperature is progressively decreased as the cohort grows, 
+allowing greater exploration during the early rounds and increasingly deterministic 
+selection in later rounds.
+
+\paragraph{Results.}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{images/policy_comparison_ischaemic_patients_only_full.png}
+    \caption{Ischaemic event rates during enrollment under the five non-random policies and random enrollment. The upper row reports the number of patients experiencing an ischaemic event among those enrolled (red) and those left out of the cohort (orange) as the enrollment size increases. The lower row reports the corresponding ischaemic event rates within the enrolled and left-out groups. Solid lines represent the mean across 100 runs, while shaded areas indicate the corresponding 95\% confidence intervals. The horizontal dotted line represents the ischaemic event rate in the full cohort.}
+\label{fig:ch8-policy-comparison}
+\end{figure}
+
+Figure \ref{fig:ch8-policy-comparison} reveals a clear separation between the policies 
+on the ischaemic axis. In particular, the $-$isch and net-benefit policies progressively 
+produce enrolled cohorts with lower ischaemic event rates than the corresponding 
+left-out groups. The remaining policies show substantially weaker or negligible 
+separation between the two groups.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        Policy & Isch. rate (\%) & Selected (\%) & Left-out (\%) &
+        Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Conflict          & 4.45 & 4.45 & 4.66 & $-0.22$ & 0.15 & 0.141 \\
+        Net-benefit       & 4.41 & 4.41 & 4.93 & $-0.52$ & 0.13 & $<0.001$ \\
+        Angle net-benefit & 4.46 & 4.46 & 4.53 & $-0.07$ & 0.15 & 0.660 \\
+        Angle conflict    & 4.47 & 4.47 & 4.48 & $-0.01$ & 0.15 & 0.923 \\
+        Random            & 4.48 & 4.48 & 4.39 & $+0.09$ & 0.12 & 0.458 \\
+        $-$isch           & 4.38 & 4.38 & 5.21 & $-0.83$ & 0.16 & $<0.001$ \\
+        $+$isch           & 4.47 & 4.47 & 4.48 & $-0.01$ & 0.16 & 0.958 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison of ischaemic event rates between enrolled and left-out patients at $n=4200$. Results are averaged over 100 runs, with 379 patients remaining outside the enrolled cohort. A negative difference indicates a lower ischaemic event rate among enrolled patients.}
+    \label{tab:ch8-ischaemic-rate-comparison}
 \end{table}
 
-The regression gives a Pearson correlation of $r = -0.939$ ($p = 0.018$) between the two
-columns, with the sign a mirror test should have: a more negative ischemic drift pairs
-with real ischemic patients entering later. The fit's intercept is $+26$ patients, not
-negligible next to the deferral itself, so part of the queue movement is not explained
-by how far a policy moves the ischemic axis. With only five policies feeding the
-regression, this remains a qualitative direction rather than a stable magnitude.
+Table \ref{tab:ch8-ischaemic-rate-comparison} quantifies this separation at the end 
+of the enrollment process. The $-$isch and net-benefit policies show statistically significant 
+reduction in ischaemic event rates compared to random selection, while the other policies do 
+not show a significant difference. For bleeding events, the $+$isch policy shows a significant 
+increase in event rates compared to random selection, while the other policies do not show a significant difference.
 
-\section{Real Outcomes}
-
-The reference plane is built from the same reference forest as the mirror test, so
-agreement with it is not independent evidence that anything real changed. The observed
-bleeding and ischemic events are read directly from the trial's adjudicated outcomes and
-never pass through a CATE estimate. For each policy, the ischemic event rate of the
-enrolled cohort is compared with that of the patients left out, paired over 100 seeds
-(Table~\ref{tab:ch8-outcomes}).
-
-\begin{table}[h]
-\centering
-\caption{Paired difference in ischemic event rate, enrolled minus left-out, at
-$n=4{,}200$, 100-seed average, standard error of the mean and two-sided $p$-value from a
-paired $t$-test. Positive values mean the enrolled cohort has \emph{more} ischemic
-events than the patients left out.}
-\label{tab:ch8-outcomes}
-\begin{tabular}{lrrr}
-\toprule
-Policy & diff (pp) & SEM & $p$ \\
-\midrule
-Random               & $+0.09$ & 0.12 & 0.458 \\
-$+$isch              & $-0.01$ & 0.16 & 0.958 \\
-Diagonal geometry     & $-0.04$ & 0.11 & 0.701 \\
-Win--win score       & $-0.22$ & 0.15 & 0.141 \\
-Trade-off score       & $-0.52$ & 0.13 & \textbf{0.0002} \\
-$-$isch              & $-0.83$ & 0.16 & \textbf{$<0.0001$} \\
-\bottomrule
-\end{tabular}
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{lrr|rr}
+        \toprule
+        Policy & \multicolumn{2}{c|}{Ischaemic} & \multicolumn{2}{c}{Bleeding} \\
+        & $\Delta$ (pp) & $p$ & $\Delta$ (pp) & $p$ \\
+        \midrule
+        $-$isch
+            & $-0.10$ & $<0.001$
+            & $+0.01$ & $0.720$ \\
+        Net-benefit
+            & $-0.06$ & $<0.001$
+            & $-0.01$ & $0.281$ \\
+        Conflict
+            & $-0.03$ & $0.041$
+            & $-0.02$ & $0.062$ \\
+        Angle net-benefit
+            & $-0.02$ & $0.211$
+            & $-0.02$ & $0.132$ \\
+        Angle conflict
+            & $-0.01$ & $0.295$
+            & $-0.01$ & $0.141$ \\
+        $+$isch
+            & $-0.01$ & $0.688$
+            & $-0.03$ & $0.005$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Difference in selected event rates between each policy and random selection at $n=4200$. 
+    Results are paired by run over 100 runs. For ischaemic events, negative differences indicate a 
+    lower event rate than random selection, whereas for bleeding events, positive differences indicate a 
+    higher event rate than random selection.}
+    \label{tab:ch8-selected-rates-vs-random}
 \end{table}
 
-The trade-off score and $-$isch are the only two arms that separate from noise, and both
-move in the same direction: their enrolled cohorts carry \emph{fewer} ischemic events
-than the patients left out, not more. This is the opposite of what a mechanism meant to
-concentrate on the trade-off quadrant would need to show. The win--win score, the
-diagonal rule and random never separate from zero.
+To assess whether this separation corresponds to a meaningful improvement over random 
+enrollment, Table \ref{tab:ch8-selected-rates-vs-random} compares the event rate among 
+selected patients under each policy with that obtained under the random control. The 
+comparison is paired by run across 100 simulations. On the ischaemic axis, the $-$isch 
+and net-benefit policies significantly reduce the event rate relative to random 
+enrollment. Conflict also shows a statistically significant reduction, although the 
+magnitude of the difference is smaller. The remaining policies do not differ 
+significantly from random enrollment.
 
 \vspace{10pt}
 
-A second, model-internal check reaches the same place from inside the estimation itself.
-Scoring the withheld arrivals at every round with a doubly-robust AUTOC lower bound, the
-estimate clears zero in at most one of a hundred seeds for any of the five non-random
-policies at the 4,000-patient checkpoint: $-$isch comes closest to zero on average
-($-0.006$), and the other four cluster at $-0.007$. The same estimator that Chapter 6
-could never separate from its own noise floor does not separate from it here either, even
-when it is the one steering enrollment.
+The bleeding axis shows a different pattern. A positive difference relative to random 
+corresponds to selecting a cohort with a higher bleeding event rate, which is the 
+desired direction when trading bleeding against ischaemic risk. However, only the 
+$+$isch policy shows a statistically significant increase in bleeding events relative
+to random enrollment. The $-$isch policy, despite achieving the strongest reduction
+in ischaemic events, does not significantly alter the bleeding event rate.
+
+\section{Mechanism 2 on the Trade-off Plane}
+
+\paragraph{The mechanism.}
+Mechanism 2 keeps the same seed-and-refit skeleton as described in
+Chapter 3. At every round, 100 patients are drawn uniformly at random from the
+not-yet-enrolled pool and ranked by the current model's score; the better half is enrolled
+with the treatment and outcome they actually received, and the worse half is permanently
+discarded rather than returned to the pool. The model is refit after every round.
+Enrollment continues until the 3,579-patient pool is exhausted, at 36 rounds: the last
+round samples only the 79 patients left, so the final split is 1,789 enrolled against
+1,790 discarded, for a final cohort of 2,789 patients, the same size Mechanism 3 and the
+bandit mechanisms reach.
+
+\paragraph{Selection rules.}
+All the policies introduced earlier in this chapter rank the random sample here. 
+Each rule is run over 100 independent seed cohorts, each tuned and refit independently.
+
+%\[score(x) = s(x) + c \cdot u(x)\] where $s(x)$ is the score of patient $x$ under the current model, $u(x)$ is the model's with exploration weight $c$ left at zero throughout this work.
+
+\paragraph{Results.}
+%
+%\begin{figure}[h]
+%   \centering
+%  \includegraphics[width=1\textwidth]{mechanism2_included_discarded_event_rates.png}
+%    \caption{Observed ischaemic (any of MI, stroke or cardiovascular death) and bleeding
+%    event rates among the patients kept (included) and permanently discarded from each
+%    round's sample under Mechanism 2, for the win-win, trade-off and diagonal selection
+%    rules. Bars show the mean over 30 independent seed-cohort replications; error bars
+%    show one standard deviation across replications.}
+%    \label{fig:ch8-mechanism2-rates}
+%\end{figure}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{lcc}
+\toprule
+& \textbf{Bleeding endpoint} & \textbf{Ischemic endpoint} \\
+\textbf{Selection policy} & \textbf{Included vs Discarded} & \textbf{Included vs Discarded} \\
+\midrule
+Conflict
+& 11.17 $\pm$ 0.60\% vs 10.95 $\pm$ 0.61\%
+& 4.45 $\pm$ 0.60\% vs 4.49 $\pm$ 0.60\% \\
+
+Net benefit
+& 11.00 $\pm$ 0.61\% vs 11.12 $\pm$ 0.64\%
+& 4.31 $\pm$ 0.53\% vs 4.63 $\pm$ 0.56\% \\
+
+Angle conflict
+& 11.23 $\pm$ 0.61\% vs 10.89 $\pm$ 0.69\%
+& 4.52 $\pm$ 0.60\% vs 4.42 $\pm$ 0.57\% \\
+
+Angle net benefit
+& 11.23 $\pm$ 0.61\% vs 10.89 $\pm$ 0.69\%
+& 4.52 $\pm$ 0.60\% vs 4.42 $\pm$ 0.57\% \\
+
+Ischemic
+& 11.25 $\pm$ 0.60\% vs 10.87 $\pm$ 0.66\%
+& 4.66 $\pm$ 0.55\% vs 4.28 $\pm$ 0.51\% \\
+
+Minus ischemic
+& 10.92 $\pm$ 0.58\% vs 11.20 $\pm$ 0.61\%
+& 4.27 $\pm$ 0.64\% vs 4.67 $\pm$ 0.65\% \\
+
+Random
+& 11.07 $\pm$ 0.64\% vs 11.05 $\pm$ 0.58\%
+& 4.48 $\pm$ 0.39\% vs 4.46 $\pm$ 0.38\% \\
+\bottomrule
+\end{tabular}
+\caption{Mean event rates ($\pm$ standard deviation) across repeated runs for patients included and discarded by each selection policy. Within each cell, values are reported as included versus discarded.}
+\label{tab:mechanism2_event_rates}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Selection policy} & \textbf{Bleeding} & \textbf{Ischemic} \\
+\midrule
+Conflict          & 0.477 & 0.304 \\
+Net benefit       & 0.376 & 0.376 \\
+Angle conflict    & 0.376 & 0.317 \\
+Angle net benefit & 0.376 & 0.317 \\
+Ischemic          & 0.383 & 0.421 \\
+Minus ischemic    & 0.347 & 0.469 \\
+Random            & 0.561 & 0.486 \\
+\bottomrule
+\end{tabular}
+\caption{Median two-sided Fisher exact test $p$-values across repeated runs comparing event frequencies between included and discarded patients.}
+\label{tab:mechanism2_pvalues}
+\end{table}
+
+Table~\ref{tab:ch8-mechanism2-rate-comparison} reports the difference in observed
+event rates between included and discarded patients, together with the combined
+standard error of the two groups. On the ischaemic axis, the trade-off score
+shows the largest separation, with a $0.53$ pp lower event rate among included
+patients. The win-win score also produces a clear separation, with a difference
+of $0.34$ pp, while the diagonal score shows the smallest difference, at
+$0.21$ pp. In all three cases, the observed ischaemic event rate is lower among
+included patients.
+
+The pattern is different on the bleeding axis. The trade-off score again
+favours the included group, which has a $0.31$ pp lower bleeding rate. The
+win-win and diagonal scores instead produce slightly higher bleeding rates
+among included patients, by $0.15$ pp and $0.35$ pp, respectively.
+
+Overall, the trade-off score provides the clearest separation on both axes,
+whereas the win-win score mainly separates patients along the ischaemic axis.
+The diagonal score produces the weakest separation. This ordering is
+consistent with the pattern observed for Mechanism~1.
+
+\section{Mechanism 3 on the Trade-off Plane}
+
+\paragraph{The mechanism.}
+Mechanism 3 keeps the same seed-and-refit skeleton as described in Chapter 3.
+The remaining 3,579 patients arrive as 1,789 pairs,
+with a single unpaired patient left over at the end of the stream and excluded from both
+groups below. Each pair is resolved by a duel rule, the winner is enrolled with the
+treatment and outcome they actually received, and the loser is permanently excluded
+rather than returned to the pool for a later round. The model is refit every 100
+enrollments.
 
 \vspace{10pt}
 
-\paragraph{The correlation behind the collapse.}
-The win--win score's own construction explains why it moves so little. On the tuned
-forest of Chapter 6 it correlates $\rho = +0.91$ with the bleeding CATE alone and only
-$\rho = +0.44$ with the weighted ischemic CATE: bleeding's raw effect keeps roughly
-double the spread of the ischemic composite even after both are rescaled to a common IQR,
-so ranking by the sum mostly re-ranks by bleeding. Of the 1,500 patients it ranks
-highest, 58\% fall in the true win--win quadrant, not the near totality the name
-suggests. It is the same mechanism Chapter 6 found in the aggregate ischemic score,
-looked at from the selection side rather than the estimation side: a linear combination
-of two quantities of unequal variance collapses toward the larger one.
+As in Mechanism 1, a decaying probability occasionally overrides the duel rule: with
+probability $p(n) = \max(e^{-n/300}, 0.05)$, where $n$ counts patients enrolled past the
+seed, the pair is resolved instead by keeping whichever of the two candidates carries the
+larger model uncertainty. Enrollment stops once the arriving stream is exhausted, at
+2,789 of the 4,579 patients: the 1,000-patient seed plus 1,789 duel winners, against
+1,789 duel losers left permanently outside the cohort.
 
-\section{The Bandit Mechanisms Against Their Own Ceiling}
+\paragraph{Duel rules.}
+Two of the five policies introduced earlier in this chapter reduce naturally to a
+pairwise comparison and are run as duel rules here. The \emph{diagonal score} keeps,
+between two patients who both fall in the win-win quadrant, the one further from the
+origin; between two who both fall in the opposite quadrant, the one closer to it; and
+between any other pair, the one closer to the $+45^\circ$ diagonal. The \emph{trade-off
+score} keeps outright the patient with the larger bleeding-minus-ischemic difference.
+Each rule is run over 50 independent seed cohorts, each tuned and refit independently, to
+average out the noise of a single arrival order.
+
+\paragraph{Results.}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{duel_included_excluded_event_rates.png}
+    \caption{Observed bleeding, cardiovascular death, myocardial infarction and stroke
+    rates among duel winners (included) and duel losers (excluded) under Mechanism 3, for
+    the diagonal-score and trade-off-score duel rules. Bars show the mean over 50
+    independent seed-cohort replications; error bars show one standard deviation across
+    replications.}
+    \label{fig:ch8-duel-rates}
+\end{figure}
+
+Figure~\ref{fig:ch8-duel-rates} shows the four endpoints side by side for both duel
+rules; for every one of them the included and excluded bars overlap within one standard
+deviation. Table~\ref{tab:ch8-duel-rate-comparison} quantifies the same comparison
+against the combined standard error of the two group means.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{llrrrr}
+        \toprule
+        Duel rule & Endpoint & Included (\%) & Excluded (\%) & Diff. (pp) & SEM (pp) \\
+        \midrule
+        Diagonal  & Bleeding & 11.08 & 11.12 & $-0.04$ & 0.13 \\
+        Diagonal  & Death    & 1.79  & 1.76  & $+0.03$ & 0.06 \\
+        Diagonal  & MI       & 2.47  & 2.34  & $+0.13$ & 0.07 \\
+        Diagonal  & Stroke   & 0.77  & 0.74  & $+0.03$ & 0.03 \\
+        Trade-off & Bleeding & 10.97 & 11.23 & $-0.26$ & 0.13 \\
+        Trade-off & Death    & 1.74  & 1.80  & $-0.06$ & 0.05 \\
+        Trade-off & MI       & 2.43  & 2.39  & $+0.04$ & 0.07 \\
+        Trade-off & Stroke   & 0.72  & 0.80  & $-0.08$ & 0.03 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Observed event rate among duel winners (included) and duel losers
+    (excluded) at the end of Mechanism 3's run, by endpoint and duel rule. Results are
+    averaged over 50 independent seed-cohort replications, each enrolling 1,789 winners
+    against 1,789 losers. A negative difference indicates a lower event rate among duel
+    winners than duel losers; SEM combines the two groups' standard errors of the mean
+    in quadrature.}
+    \label{tab:ch8-duel-rate-comparison}
+\end{table}
+
+Under the diagonal rule no endpoint separates the two groups by more than 1.8 combined
+SEM. The trade-off rule moves in the direction it is built to select for on two
+endpoints: bleeding, at $-0.26$ pp against a combined SEM of $0.13$ pp, and stroke, at
+$-0.08$ pp against $0.03$ pp; death and MI stay under 1.2 combined SEM.
+
+\section{Mechanisms 4 and 5 on the Trade-off Plane}
 
 Mechanisms 4 and 5 of Chapter 3, UCB1 and Thompson sampling, are also run on this cohort,
 over a duel of arriving pairs rather than a whole-pool sweep, with the exploration bonus
-active. Two things beyond the enrolled cohort's own view of itself are needed to judge
-them honestly: a \emph{referee}, this time genuinely the Optuna-tuned forest of Chapter 6
-(distinct from the untuned reference forest used earlier in this chapter), scoring the
-final enrolled cohort with a model that took no part in selecting it; and a
-\emph{ceiling}, the identical sequence of arrival pairs scored with the referee instead of
-the online model, which is the best either bandit could have done with a perfect forest
-and no learning delay.
+active.
 
-\begin{table}[h]
-\centering
-\caption{Referee-scored conflict of the bandit-enrolled cohort against its own ceiling
-(same arrival pairs, offline tuned forest) and against a matched random cohort of equal
-size ($n = 2{,}789$), plus Fisher's exact test on real bleeding, death, MI and stroke
-event rates between the guided cohort and its random match.}
-\label{tab:ch8-bandits}
-\begin{tabular}{lccc|c}
-\toprule
-Policy & Online-guided & Ceiling & Fraction of ceiling & Fisher exact, worst $p$ \\
-\midrule
-UCB1     & $+0.091$ & $+0.303$ & 30\% & 0.349 (death) \\
-Thompson & $+0.105$ & $+0.330$ & 32\% & 0.281 (MI) \\
-Random   & $\approx 0.000$ & --- & --- & --- \\
-\bottomrule
-\end{tabular}
-\end{table}
+% INSERT RIGHT TABLE
 
 Both bandits reach a real, positive gap over random, about a third of the ceiling
 reachable on the identical arrivals if the referee itself had been doing the choosing.
@@ -206,45 +392,6 @@ with no random component, while Thompson's sampling step gives it run-to-run var
 
 \vspace{10pt}
 
-None of it moves real outcomes. Fisher's exact test on the guided cohort against a
-matched random cohort of the same size finds no endpoint distinguishable at conventional
-significance for either policy; the smallest $p$-value, for Thompson on MI, is $0.281$.
-The online model that guides these two mechanisms is deliberately light, refit every 100
-enrollments without its own hyperparameter search past the seed, and the gap to the
-ceiling is consistent with that: the bottleneck is the forest's own noise under a small,
-frequently-refit sample, not a defect specific to either exploration rule.
-
 \section{What This Chapter Establishes}
 
-The mirror test gives some evidence that the machinery moves cohorts in the direction
-its objective points: the correlation between ischemic-axis drift and the deferral of
-real ischemic-event patients has the expected sign ($r=-0.939$, $p=0.018$), though the
-fit's intercept is not negligible and only five policies feed the regression, so this
-remains a qualitative direction rather than a stable magnitude. On real, adjudicated
-outcomes, the picture does not improve: the two arms that do separate from a random
-control move in the wrong direction for a mechanism meant to concentrate on the
-trade-off quadrant, the win--win score and the diagonal rule never separate from noise,
-the model-internal AUTOC lower bound clears zero in at most one seed out of a hundred
-for any of them, and the bandit mechanisms enrich their own referee-scored score by a
-real but partial margin without moving a single real event rate.
-
 \vspace{10pt}
-
-The mirror-test result and the real-outcome result are not two independent confirmations
-of the same thing; only the second is. The online model that steers enrollment and the
-frozen forest against which the mirror test is read are both causal-forest CATE
-estimators of the kind Chapter 6 evaluated, not the specific Optuna-tuned model from
-that chapter: the online model is tuned lightly on the 1,000-patient seed alone, and the
-reference forest is left at a fixed, untuned configuration so it cannot move with the
-thing it measures.
-Agreement between them shows the machinery is internally consistent, not that it found
-something real. What is independent is the observed event counts, which never pass
-through an estimated CATE, and they show the same absence of signal Chapter 6 already
-established. \emph{The machinery selects well on a signal that is mostly noise.}
-
-\todo{Re-run the whole-pool comparison at an earlier checkpoint (for instance
-$n=2{,}500$--$3{,}000$): at 92\% enrollment the policies have too little of the cohort left
-to diverge from, which biases the comparison toward the null already reported here.}
-\todo{Build a matched-size, non-adaptive randomized-arrival baseline so that precision, not
-only cohort composition, can be compared between guided and plain enrollment at equal
-enrolled $n$; no such comparison currently exists for this cohort.}

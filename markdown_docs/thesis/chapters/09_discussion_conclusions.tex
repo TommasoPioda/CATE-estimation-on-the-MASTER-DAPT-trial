@@ -22,8 +22,9 @@ estimators separates from noise on any endpoint (Chapter 6).
 
 \vspace{10pt}
 
-The same conclusion is reached a second time without estimating a single CATE. Chapter
-8's guided-enrollment mechanisms move the estimated-CATE plane exactly as designed, and
+The same conclusion is reached a second time without estimating a single CATE.
+Chapter~\ref{ch:guided-enrollment-applied}'s guided-enrollment mechanisms move the
+estimated-CATE plane exactly as designed, and
 that movement is confirmed by a reference model that took no part in selection, yet the
 observed bleeding and ischemic event rates of the resulting cohorts do not differ
 reliably from a matched random cohort at either exploration setting tested, and the two
@@ -56,7 +57,7 @@ enter a trial by their estimated score preserves randomization, because the scor
 only on covariates measured before assignment; allocating patients to an arm by the same
 score does not, and needs the tempered, rejection-sampled rule of Chapter 3 to stay
 identified. And a linear combination of two effects of unequal variance collapses toward
-the larger one: the win--win score of Chapter 8 correlates $\rho=+0.91$ with the bleeding
+the larger one: the win--win score of Chapter~\ref{ch:guided-enrollment-applied} correlates $\rho=+0.91$ with the bleeding
 CATE alone, and its diagonal-geometry counterpart produces an identical ranking whether it
 is built from the win--win or the trade-off scalar, because both read the same two
 underlying numbers.
@@ -90,14 +91,14 @@ average once a bootstrap confidence interval is attached.
 
 \vspace{10pt}
 
-Chapter 8's own scope is narrower than its headline result suggests. The main comparison
+Chapter~\ref{ch:guided-enrollment-applied}'s own scope is narrower than its headline result suggests. The main comparison
 is read at a checkpoint where 92\% of the cohort is already enrolled, a regime that leaves
 little room for any policy to diverge from the population it is drawn from, which biases
 the comparison toward the null reported rather than away from it. The one mirror-test
 regression that does show the expected sign, in the tempered configuration, loses both its
 sign and its significance in the greedy one, on only five points; it does not survive as a
 stable result. And no matched-size, non-adaptive randomized-arrival baseline exists for
-this cohort, so Chapter 8 can say that guided enrollment does not change which real
+this cohort, so Chapter~\ref{ch:guided-enrollment-applied} can say that guided enrollment does not change which real
 outcomes occur at a given enrolled size, but it cannot say whether any mechanism would
 reach a given precision with fewer patients than random enrollment, which was the second
 half of the question Chapter 3 originally posed.
@@ -126,7 +127,8 @@ DAPT, like most trials, is powered for the average effect; the minimum detectabl
 $\delta$ of Chapter 6 is precisely the tool that turns \emph{how much heterogeneity would
 this design see} into a number that can be checked before a single patient is enrolled,
 rather than discovered afterward as this thesis had to. It is on such a cohort, not on
-this one, that the guided-enrollment machinery of Chapters 3 and 8 would have something to
+this one, that the guided-enrollment machinery of Chapter 3 and
+Chapter~\ref{ch:guided-enrollment-applied} would have something to
 find: the mechanisms, the reference-model discipline, and the two documented failure
 modes, allocation without tempering and linear scores collapsing toward the higher-variance
 axis, are all already built and already measured.
@@ -148,12 +150,12 @@ intervals compared directly against the published trial's own.
 
 \vspace{10pt}
 
-Two extensions follow directly from Chapter 8's own limitations. The whole-pool
+Two extensions follow directly from Chapter~\ref{ch:guided-enrollment-applied}'s own limitations. The whole-pool
 comparison should be re-run at an earlier checkpoint, before the cohort is 92\% enrolled,
 so that any real divergence between policies is not structurally suppressed; and a
 matched-size, non-adaptive randomized-arrival baseline should be built so that precision,
 not only cohort composition, can be compared at equal enrolled $n$ — the comparison
-Chapter 3 originally set out to make and Chapter 8 could not complete.
+Chapter 3 originally set out to make and Chapter~\ref{ch:guided-enrollment-applied} could not complete.
 
 \vspace{10pt}
 
