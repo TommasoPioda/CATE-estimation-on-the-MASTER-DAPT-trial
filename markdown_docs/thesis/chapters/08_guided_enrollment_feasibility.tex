@@ -122,11 +122,38 @@ separation between the two groups.
     \label{tab:ch8-ischaemic-rate-comparison}
 \end{table}
 
-Table \ref{tab:ch8-ischaemic-rate-comparison} quantifies this separation at the end 
-of the enrollment process. The $-$isch and net-benefit policies show statistically significant 
-reduction in ischaemic event rates compared to random selection, while the other policies do 
-not show a significant difference. For bleeding events, the $+$isch policy shows a significant 
-increase in event rates compared to random selection, while the other policies do not show a significant difference.
+Table \ref{tab:ch8-ischaemic-rate-comparison} quantifies this separation at the end
+of the enrollment process. The $-$isch and net-benefit policies yield significantly
+lower ischaemic event rates among enrolled than left-out patients, whereas the other
+policies do not show a significant separation.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        Policy & Bleed. rate (\%) & Selected (\%) & Left-out (\%) &
+        Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Conflict          & 11.06 & 11.06 & 11.04 & $+0.02$ & 0.17 & 0.898 \\
+        Net-benefit       & 11.07 & 11.07 & 11.02 & $+0.04$ & 0.17 & 0.793 \\
+        Angle net-benefit & 11.05 & 11.05 & 11.13 & $-0.08$ & 0.17 & 0.633 \\
+        Angle conflict    & 11.05 & 11.05 & 11.12 & $-0.06$ & 0.17 & 0.708 \\
+        Random            & 11.09 & 11.09 & 10.85 & $+0.23$ & 0.18 & 0.203 \\
+        $-$isch           & 10.98 & 10.98 & 11.73 & $-0.75$ & 0.17 & $<0.001$ \\
+        $+$isch           & 11.04 & 11.04 & 11.25 & $-0.21$ & 0.17 & 0.225 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison of bleeding event rates between enrolled and left-out patients at $n=4200$. Results are averaged over 100 runs, with 379 patients remaining outside the enrolled cohort. A negative difference indicates a lower bleeding event rate among enrolled patients.}
+    \label{tab:ch8-bleeding-rate-comparison}
+\end{table}
+
+The analogous bleeding comparison in Table~\ref{tab:ch8-bleeding-rate-comparison}
+shows a significant separation only for $-$isch: its enrolled cohort has a bleeding
+event rate $0.75$ percentage points below the left-out group ($p<0.001$). The other
+policies, including random enrollment, show no statistically significant bleeding
+separation at this checkpoint.
 
 \begin{table}[htbp]
     \centering
@@ -181,6 +208,11 @@ desired direction when trading bleeding against ischaemic risk. However, only th
 $+$isch policy shows a statistically significant increase in bleeding events relative
 to random enrollment. The $-$isch policy, despite achieving the strongest reduction
 in ischaemic events, does not significantly alter the bleeding event rate.
+
+No experimentation was made on the final cohort size, wich was set to 4200 patients.
+Changing the number of patients enrolled might benefit the performance of the mechanism.
+This number was chosen arbitrarily to leave a small number of patients outside the enrolled cohort,
+to allow for a final comparison between the enrolled and left-out groups.
 
 \section{Mechanism 2 on the Trade-off Plane}
 
@@ -508,8 +540,12 @@ the two CATEs rather than from a joint selection rule.
 
 The chapter's opening question was whether the enrollment machinery of Chapter 3 remains
 distinguishable from random selection once its premise, a real trade-off between two
-well-separated risk axes, is gone. Several policy-mechanism combinations separate
-significantly from random on at least one axis; the largest joint bleeding-and-ischaemic
-effect, $-$isch under Mechanism 2, moves each axis by well under half a percentage point.
-The compression Chapter 6 describes narrows what a selection rule can find without
-eliminating it.
+well-separated risk axes, is gone. Several policy--mechanism combinations produce a
+significant separation on at least one axis. The largest single-axis separation between
+enrolled and left-out patients is $-0.83$ percentage points for $-$isch under
+Mechanism~1; when the selected cohort is compared directly with random enrollment, the
+corresponding difference is $-0.10$ percentage points. The largest simultaneous movement
+of both axes in an included-versus-discarded comparison occurs for $-$isch under
+Mechanism~2, with changes of $-0.28$ percentage points for bleeding and $-0.40$
+percentage points for ischemic events. The compression described in Chapter~6 narrows
+what a selection rule can find without eliminating it.
