@@ -1,0 +1,155 @@
+% Bibliography for "CATE estimation and use in MASTER DAPT study".
+% Grouped by role; see appendix chapters/A_references.tex for which chapter
+% uses each entry and why. Entries marked (preprint) are cited from the
+% version consulted in markdown_docs/papers/; where a later peer-reviewed
+% version exists, it should replace the preprint before submission.
+
+% --- Causal inference and CATE estimation --------------------------------
+
+@article{kennedy2020,
+  author  = {Kennedy, Edward H.},
+  title   = {Towards Optimal Doubly Robust Estimation of Heterogeneous Causal Effects},
+  journal = {arXiv preprint arXiv:2004.14497},
+  year    = {2020},
+  note    = {v5, preprint}
+}
+
+@article{kennedy2023,
+  author  = {Kennedy, Edward H.},
+  title   = {Semiparametric Doubly Robust Targeted Double Machine Learning: A Review},
+  journal = {arXiv preprint arXiv:2203.06469},
+  year    = {2023},
+  note    = {v2, stat.ME, preprint}
+}
+
+@article{salditt2024,
+  author  = {Salditt, Marie and Eckes, Theresa and Nestler, Steffen},
+  title   = {A Tutorial Introduction to Heterogeneous Treatment Effect Estimation with Meta-learners},
+  journal = {Administration and Policy in Mental Health and Mental Health Services Research},
+  volume  = {51},
+  pages   = {650--673},
+  year    = {2024},
+  doi     = {10.1007/s10488-023-01303-9}
+}
+
+% --- Validation of treatment prioritization rules -------------------------
+
+@article{chernozhukov2022,
+  author  = {Chernozhukov, Victor and Demirer, Mert and Duflo, Esther and Fern{\'a}ndez-Val, Iv{\'a}n},
+  title   = {Generic Machine Learning Inference on Heterogeneous Treatment Effects in Randomized Experiments},
+  journal = {arXiv preprint arXiv:1712.04802},
+  year    = {2022},
+  note    = {preprint}
+}
+
+@article{dwivedi2020,
+  author  = {Dwivedi, Raaz and others},
+  title   = {Stable Discovery of Interpretable Subgroups via Calibration in Causal Studies},
+  journal = {arXiv preprint arXiv:2008.10109},
+  year    = {2020},
+  note    = {preprint}
+}
+
+@article{radcliffe2007,
+  author  = {Radcliffe, Nicholas},
+  title   = {Using Control Groups to Target on Predicted Lift: Building and Assessing Uplift Models},
+  journal = {Direct Marketing Analytics Journal},
+  pages   = {14--21},
+  year    = {2007}
+}
+
+% --- Adaptive enrolment, active and online learning -----------------------
+
+@article{kato2024,
+  author  = {Kato, Masahiro and Oga, Akihiro and Komatsubara, Wataru and Inokuchi, Ryo},
+  title   = {Active Adaptive Experimental Design for Treatment Effect Estimation with Covariate Choice},
+  journal = {arXiv preprint arXiv:2403.03589},
+  year    = {2024},
+  note    = {v2, preprint}
+}
+
+@article{cacciarelli2023survey,
+  author  = {Cacciarelli, Davide and Kulahci, Murat},
+  title   = {Active Learning for Data Streams: A Survey},
+  journal = {Machine Learning},
+  publisher = {Springer},
+  year    = {2023},
+  doi     = {10.1007/s10994-023-06454-2}
+}
+
+@article{cacciarelli2022stream,
+  author  = {Cacciarelli, Davide and Kulahci, Murat and Tyssedal, John S{\o}lve},
+  title   = {Stream-based Active Learning with Linear Models},
+  journal = {arXiv preprint},
+  year    = {2022},
+  note    = {preprint}
+}
+
+@inproceedings{cacciarelli2022soft,
+  author    = {Cacciarelli, Davide and Kulahci, Murat and Tyssedal, John},
+  title     = {Online Active Learning for Soft Sensor Development using Semi-Supervised Autoencoders},
+  booktitle = {ICML 2022 Workshop on Adaptive Experimental Design and Active Learning in the Real World},
+  year      = {2022},
+  note      = {arXiv:2212.13067}
+}
+
+@article{fontaine2020,
+  author  = {Fontaine, Xavier and Perrault, Pierre and Valko, Michal and Perchet, Vianney},
+  title   = {Online A-Optimal Design and Active Linear Regression},
+  journal = {arXiv preprint arXiv:1906.08509},
+  year    = {2020},
+  note    = {v2, stat.ML, preprint}
+}
+
+@article{riquelme2016,
+  author  = {Riquelme, Carlos and Johari, Ramesh and Zhang, Baosen},
+  title   = {Online Active Linear Regression via Thresholding},
+  journal = {arXiv preprint arXiv:1602.02845},
+  year    = {2016},
+  note    = {v4, stat.ML, preprint}
+}
+
+@article{auer2002,
+  author  = {Auer, Peter and Cesa-Bianchi, Nicol{\`o} and Fischer, Paul},
+  title   = {Finite-time Analysis of the Multiarmed Bandit Problem},
+  journal = {Machine Learning},
+  volume  = {47},
+  pages   = {235--256},
+  year    = {2002},
+  doi     = {10.1023/A:1013689704352}
+}
+
+% --- Trial and dataset documentation --------------------------------------
+
+@article{valgimigli2021masterdapt,
+  author  = {Valgimigli, Marco and Frigoli, Enrico and Heg, Dik and Tijssen, Jan and J{\"u}ni, Peter
+             and Vranckx, Pascal and Ozaki, Yukio and Morice, Marie-Claude and Chevalier, Bernard
+             and Onuma, Yoshinobu and Windecker, Stephan and Tonino, Pim A. L. and Roffi, Marco
+             and Lesiak, Maciej and Mahfoud, Felix and Bartunek, Jozef and Hildick-Smith, David
+             and Colombo, Antonio and Stankovi{\'c}, Goran and I{\~n}iguez, Andres and Schultz, Carl
+             and Kornowski, Ran and Ong, Paul J. L. and Alasnag, Mirvat and Rodriguez, Alfredo E.
+             and Moschovitis, Aris and Laanmets, Peep and Donahue, Mark and Leonardi, Sergio
+             and Smits, Pieter C.},
+  title   = {Dual Antiplatelet Therapy after {PCI} in Patients at High Bleeding Risk},
+  journal = {New England Journal of Medicine},
+  volume  = {385},
+  number  = {18},
+  pages   = {1643--1655},
+  year    = {2021},
+  doi     = {10.1056/NEJMoa2108749},
+  note    = {for the MASTER DAPT Investigators}
+}
+
+@misc{valgimigli2021appendix,
+  author = {{MASTER DAPT Investigators}},
+  title  = {Supplementary Appendix to: Dual Antiplatelet Therapy after {PCI} in Patients at High Bleeding Risk},
+  year   = {2021},
+  note   = {Supplement to Valgimigli et al. (2021)}
+}
+
+@unpublished{maroni2026,
+  author = {Maroni, Gabriele and Azzimonti, Laura},
+  title  = {Machine Learning Prediction of Clinical Outcomes in {MASTER DAPT}. Draft Report: Predictive Performance, {SHAP} Interpretation, and Variable Dictionary},
+  note   = {Internal report, 6 May 2026, unpublished},
+  year   = {2026}
+}

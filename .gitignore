@@ -247,5 +247,8 @@ markdown_docs/thesis/**/*.pdf
 *.lot
 *.lof
 *.synctex.gz
+*.bbl
+*.bbl-SAVE-ERROR
+*.blg
 *.xdv
 *.log

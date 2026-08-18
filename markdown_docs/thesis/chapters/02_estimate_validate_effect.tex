@@ -66,7 +66,7 @@ different ways of failing, so that a conclusion which survives all five stops
 being attributable to any one of them.
 
 \paragraph{Two-model meta-learner (T-learner).}
-The simplest model of the five (Salditt et al., 2024): it fits one outcome model per treatment arm,
+The simplest model of the five \citep{salditt2024}: it fits one outcome model per treatment arm,
 $\hat\mu_1(x)$ and $\hat\mu_0(x)$, and take their difference as
 
 \[
@@ -94,7 +94,7 @@ where the true probabilities agree.
 \paragraph{Causal forest.}
 The causal forest estimates the treatment effect $\tau(x)$ directly,
 rather than fitting two separate outcome models and taking their
-difference. It uses double machine learning (Kennedy, 2023) to account for confounding:
+difference. It uses double machine learning \citep{kennedy2023} to account for confounding:
 writing $\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]$ and
 $\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]$ for the fitted outcome and
 treatment models, the forest works on the residuals
@@ -152,7 +152,7 @@ variant of the same idea.
 \vspace{10pt}
 
 \paragraph{Interaction forest (S-learner).}
-The S-learner of the same taxonomy (Salditt et al., 2024): fits a single classification forest $\hat f(x,t,x\cdot t)$ on the augmented
+The S-learner of the same taxonomy \citep{salditt2024}: fits a single classification forest $\hat f(x,t,x\cdot t)$ on the augmented
 design $[X, T, X\cdot T]$, covariates, treatment, and their interactions, and
 recovers the implied CATE as
 \[
@@ -192,7 +192,7 @@ question, asked and answered separately.
 
 \vspace{10pt}
 
-The group averages are built from a \emph{doubly robust} pseudo-outcome (Kennedy, 2020), one
+The group averages are built from a \emph{doubly robust} pseudo-outcome \citep{kennedy2020}, one
 number per patient, formed by taking the prediction of an outcome model and
 correcting it with the inverse-propensity-weighted residual of the arm the
 patient was actually assigned to. Individually this number is far too noisy
@@ -242,7 +242,7 @@ Two scalar summaries integrate the TOC curve, differing only in how they
 weight its depths. \textbf{AUTOC} weights every fraction equally, so a narrow
 high-benefit group at the top contributes as much as a broad one; it is the
 more powerful summary when the benefit is concentrated in a small subgroup.
-\textbf{QINI} weights each point by the size of the group it refers to, which
+\textbf{QINI} \citep{radcliffe2007} weights each point by the size of the group it refers to, which
 suppresses the top of the ranking and rewards an effect spread broadly across
 the population. Which of the two is the appropriate lens depends on whether
 the responsive subgroup is a narrow tail or a large fraction of the cohort —
@@ -254,7 +254,7 @@ ranking rather than of the choice of weight.
 
 A second test asks the question the ordering deliberately sets aside.
 Grouping patients into quantiles of predicted CATE, \emph{group calibration}
-compares the effect actually estimated within each group, $\text{GATE}_g^{DR}$,
+\citep{dwivedi2020} compares the effect actually estimated within each group, $\text{GATE}_g^{DR}$,
 against the effect the model predicts for that same group, $\bar\tau_g$, and
 scales the discrepancy by how far the group effects lie from the overall
 average effect $\hat\theta_{\text{ATE}}$,
@@ -277,7 +277,7 @@ differ.
 \vspace{10pt}
 
 A complementary check is the \textbf{best linear predictor (BLP) slope}
-(Chernozhukov et al., 2022). Regressing the doubly robust pseudo-outcome
+\citep{chernozhukov2022}. Regressing the doubly robust pseudo-outcome
 $\hat\varphi_i$ on the model's predicted effect $\hat\tau(x_i)$,
 \[
 \hat\varphi_i = \beta_0 + \beta_1\,\hat\tau(x_i) + \epsilon_i,

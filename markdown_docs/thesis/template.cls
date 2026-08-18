@@ -29,7 +29,7 @@ amos.brocco@supsi.ch]
 % Figure
 \usepackage{graphicx}
 % Bibliografia
-%\usepackage{natbib}
+\usepackage[round,authoryear]{natbib}
 % Per adattare margini
 \usepackage[strict]{changepage}
 % Footer logo

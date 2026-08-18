@@ -9,23 +9,17 @@ should replace it before submission.
 \section{Causal inference and CATE estimation}
 
 \begin{enumerate}
-  \item Kennedy, E. H. \emph{Towards Optimal Doubly Robust Estimation of
-    Heterogeneous Causal Effects.} arXiv:2004.14497v5 (preprint).
+  \item \citet{kennedy2020}.
     \\\textit{Used in Ch.~2:} the doubly robust pseudo-outcome of
     Eq.~\eqref{eq:aipw-pseudo-outcome} and the two-stage DR-learner
     construction.
 
-  \item Kennedy, E. H. \emph{Semiparametric Doubly Robust Targeted Double
-    Machine Learning: A Review.} arXiv:2203.06469v2 [stat.ME], 26 January 2023
-    (preprint).
+  \item \citet{kennedy2023}.
     \\\textit{Used in Ch.~2:} influence-function framing of the AIPW estimator
     and the double-machine-learning nuisance structure behind the causal
     forest.
 
-  \item Salditt, M., Eckes, T., Nestler, S. \emph{A Tutorial Introduction to
-    Heterogeneous Treatment Effect Estimation with Meta-learners.}
-    Administration and Policy in Mental Health and Mental Health Services
-    Research, 51:650--673, 2024. DOI: 10.1007/s10488-023-01303-9.
+  \item \citet{salditt2024}.
     \\\textit{Used in Ch.~2:} the meta-learner taxonomy, in particular the
     T-learner and the S-learner families.
 \end{enumerate}
@@ -38,88 +32,64 @@ summaries, and the group calibration test --- is applied through the
 on the following sources.
 
 \begin{enumerate}\setcounter{enumi}{3}
-  \item Chernozhukov, V. et al. \emph{Generic Machine Learning Inference on
-    Heterogeneous Treatment Effects in Randomized Experiments.}
-    arXiv:1712.04802, 2022 (preprint).
+  \item \citet{chernozhukov2022}.
     \\\textit{Used in Ch.~2:} the group average treatment effect (GATES) and
     best-linear-predictor tests underlying group calibration.
 
-  \item Dwivedi, R. et al. \emph{Stable Discovery of Interpretable Subgroups via
-    Calibration in Causal Studies.} arXiv:2008.10109, 2020 (preprint).
+  \item \citet{dwivedi2020}.
     \\\textit{Used in Ch.~2:} the calibration $R^2$ normalized against the
     constant-effect baseline.
 
-  \item Radcliffe, N. \emph{Using control groups to target on predicted lift:
-    building and assessing uplift models.} Direct Marketing Analytics Journal,
-    pages 14--21, 2007.
+  \item \citet{radcliffe2007}.
     \\\textit{Used in Ch.~2:} the QINI curve and its group-size weighting.
 \end{enumerate}
 
 \section{Adaptive enrolment, active and online learning}
 
 \begin{enumerate}\setcounter{enumi}{6}
-  \item Kato, M., Oga, A., Komatsubara, W., Inokuchi, R. \emph{Active Adaptive
-    Experimental Design for Treatment Effect Estimation with Covariate Choice.}
-    arXiv:2403.03589v2 (preprint).
-    \\\textit{Used in Ch.~3 and Ch.~8:} joint optimization of covariate density
+  \item \citet{kato2024}.
+    \\\textit{Used in Ch.~3 and Ch.~7:} joint optimization of covariate density
     and propensity score as the reference framework for guided enrolment.
 
-  \item Cacciarelli, D., Kulahci, M. \emph{Active learning for data streams: a
-    survey.} Machine Learning (Springer), 2023.
-    DOI: 10.1007/s10994-023-06454-2.
+  \item \citet{cacciarelli2023survey}.
     \\\textit{Used in Ch.~3:} the stream-based versus pool-based distinction
     that frames sequential patient enrolment as an online problem.
 
-  \item Cacciarelli, D., Kulahci, M., Tyssedal, J. S. \emph{Stream-based active
-    learning with linear models.} (preprint).
+  \item \citet{cacciarelli2022stream}.
     \\\textit{Used in Ch.~3:} informativeness thresholding on a stream of
     incoming units.
 
-  \item Cacciarelli, D., Kulahci, M., Tyssedal, J. \emph{Online Active Learning
-    for Soft Sensor Development using Semi-Supervised Autoencoders.} ICML 2022
-    Workshop on Adaptive Experimental Design and Active Learning in the Real
-    World.
+  \item \citet{cacciarelli2022soft}.
     \\\textit{Used in Ch.~3:} adaptation of pool-based query strategies to the
     stream-based setting.
 
-  \item Fontaine, X., Perrault, P., Valko, M., Perchet, V. \emph{Online
-    A-Optimal Design and Active Linear Regression.} arXiv:1906.08509v2
-    [stat.ML], 30 December 2020 (preprint).
+  \item \citet{fontaine2020}.
     \\\textit{Used in Ch.~3:} optimal-experiment-design view of budget
     allocation under heteroscedasticity.
 
-  \item Riquelme, C., Johari, R., Zhang, B. \emph{Online Active Linear
-    Regression via Thresholding.} arXiv:1602.02845v4 [stat.ML], 21 December
-    2016 (preprint).
+  \item \citet{riquelme2016}.
     \\\textit{Used in Ch.~3:} threshold-based selection of the most informative
     observations under a fixed experimentation budget.
+
+  \item \citet{auer2002}.
+    \\\textit{Used in Ch.~3 and Ch.~7:} UCB1, the upper-confidence-bound rule
+    behind Mechanism~4's bandit-style enrolment.
 \end{enumerate}
 
 \section{Trial and dataset documentation}
 
-\begin{enumerate}\setcounter{enumi}{12}
-  \item Valgimigli, M., Frigoli, E., Heg, D., Tijssen, J., J\"uni, P., Vranckx,
-    P., et al., for the MASTER DAPT Investigators. \emph{Dual Antiplatelet
-    Therapy after PCI in Patients at High Bleeding Risk.} New England Journal
-    of Medicine, 385(18):1643--1655, 28 October 2021.
-    DOI: 10.1056/NEJMoa2108749.
-    \\\textit{Used in Ch.~4 and Ch.~7:} trial design, randomization at the
-    one-month landmark visit, endpoint definitions and headline results.
+\begin{enumerate}\setcounter{enumi}{13}
+  \item \citet{valgimigli2021masterdapt}.
+    \\\textit{Used in Ch.~1, Ch.~4, Ch.~6 and Ch.~7:} trial design,
+    randomization at the one-month landmark visit, the NACE/MACCE composite
+    endpoints, and headline results.
 
-  \item \emph{Supplementary Appendix} to the above.
-    \\\textit{Used in Ch.~4:} high-bleeding-risk criteria, inclusion and
-    exclusion criteria, outcome definitions and the per-protocol population.
+  \item \citet{valgimigli2021appendix}.
+    \\\textit{Used in Ch.~4 and Ch.~6:} high-bleeding-risk criteria, inclusion
+    and exclusion criteria, outcome definitions and the per-protocol
+    population.
 
-  \item Maroni, G., Azzimonti, L. \emph{Machine Learning Prediction of Clinical
-    Outcomes in MASTER DAPT. Draft report: predictive performance, SHAP
-    interpretation, and variable dictionary.} Internal report, 6 May 2026.
-    Unpublished.
+  \item \citet{maroni2026}.
     \\\textit{Used in Ch.~5:} baseline predictive performance, SHAP-based
     interpretation and the variable dictionary of the modelling dataset.
 \end{enumerate}
-
-\bibitem[Valgimigli et al.(2021)]{valgimigli2021masterdapt}
-Valgimigli, M., et al. (2021).
-Dual antiplatelet therapy after PCI in patients at high bleeding risk
-(MASTER DAPT).
-\textit{New England Journal of Medicine}, 385(18), 1643--1655.

@@ -468,7 +468,8 @@ endpoint can. This section therefore adds two endpoints already adjudicated by
 the trial's Clinical Event Committee rather than built for this thesis: NACE
 (Net Adverse Clinical Events, 7.7\% in this cohort), the trial's pre-specified
 primary net-benefit endpoint, combining death, MI, stroke and BARC 3--5
-bleeding, and the ischemic composite MACCE (death, MI and stroke, 6.0\%). Both
+bleeding, and the ischemic composite MACCE (death, MI and stroke, 6.0\%)
+\citep{valgimigli2021masterdapt}. Both
 are read directly from the merged MASTER DAPT dataset, as the columns
 \texttt{cec\_nace\_335d} and \texttt{cec\_macce\_335d}, and neither passes
 through the five-endpoint modelling pipeline of Chapter 4 or the CATE
@@ -672,8 +673,8 @@ the ischemic endpoints, reliable detection would require substantially larger
 effect modification, making the question difficult to resolve with this
 cohort alone.
 
-MASTER DAPT enrolls only patients already flagged as high bleeding risk 
-(ARC-HBR criterion), so predicted bleeding risk varies little across the cohort, 
+MASTER DAPT enrolls only patients already flagged as high bleeding risk
+(ARC-HBR criterion, \citealp{valgimigli2021appendix}), so predicted bleeding risk varies little across the cohort,
 leaving the causal forest little covariate-space variation to exploit 
 regardless of the 506 observed events.
 
