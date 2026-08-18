@@ -10,16 +10,16 @@ functions are collapsed into one, parametrized by `score_kind`; same defaults, s
 `markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex` (chapter 7 as
 compiled).
 
-Run (from `online-learning/`, ~12 min on a 192-core box):
-    M2_N_RUNS=30 M2_N_TRIALS=20 python3 mechanism2_repeated_runs.py
+Run (from anywhere, ~12 min on a 192-core box):
+    M2_N_RUNS=30 M2_N_TRIALS=20 python3 online-learning/scripts/mechanism2_repeated_runs.py
 
 Env overrides (all optional): M2_N_SEED, M2_N_RUNS, M2_N_TRIALS, M2_VARIANTS
 (comma-separated subset of conflict,net_benefit,angle), M2_N_STOP (early-stop enrolled
 count, for a fast smoke test), M2_OUT (output parquet filename).
 
 Saves long-format results (one row per variant/run/group) to
-`results_mechanism2_sample_select.parquet` and prints the mean/std summary used to build
-the thesis table and figure (`mechanism2_included_discarded_event_rates.png`).
+`results/results_mechanism2_sample_select.parquet` and prints the mean/std summary used to
+build the thesis table and figure (`mechanism2_included_discarded_event_rates.png`).
 """
 import os
 import sys
@@ -31,10 +31,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-REPO = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-OL_DIR = os.path.join(REPO, "online-learning")
+OL_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+REPO = os.path.normpath(os.path.join(OL_DIR, ".."))
 CF_DIR = os.path.join(REPO, "Meta-learning", "causal_forest")
-sys.path.insert(0, OL_DIR)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, CF_DIR)
 
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed/60:.1f} min", flush=True)
 
-    out_path = os.path.join(OL_DIR, os.environ.get("M2_OUT", "results_mechanism2_sample_select.parquet"))
+    out_path = os.path.join(OL_DIR, "results", os.environ.get("M2_OUT", "results_mechanism2_sample_select.parquet"))
     results_df.to_parquet(out_path)
     results_df.to_parquet(os.path.join(RUN_DIR, os.path.basename(out_path)))
     print("saved:", out_path, flush=True)

@@ -14,14 +14,14 @@ the cost of an already expensive online loop (a full causal-forest refit every 1
 ~18 refits per run) by another factor of N_RUNS. Backs "Mechanisms 4 and 5 on the Trade-off
 Plane" in markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex.
 
-Run (from `online-learning/`):
-    M45_N_RUNS=50 python3 mechanism4_5_repeated_runs.py
+Run (from anywhere):
+    M45_N_RUNS=50 python3 online-learning/scripts/mechanism4_5_repeated_runs.py
 
 Env overrides (all optional): M45_N_RUNS (default 50), M45_N_STOP (early-stop enrolled count,
 for a fast smoke test).
 
 Saves long-format results (one row per policy/regime/run/group) to
-`results_mechanism4_5_bandit_duel.parquet`.
+`results/results_mechanism4_5_bandit_duel.parquet`.
 """
 import os
 import sys
@@ -35,10 +35,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-REPO = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-OL_DIR = os.path.join(REPO, "online-learning")
+OL_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+REPO = os.path.normpath(os.path.join(OL_DIR, ".."))
 CF_DIR = os.path.join(REPO, "Meta-learning", "causal_forest")
-sys.path.insert(0, OL_DIR)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, CF_DIR)
 
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed / 60:.1f} min", flush=True)
 
-    out_path = os.path.join(OL_DIR, "results_mechanism4_5_bandit_duel.parquet")
+    out_path = os.path.join(OL_DIR, "results", "results_mechanism4_5_bandit_duel.parquet")
     results_df.to_parquet(out_path)
     results_df.to_parquet(os.path.join(RUN_DIR, os.path.basename(out_path)))
     print("saved:", out_path, flush=True)

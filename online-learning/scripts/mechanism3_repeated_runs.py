@@ -41,16 +41,17 @@ refit -- exactly what that function's own docstring warns against ("fine per cal
 put the fallback inside a per-duel loop"). `_build_frame` below precomputes them once per
 refit for every policy so the fallback is never on the hot path.
 
-Run (from `online-learning/`):
-    M3_N_RUNS=50 M3_N_TRIALS=20 python3 mechanism3_repeated_runs.py
+Run (from anywhere):
+    M3_N_RUNS=50 M3_N_TRIALS=20 python3 online-learning/scripts/mechanism3_repeated_runs.py
 
 Env overrides (all optional): M3_N_SEED, M3_N_RUNS, M3_N_TRIALS, M3_POLICIES (comma-separated
 subset of conflict,net_benefit,-isch,+isch,angle_conflict,angle_net_benefit,random), M3_N_STOP
 (early-stop enrolled count, for a fast smoke test), M3_OUT (output parquet filename).
 
 Saves long-format results (one row per policy/run/endpoint/group) to
-`results_mechanism3_duel_policies.parquet` and prints the mean/std summary, same shape as nb02's
-own cell 23/24 ("included" = the duel winners minus the seed, "excluded" = the duel losers).
+`results/results_mechanism3_duel_policies.parquet` and prints the mean/std summary, same shape
+as nb02's own cell 23/24 ("included" = the duel winners minus the seed, "excluded" = the duel
+losers).
 """
 import os
 import sys
@@ -62,10 +63,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-REPO = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-OL_DIR = os.path.join(REPO, "online-learning")
+OL_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+REPO = os.path.normpath(os.path.join(OL_DIR, ".."))
 CF_DIR = os.path.join(REPO, "Meta-learning", "causal_forest")
-sys.path.insert(0, OL_DIR)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, CF_DIR)
 
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
@@ -330,7 +331,7 @@ if __name__ == "__main__":
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed/60:.1f} min", flush=True)
 
-    out_path = os.path.join(OL_DIR, os.environ.get("M3_OUT", "results_mechanism3_duel_policies.parquet"))
+    out_path = os.path.join(OL_DIR, "results", os.environ.get("M3_OUT", "results_mechanism3_duel_policies.parquet"))
     results_df.to_parquet(out_path)
     results_df.to_parquet(os.path.join(RUN_DIR, os.path.basename(out_path)))
     print("saved:", out_path, flush=True)

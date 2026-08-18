@@ -19,8 +19,8 @@ if it does not. `random` therefore sits near 0 by construction. If `real` lands 
 and `random`, a patient's selection is noise: they are picked because this particular
 resample nudged them across a boundary, not because the model knows something about them.
 
-  python selection_stability.py --n-seeds 100 --workers 12
-  python selection_stability.py --rule topright          # the win-win corner instead
+  python online-learning/scripts/selection_stability.py --n-seeds 100 --workers 12
+  python online-learning/scripts/selection_stability.py --rule topright  # the win-win corner instead
 
 Caveat on `placebo`: permuting T destroys the bleeding ATE as well as the heterogeneity, so
 it is a null for "any structure at all", not for heterogeneity alone. It is the floor, not a
@@ -47,7 +47,7 @@ from online_learning_utils import plane_coords
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.normpath(os.path.join(HERE, '..'))
+ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 CF_DIR = os.path.join(ROOT, 'Meta-learning', 'causal_forest')
 MODEL_PATH = os.path.join(ROOT, 'Meta-learning', 'models', 'CausalForest',
                           'CausalForest_multioutput_tuned.joblib')

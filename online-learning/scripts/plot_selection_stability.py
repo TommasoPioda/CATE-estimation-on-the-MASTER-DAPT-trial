@@ -9,7 +9,7 @@ on -- and for which patients does `real` disagree with `placebo` specifically?
 Needs selection_frequency_{rule}.csv + stability_report_{rule}.csv, already
 written by selection_stability.py into Meta-learning/models/CausalForest/STABILITY/.
 
-    python plot_selection_stability.py --rule angle
+    python online-learning/scripts/plot_selection_stability.py --rule angle
 """
 import argparse
 import os
@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.normpath(os.path.join(HERE, '..'))
+ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 STAB_DIR = os.path.join(ROOT, 'Meta-learning', 'models', 'CausalForest', 'STABILITY')
 
 # Fixed hue per arm, reused across every plot below -- colorblind-safe qualitative triplet.

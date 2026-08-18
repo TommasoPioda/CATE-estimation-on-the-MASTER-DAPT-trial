@@ -5,20 +5,21 @@ from scipy.stats import fisher_exact
 from run_archiving import start_run_archive
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RUN_DIR = start_run_archive(HERE, "mechanism2_statistics")
+OL_DIR = os.path.normpath(os.path.join(HERE, ".."))
+RUN_DIR = start_run_archive(OL_DIR, "mechanism2_statistics")
 
 RESULTS_FILE = os.path.join(
-    HERE,
+    OL_DIR, "results",
     "results_mechanism2_sample_select.parquet",
 )
 
 OUT_STATS = os.path.join(
-    HERE,
+    OL_DIR, "results",
     "mechanism2_statistics.parquet",
 )
 
 OUT_TEX = os.path.join(
-    HERE,
+    OL_DIR, "results",
     "mechanism2_statistics.tex",
 )
 
