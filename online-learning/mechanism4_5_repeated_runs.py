@@ -46,6 +46,9 @@ from online_learning_utils import (z, fit_cate, conflict_from_model,  # noqa: E4
                                     net_benefit_from_model, weighted_isch, tune_on_seed,
                                     policy_ucb, policy_thompson,
                                     DEFAULT_CF_PARAMS, DEFAULT_NUISANCE_PARAMS)
+from run_archiving import start_run_archive  # noqa: E402
+
+RUN_DIR = start_run_archive(OL_DIR, "mechanism4_5")
 
 SEED = 42
 np.random.seed(SEED)
@@ -194,7 +197,9 @@ if __name__ == "__main__":
 
     out_path = os.path.join(OL_DIR, "results_mechanism4_5_bandit_duel.parquet")
     results_df.to_parquet(out_path)
+    results_df.to_parquet(os.path.join(RUN_DIR, os.path.basename(out_path)))
     print("saved:", out_path, flush=True)
+    print("archived copy:", RUN_DIR, flush=True)
 
     summary = (results_df.groupby(["policy", "regime", "group"])[["isch_rate", "bleed_rate"]]
                .agg(["mean", "std"]))

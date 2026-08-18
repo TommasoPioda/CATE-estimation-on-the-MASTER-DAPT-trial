@@ -2,7 +2,10 @@ import os
 import pandas as pd
 from scipy.stats import fisher_exact
 
+from run_archiving import start_run_archive
+
 HERE = os.path.dirname(os.path.abspath(__file__))
+RUN_DIR = start_run_archive(HERE, "mechanism2_statistics")
 
 RESULTS_FILE = os.path.join(
     HERE,
@@ -96,6 +99,10 @@ stats_df.to_parquet(
     OUT_STATS,
     index=False,
 )
+stats_df.to_parquet(
+    os.path.join(RUN_DIR, os.path.basename(OUT_STATS)),
+    index=False,
+)
 
 print(f"Saved statistics: {OUT_STATS}")
 
@@ -169,5 +176,12 @@ with open(
     encoding="utf-8",
 ) as f:
     f.write(latex_table)
+with open(
+    os.path.join(RUN_DIR, os.path.basename(OUT_TEX)),
+    "w",
+    encoding="utf-8",
+) as f:
+    f.write(latex_table)
 
 print(f"Saved LaTeX table: {OUT_TEX}")
+print(f"Archived copy: {RUN_DIR}")
