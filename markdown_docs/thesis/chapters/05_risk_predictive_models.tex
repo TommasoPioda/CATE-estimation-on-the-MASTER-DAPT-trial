@@ -75,7 +75,7 @@ rare positive class.
 
 \paragraph{Calibrating the per-arm models}
 The per-arm outcome models built for the T-learner are additionally wrapped,
-after tuning, in a Platt (sigmoid) calibrator, fitted by internal
+after tuning, in a Platt (sigmoid) calibrator \citep{platt1999}, fitted by internal
 cross-validation on the training fold, rather than an isotonic one, because
 isotonic fitting is unstable at these event rates.
 
@@ -173,7 +173,7 @@ unstable and almost overlaps with the diagonal. With this many
 positive events is really hard to get a stable estimate of the model's performance.
 
 \paragraph{What the models look at.}
-The average absolute SHAP feature attributions computed on logistic regression, random forest and gradient boosting
+The average absolute SHAP feature attributions \citep{lundberg2017shap} computed on logistic regression, random forest and gradient boosting
  are consistent with the anomaly presented 
 at the beginning of this section rather than
 explaining it away. For cardiovascular death (Figure~\ref{fig:shap-cvdeath})
@@ -182,8 +182,8 @@ haemoglobin, ejection fraction, creatinine, heart rate, contrast volume — plus
 recent myocardial infarction, all of which vary widely across the cohort. For
 bleeding (Figure~\ref{fig:shap-bleeding}) the leading contributors are age,
 oral anticoagulation, renal function and the
-acute-coronary-syndrome presentation: variables that overlap heavily with the
-eligibility criteria through which the cohort was assembled.
+acute-coronary-syndrome presentation; several of these variables overlap with
+the eligibility criteria through which the cohort was assembled \citep{valgimigli2021appendix}.
 
 \begin{figure}[h]
 \centering
@@ -199,8 +199,8 @@ boosting. The ranking is dominated by continuous physiological markers.}
 \includegraphics[width=1\textwidth]{SHAP_bleeding.png}
 \caption{Mean absolute SHAP attribution, top ten covariates, bleeding, one
 panel each for logistic regression, random forest and gradient boosting. The
-ranking is dominated by variables that also appear among the trial's
-high-bleeding-risk eligibility criteria.}
+ranking includes variables that also appear among the trial's
+high-bleeding-risk eligibility criteria \citep{valgimigli2021appendix}.}
 \label{fig:shap-bleeding}
 \end{figure}
 
@@ -264,7 +264,7 @@ under prolonged therapy. For ischemic targets the the corresponding differences 
 percentage points on MI, cardiovascular death and stroke, respectively. These differences
 are small relative to the observed event counts and do not provide evidence
 of a detectable treatment effect, consistent with the conclusions of the
-original trial report.
+original trial report \citep{valgimigli2021masterdapt}.
 
 \section{The Anomaly, Left Open}
 
@@ -280,7 +280,7 @@ Three readings are available at this point. The covariate set might simply
 lack the variables that determine bleeding, which the feature attributions
 make implausible: the models are using precisely the variables a clinician
 would name. The bleeding endpoint might be intrinsically less predictable than
-death, which is not what the wider literature reports, where bleeding risk
-scores routinely achieve higher discrimination than the values in
-Table~\ref{tab:risk-auroc}. Or the cohort itself might have been assembled in
+death, which is not what the PRECISE-DAPT derivation and validation cohorts
+report: its C-index for out-of-hospital bleeding ranged from 0.66 to 0.73
+\citep{costa2017precisedapt}. Or the cohort itself might have been assembled in
 a way that removes the variation a bleeding model would need.

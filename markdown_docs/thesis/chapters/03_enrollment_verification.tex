@@ -277,7 +277,7 @@ having a large enough $u(x)$ to close the gap, every time.
 
 \vspace{10pt}
 
-For each candidate, \emph{Thompson sampling} (Mechanism~5) draws one value from
+For each candidate, \emph{Thompson sampling} \citep{thompson1933} (Mechanism~5) draws one value from
 $\mathcal{N}(s(x), u(x))$, the model's belief about the
 patient's value with its own uncertainty as the width of that belief, and enrolls the
 candidate with the higher draw. The scale is floored at a small $\varepsilon$, since a

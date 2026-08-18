@@ -94,7 +94,7 @@ where the true probabilities agree.
 \paragraph{Causal forest.}
 The causal forest estimates the treatment effect $\tau(x)$ directly,
 rather than fitting two separate outcome models and taking their
-difference. It uses double machine learning \citep{kennedy2023} to account for confounding:
+difference. It uses double machine learning \citep{kennedy2023} and the causal-forest procedure of \citet{wager2018} and \citet{athey2019grf}:
 writing $\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]$ and
 $\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]$ for the fitted outcome and
 treatment models, the forest works on the residuals
@@ -118,7 +118,7 @@ estimate the effect inside it, and it remains relevant whether or not
 treatment is randomized.
 
 \paragraph{Bayesian causal forest (BCF).}
-A Bayesian counterpart that writes the outcome as
+A Bayesian counterpart \citep{hahn2020bcf} writes the outcome as
 \[
 Y_i(t) = \mu(X_i) + \tau(X_i)\, t + \varepsilon_i,
 \]
@@ -134,9 +134,9 @@ rather than a point estimate, which later sections use to assess not
 only the magnitude of the estimated effect but the uncertainty attached
 to it.
 
-\paragraph{In-context model.}
+\paragraph{In-context model (CausalPFN).}
 Rather than being fitted to one dataset, this estimator is pre-trained once on
-a large distribution of synthetic causal problems and, at inference time,
+a large distribution of synthetic causal problems \citep{balazadeh2025causalpfn} and, at inference time,
 maps the whole cohort and a query point directly to a prediction,
 \[
 (\{X_i,T_i,Y_i\}_{i=1}^n,\, x) \;\longmapsto\; \hat\tau(x),
