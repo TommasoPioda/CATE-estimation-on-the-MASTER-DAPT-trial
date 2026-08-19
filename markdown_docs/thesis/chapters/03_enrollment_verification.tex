@@ -307,13 +307,13 @@ uncertainty rule:
 \vspace{10pt}
 
 \paragraph{Methodology of comparison.}
-To evaluate the five models produced by the mechanisms, we must use an independent reference point.
-The model that guides selection updates as new data arrive, so it cannot 
+To evaluate the five enrollment mechanisms, we must use an independent reference point.
+The model that guides selection updates as new data arrive, so it cannot
 also be the reference point by which one judges whether the cohort has moved.
 Even comparing the mechanisms against each other is not enough, because they all share the same
 bias.
-To have a reference point that is independent we decided to use the model fitted and hypertuned
-on the entire cohort, which is the best model we could obtain from the data.
+The reference point that avoids this circularity is not a model at all: the mechanisms are
+evaluated on the patients' actual, observed trial outcomes.
 
 The performances of the mechanisms are evaluated by comparing the outcome-event rates of
 the enrolled cohort against the discarded one, on each axis that defines the trade-off
@@ -331,5 +331,7 @@ This chapter contains the description of the five enrollment mechanisms
 used in this project, and the reasons why they were chosen. The chapter 
 also describes the trade-off plane used to evaluate the performance of
 the mechanisms, and the reasons why this plane is the object of evaluation. Finally, the chapter
-explains how the mechanisms are evaluated.
+explains how the mechanisms are evaluated: by comparing the outcome-event rates of the
+enrolled and discarded cohorts on both axes of the trade-off quadrant, averaged over repeated
+enrollment runs.
 
