@@ -139,12 +139,20 @@ def run_online(prep, n_steps, select, enrol_seed=0, *, score_fn=conflict_from_mo
 
 
 def _rates(idx):
+    """Any-event ischaemic rate (kept for continuity with earlier runs) plus the
+    per-endpoint rates needed to build the ISCH_WEIGHTS-weighted composite the same
+    way `mechanism3_repeated_runs.py` does downstream."""
     yy = y.iloc[idx]
-    isch = ((yy[ENDPOINTS["death"]].to_numpy() == 1) |
-            (yy[ENDPOINTS["mi"]].to_numpy() == 1) |
-            (yy[ENDPOINTS["stroke"]].to_numpy() == 1))
+    death = yy[ENDPOINTS["death"]].to_numpy() == 1
+    mi = yy[ENDPOINTS["mi"]].to_numpy() == 1
+    stroke = yy[ENDPOINTS["stroke"]].to_numpy() == 1
+    isch = death | mi | stroke
     bleed = yy[ENDPOINTS["bleed"]].to_numpy() == 1
-    return isch.mean(), bleed.mean()
+    isch_weighted = (ISCH_WEIGHTS["death"] * death.mean()
+                      + ISCH_WEIGHTS["mi"] * mi.mean()
+                      + ISCH_WEIGHTS["stroke"] * stroke.mean())
+    return dict(isch_rate=isch.mean(), bleed_rate=bleed.mean(), isch_weighted_rate=isch_weighted,
+                death_rate=death.mean(), mi_rate=mi.mean(), stroke_rate=stroke.mean())
 
 
 N_SEED, N_TRIALS = 1000, 20
@@ -181,9 +189,9 @@ def one_run(run_id):
                                         score_fn=regime["score_fn"], score_col=regime["score_col"],
                                         n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS, n_stop=N_STOP)
             for group_name, idx in [("selected", enrolled), ("random", rnd)]:
-                isch_rate, bleed_rate = _rates(idx)
+                r = _rates(idx)
                 rows.append(dict(policy=pname, regime=rname, run=run_id, group=group_name,
-                                  n=len(idx), isch_rate=isch_rate, bleed_rate=bleed_rate))
+                                  n=len(idx), **r))
     return rows
 
 

@@ -93,3 +93,51 @@ on the following sources.
     \\\textit{Used in Ch.~5:} baseline predictive performance, SHAP-based
     interpretation and the variable dictionary of the modelling dataset.
 \end{enumerate}
+
+\section{Additional methodological and clinical sources}
+
+\begin{enumerate}\setcounter{enumi}{16}
+  \item \citet{wager2018}.
+    \\\textit{Used in Ch.~2:} the causal forest, which estimates $\tau(x)$
+    directly by residualizing $Y$ and $T$ against fitted outcome and
+    propensity models and regressing the residuals within each leaf.
+
+  \item \citet{athey2019grf}.
+    \\\textit{Used in Ch.~2:} the generalized random forest framework and
+    honest splitting, which fits the tree structure and the within-leaf
+    effect estimate on separate data subsets.
+
+  \item \citet{hahn2020bcf}.
+    \\\textit{Used in Ch.~2:} the Bayesian causal forest, separating the
+    prognostic surface $\mu(x)$ from the effect surface $\tau(x)$ with
+    independent priors, and returning a posterior over $\tau(x)$.
+
+  \item \citet{balazadeh2025causalpfn}.
+    \\\textit{Used in Ch.~2:} CausalPFN, the in-context estimator
+    pre-trained on synthetic causal problems, which maps a cohort and a
+    query point to $\hat\tau(x)$ without further fitting.
+
+  \item \citet{thompson1933}.
+    \\\textit{Used in Ch.~3:} Thompson sampling, Mechanism~5's enrolment
+    rule, which draws from each candidate's belief distribution and enrols
+    whichever draw is higher.
+\end{enumerate}
+
+\section{Predictive modelling and interpretation}
+
+\begin{enumerate}\setcounter{enumi}{21}
+  \item \citet{platt1999}.
+    \\\textit{Used in Ch.~5:} Platt (sigmoid) calibration of the per-arm
+    T-learner outcome models, fitted by internal cross-validation on the
+    training fold.
+
+  \item \citet{lundberg2017shap}.
+    \\\textit{Used in Ch.~5:} SHAP feature attributions, averaged in
+    absolute value across logistic regression, random forest and gradient
+    boosting, used to characterize which covariates the risk models rely on.
+
+  \item \citet{costa2017precisedapt}.
+    \\\textit{Used in Ch.~5:} the PRECISE-DAPT score's derivation and
+    validation C-index for out-of-hospital bleeding (0.66--0.73), used as
+    a benchmark against the bleeding model's own discrimination.
+\end{enumerate}

@@ -124,13 +124,22 @@ def seed_fit_tune(n_seed, seed=0, n_trials=0, n_test=0, verbose=False, n_jobs=32
 
 
 def _rates(yy):
+    """Any-event ischaemic rate (kept for continuity with earlier runs) plus the
+    per-endpoint counts needed to build the ISCH_WEIGHTS-weighted composite the same
+    way `mechanism3_repeated_runs.py` does downstream."""
     if len(yy) == 0:
-        return np.nan, np.nan, 0, 0
-    isch = ((yy[ENDPOINTS["death"]].to_numpy() == 1) |
-            (yy[ENDPOINTS["mi"]].to_numpy() == 1) |
-            (yy[ENDPOINTS["stroke"]].to_numpy() == 1))
+        return dict(isch_rate=np.nan, bleed_rate=np.nan, isch_n=0, bleed_n=0,
+                    death_n=0, mi_n=0, stroke_n=0,
+                    death_rate=np.nan, mi_rate=np.nan, stroke_rate=np.nan)
+    death = yy[ENDPOINTS["death"]].to_numpy() == 1
+    mi = yy[ENDPOINTS["mi"]].to_numpy() == 1
+    stroke = yy[ENDPOINTS["stroke"]].to_numpy() == 1
+    isch = death | mi | stroke
     bleed = yy[ENDPOINTS["bleed"]].to_numpy() == 1
-    return isch.mean(), bleed.mean(), int(isch.sum()), int(bleed.sum())
+    return dict(isch_rate=isch.mean(), bleed_rate=bleed.mean(),
+                isch_n=int(isch.sum()), bleed_n=int(bleed.sum()),
+                death_n=int(death.sum()), mi_n=int(mi.sum()), stroke_n=int(stroke.sum()),
+                death_rate=death.mean(), mi_rate=mi.mean(), stroke_rate=stroke.mean())
 
 
 def run_sample_select_enrollment(prep, score_kind, sample_size=100, c=0.0, seed=SEED,
@@ -223,10 +232,12 @@ def one_run(variant, run_id):
     included = enrolled[seed_n:]
     rows = []
     for group_name, idx in [("included", included), ("discarded", discarded)]:
-        isch_rate, bleed_rate, isch_n, bleed_n = _rates(y.loc[idx] if len(idx) else y.iloc[:0])
+        r = _rates(y.loc[idx] if len(idx) else y.iloc[:0])
+        isch_weighted_rate = (ISCH_WEIGHTS["death"] * r["death_rate"]
+                               + ISCH_WEIGHTS["mi"] * r["mi_rate"]
+                               + ISCH_WEIGHTS["stroke"] * r["stroke_rate"])
         rows.append(dict(variant=variant, run=run_id, group=group_name, n=len(idx),
-                          isch_rate=isch_rate, bleed_rate=bleed_rate,
-                          isch_n=isch_n, bleed_n=bleed_n))
+                          isch_weighted_rate=isch_weighted_rate, **r))
     return rows
 
 

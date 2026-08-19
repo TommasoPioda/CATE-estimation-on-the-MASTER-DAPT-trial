@@ -43,7 +43,7 @@ trial's unadjusted arm difference with the mean CATE produced by each of the
 five estimators, endpoint by endpoint. Under the convention of Chapter 4 a
 positive value is the benefit of abbreviating.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Average effect recovery. Raw ATE is the unadjusted difference in event
 rate between arms; the remaining columns are the cohort mean of each
@@ -101,7 +101,7 @@ property of the estimators rather than of the cohort. If the spread reflected
 real variation in treatment response, it would not depend so strongly on who
 is measuring it.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Standard deviation of the per-patient CATE by estimator. The BCF
 column reports the posterior mean of $\mathrm{sd}(\tau(x))$, and the placebo
@@ -157,7 +157,7 @@ noise floor for bleeding and essentially no separation for BARC 2/3/5, rather
 than strong evidence of treatment-effect heterogeneity. Figure~\ref{fig:placebo-floor}
 shows the corresponding distributions.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{CATE_placebo_floor.png}
 \caption{Posterior of the cross-patient spread $\mathrm{sd}(\tau(x))$ under the
@@ -175,7 +175,7 @@ held-out set. The decisive test is the other one. Table~\ref{tab:drtester}
 reports the doubly-robust validation of the ranking on the held-out 30\% for
 the three estimators that share exact same protocol.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Doubly-robust validation of the CATE ranking on a held-out 30\% split.
 AUTOC is the targeting gain over random with $1/q$ weighting; a positive value
@@ -234,7 +234,7 @@ between $0.0009$ and $0.0018$ of the forest's total splitting importance
 depending on the endpoint, so the ensemble that is free to split on treatment,
 on covariates and on their product barely uses the treatment at all.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{CATE_sorted_forest.png}
 \caption{Per-patient CATE of the tuned causal forest, patients sorted by
@@ -244,7 +244,7 @@ spans is a fraction of the average effect.}
 \label{fig:sorted-cate}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{CATE_rate_toc.png}
 \caption{TOC curves for the tuned causal forest on the held-out split: gain
@@ -280,17 +280,24 @@ quantitative by measuring how large a heterogeneity those tools would have
 needed in order to find it.
 
 \section{An Episode: The Model That Collapsed}
+\label{sec:tuned-forest}
 
 Following Chapter 2, the causal forest's hyperparameters are tuned on the same
 criterion used to evaluate it: the cross-validated lower confidence bound of
-the AUTOC on the bleeding endpoint, $\mathrm{AUTOC} - z \cdot \mathrm{SE}$
-averaged over folds. The search is deliberately wide and it is run as a parallel Optuna study over a shared journal;
-the configuration reported here was selected over 23,361 completed trials. Two
-defences against the winner's curse are built into the objective: the lower
-bound rather than the point estimate, so that a large-but-uncertain score
-cannot win, and a hard zero for any configuration that returns a constant CATE,
-so that a degenerate model cannot score well by having no ranking to be wrong
-about.
+the AUTOC on the bleeding endpoint, 
+\[
+\mathrm{AUTOC} - z \cdot \mathrm{SE}
+\]
+averaged over folds. The search is deliberately wide and it is run as a parallel 
+Optuna study reporting the results in a shared journal;
+the configuration reported here was selected over 23,361 completed trials. 
+Two methods are used to avoid the winner's curse. First the performance of the model
+is evaluated against the lower bound of the AUTOC calculated with the formula cited above.
+This penalizes configurations whose apparently strong ranking performance is accompanied
+by high uncertainty, reducing the chance of selecting a model simply because of a
+favourable but unstable cross-validation estimate. Secondly if the model returns a
+constant cate across the patients, the AUTOC is set to zero, so that 
+the model cannot win by returning a degenerate ranking.
 
 That second safeguard is motivated by an earlier diagnostic result. Under one
 tuned configuration, $\mathrm{std}(\mathrm{CATE})$ was exactly zero, meaning
@@ -307,9 +314,9 @@ Rather than settle the question with a single tuned model, three explicit
 configurations of increasing capacity are fitted, scaling the forest and its
 first-stage nuisance models together: \texttt{regularized} (depth 2, leaves of
 at least 40), \texttt{medium} (depth 4, leaves of 15) and \texttt{flexible}
-(depth 8, leaves of 5). Table~\ref{tab:flex-ladder} reports what happens.
+(depth 8, leaves of 5). Table~\ref{tab:flex-ladder} reports the results.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Mean and standard deviation of the per-patient CATE across three
 explicit flexibility levels and the tuned model. The mean is stable; only the
@@ -320,7 +327,7 @@ dispersion moves.}
 \toprule
 & \multicolumn{4}{c}{mean CATE / std CATE} \\
 \cmidrule(lr){2-5}
-Endpoint & Regularized & Medium & Flexible & Tuned \\
+Endpoint & Regularized & Medium & Flexible & Tuned (Optuna) \\
 \midrule
 Bleeding             & $0.046$ / $0.004$ & $0.045$ / $0.006$ & $0.046$ / $0.016$ & $0.047$ / $0.006$ \\
 Bleeding BARC 2/3/5  & $0.028$ / $0.002$ & $0.026$ / $0.005$ & $0.026$ / $0.014$ & $0.029$ / $0.004$ \\
@@ -331,10 +338,10 @@ Stroke               & $0.004$ / $0.000$ & $0.004$ / $0.003$ & $0.004$ / $0.006$
 \end{tabular}
 \end{table}
 
-Even varying the model configurations from the most to the least 
-regularized, the \emph{mean} CATE does not move at all — bleeding stays between $0.045$--$0.047$ on every rung of
-the ladder — while the \emph{dispersion} grows by a factor of four. Under the
-regularized preset the three ischemic endpoints collapse to a constant: stroke
+Even varying the model configurations from the most to the least regularized, 
+the mean CATE does not variate at all: bleeding stays between 0.045 and 0.047 across all configurations,
+while the dispersion grows by a factor of four.
+Under the regularized preset the three ischemic endpoints collapse to a constant: stroke
 takes exactly one distinct value across all 4,579 patients, and cardiovascular
 death and MI take three, spanning a range of $2 \times 10^{-5}$ and
 $1 \times 10^{-4}$ respectively. Under the flexible preset the same endpoints
@@ -376,20 +383,36 @@ therapy, while the bottom-left favours prolonged therapy. The bottom-right
 quadrant is the most relevant for personalization, as abbreviated therapy
 reduces bleeding but increases ischemic risk. The ischemic axis combines MI,
 stroke, and cardiovascular death using the prespecified weights $0.4$, $0.4$,
-and $0.2$, respectively.
+and $0.2$, respectively. Both axes are read from the single tuned causal
+forest of Section~\ref{sec:tuned-forest}, the same model used for the
+sorted-CATE and TOC figures earlier in this chapter, rather than from all
+five estimators of Section~\ref{sec:positive-control}: the plane is a
+two-dimensional view of one model's ranking, not a cross-estimator
+comparison.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{CATE_tradeoff_plane.png}
-\caption{The trade-off plane: bleeding benefit of abbreviating against the
-weighted ischemic benefit, one point per patient. Left, patient density;
-right, the same points tinted by the conflict score. The entire cohort sits in
-the right half-plane, and the cloud straddles the horizontal axis without any
+\caption{The trade-off plane, from the tuned causal forest: bleeding benefit
+of abbreviating against the weighted ischemic benefit ($0.4$ MI $+\,0.4$
+stroke $+\,0.2$ cardiovascular death), one point per patient. Left, patient
+density; right, the same points tinted by the conflict score
+$z(\text{bleed}) - z(\text{ischemic})$. The entire cohort sits in the right
+half-plane, and the cloud straddles the horizontal axis without any
 concentration in the bottom-right quadrant that a personalized rule would
 require.}
 \label{fig:tradeoff-plane}
 \end{figure}
 
+Figure~\ref{fig:tradeoff-plane} collapses the three ischemic endpoints into
+one weighted axis. Appendix~\ref{app:supplementary-tables} unpacks that
+choice from both sides: Figure~\ref{fig:tradeoff-individual-endpoints} plots
+bleeding against each ischemic endpoint separately instead of the weighted
+combination, and Figure~\ref{fig:ischaemic-pairwise} plots the three
+ischemic endpoints against one another, checking whether they move together
+or pull apart across patients.
+
+\iffalse
 \paragraph{What the plane shows.}
 Figure~\ref{fig:tradeoff-plane} shows a single, compact cloud of patients.
 The bleeding CATE is uniformly positive, ranging from $+0.032$ to $+0.068$,
@@ -400,13 +423,14 @@ the best silhouette score selects three clusters that correspond to adjacent
 slices of the same continuous cloud, with mean bleeding CATEs of $0.043$,
 $0.047$, and $0.053$. Thus, the plane provides no clear evidence of distinct
 patient subgroups with meaningfully different treatment-effect profiles.
+\fi
 
 \paragraph{The plane with uncertainty.}
 A single fitted plane does not quantify uncertainty in individual treatment
 effects. We therefore use a nonparametric bootstrap, resampling patients with
 replacement, refitting the tuned forest, and predicting on the original
 covariates. Fifty replicates provide a 95\% interval for each patient's
-position on both axes. As shown in Figure~6.5, none of the $4{,}579$ patients
+position on both axes. As shown in Figure~\ref{fig:tradeoff-bootstrap}, none of the $4{,}579$ patients
 has its entire confidence region within the bottom-right quadrant, despite
 $1{,}544$ point estimates falling there. The within-patient bootstrap
 variation is also large relative to the variation across patients, with
@@ -420,14 +444,14 @@ heterogeneity.
 
 TODO: Check the numbers of boostrap and average bootstrap
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{CATE_tradeoff_bootstrap.png}
 \caption{The trade-off plane with bootstrap uncertainty, from 50 refits of the
 tuned forest on resampled cohorts. Left, per-patient 95\% intervals for a
 random subsample of 1,000 patients; right, the whole cohort, with patients
 whose interval lies entirely in the trade-off quadrant marked in red. There
-are none.}
+are no patients that lie entirely in the bottom-right quadrant.}
 \label{fig:tradeoff-bootstrap}
 \end{figure}
 
@@ -437,8 +461,9 @@ plane is thus a precise picture of the whole chapter — the effect is real,
 strong and essentially the same for everyone.
 
 \paragraph{A caution about the conflict subgroup.}
-Flagging the top 15\% by conflict score produces a subgroup of 687 patients
-whose \emph{observed} event rates look spectacular: 24.6\% bleeding under
+When we sort by CAE the training test and we use the top 15\% by conflict 
+score produces a subgroup of 687 patients
+whose \emph{observed} event rates are very high: 24.6\% bleeding under
 prolonged therapy against 3.7\% under abbreviated, a raw difference of 20.8
 percentage points, against 1.6 points in the rest of the cohort. The number is
 real and it means nothing, because the score that selected those patients was
@@ -487,7 +512,7 @@ therapy shows a bleeding benefit, while the ischemic effect is not
 statistically distinguishable from zero. The two effects therefore largely
 offset each other at the composite level.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Cross-fitted AIPW average treatment effect (prolonged minus
 abbreviated) on NACE and on its bleeding and ischemic components, with the
@@ -512,7 +537,7 @@ Two are the fixed arms. A third, \emph{ATE sign}, is a data-driven constant rule
 
 Evaluation follows the same five-fold discipline as the ATE estimates: each learned policy is fitted on the training folds and scored only on the held-out fold, so no policy is evaluated on patients it was trained on. A policy's \emph{value} is its out-of-fold expected NACE rate (lower is better); its \emph{improvement} is the paired, per-patient difference against whichever fixed arm scores lower, with a confidence interval on that paired difference (Table~\ref{tab:policy-value}).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Cross-fitted AIPW policy value on NACE (lower is better) and paired
 improvement over the better fixed arm. A usable personalized rule would show a
@@ -585,7 +610,7 @@ not make. With 20 seeds per $(\text{endpoint}, \delta)$ pair and 500 fits in
 total, $\delta^*$ is defined as the smallest $\delta$ on the grid at which the
 observed score beats its paired floor in at least 90\% of seeds.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Minimum detectable heterogeneity $\delta^*$ per endpoint, against the
 endpoint's own average effect. Detection requires beating the permuted-treatment
@@ -604,7 +629,7 @@ Stroke               & $+0.005$ & not reached & degenerate, see below \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=1\textwidth]{delta_sensitivity.png}
 \caption{Observed AUTOC lower bound (blue) against the permuted-treatment floor
@@ -685,3 +710,125 @@ each component, but equally consistent with opposite-direction effects (e.g. MI 
 cancelling in the sum. Together, the two facts explain a strong average effect 
 alongside near-zero estimated heterogeneity: trial selection compresses the risk 
 variation on the bleeding side, aggregation masks it on the ischemic side.
+
+\section{Supplementary Results with Discretized Covariates}
+\label{sec:discretized-covariates}
+
+This section reports separately the results obtained with the discretized
+covariate representation.  They are included as a preprocessing sensitivity
+analysis and do not replace Tables~\ref{tab:ate-recovery}--\ref{tab:delta-star},
+which retain the values used in the main analysis above.  The tables in this
+section are generated directly from the saved model artefacts, executed
+notebook outputs, and result CSV files; the intermediate, non-rounded values
+and their provenance are retained in a machine-readable audit file.
+
+There is one provenance limitation.  The saved T-learner pipelines contain an
+explicit four-bin discretizer, whereas the current causal-forest, BCF and
+CausalPFN code paths load the 63 numeric columns from
+\texttt{X\_features.parquet} and expose only imputation and scaling.  The
+sensitivity notebook likewise describes its copy of this matrix as ``raw
+numeric features.''  The block below is retained under the discretized-run
+label to keep the two result versions separate, as intended, but the current
+artefacts alone do not establish that every estimator received the same
+continuous-variable discretization.  A strictly harmonized comparison would
+require refitting all estimator families from a single explicitly discretized
+design matrix.
+
+\begin{table}[H]
+\centering
+\caption{Average-effect recovery in the discretized-covariate analysis. Raw
+ATE is the observed prolonged-minus-abbreviated arm difference; the remaining
+columns are the cohort mean CATE from the saved estimator artefacts.}
+\label{tab:ate-recovery-discretized}
+\small
+\setlength{\tabcolsep}{4pt}
+\input{generated_tables/ch6_discretized_ate_recovery.tex}
+\end{table}
+
+The sign of the bleeding effect remains positive across all estimators, while
+the interaction forest is substantially less stable in magnitude, especially
+for the rare ischemic endpoints.  This is why the discretized results are kept
+as a separate robustness analysis instead of silently replacing the primary
+table.
+
+\begin{table}[H]
+\centering
+\caption{Cross-patient CATE dispersion in the discretized-covariate analysis.
+The BCF column is the posterior mean of $\mathrm{sd}(\tau(x))$; its placebo
+floor is available for the two bleeding endpoints.}
+\label{tab:cate-dispersion-discretized}
+\small
+\setlength{\tabcolsep}{4pt}
+\input{generated_tables/ch6_discretized_cate_dispersion.tex}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Held-out doubly robust validation of the discretized-covariate CATE
+rankings. The displayed values are extracted from the executed DRTester cells;
+they are not reconstructed from rounded manuscript values.}
+\label{tab:drtester-discretized}
+\input{generated_tables/ch6_discretized_drtester.tex}
+\end{table}
+
+The BCF bleeding result is nominally significant before multiplicity adjustment
+($p=0.041$), but its sign disagrees with the causal forest on the same endpoint
+and the other fourteen comparisons do not reach $5\%$.  It is therefore a
+model-specific signal rather than cross-estimator evidence of a usable ranking.
+
+\begin{table}[H]
+\centering
+\caption{Mean and standard deviation of the per-patient CATE across the four
+saved causal-forest configurations in the discretized-covariate analysis.}
+\label{tab:flex-ladder-discretized}
+\small
+\input{generated_tables/ch6_discretized_flexibility.tex}
+\end{table}
+
+In this rerun, increasing flexibility changes not only dispersion but also some
+endpoint means: for example, the stroke mean moves from $0.004$ under the
+regularized configuration to $0.016$ under the medium and flexible
+configurations.  This reinforces the need to treat the apparent heterogeneity
+as model-dependent.
+
+\begin{table}[H]
+\centering
+\caption{Cross-fitted AIPW effects for the net-benefit analysis associated with
+the discretized-covariate rerun. Positive values favour abbreviated therapy.}
+\label{tab:nace-ate-discretized}
+\input{generated_tables/ch6_discretized_nace_ate.tex}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Cross-fitted NACE policy values associated with the
+discretized-covariate rerun. Lower policy value is better; improvement is
+relative to the better fixed arm.}
+\label{tab:policy-value-discretized}
+\small
+\input{generated_tables/ch6_discretized_policy_value.tex}
+\end{table}
+
+The fixed all-abbreviated policy remains the best policy in this version.  The
+ATE-sign and policy-forest rules have paired improvement intervals below zero;
+the policy-tree interval spans zero.
+
+\begin{table}[H]
+\centering
+\caption{Minimum detectable heterogeneity in the discretized-covariate
+sensitivity experiment. Detection is the first grid point at which the
+observed AUTOC lower bound exceeds its paired permuted-treatment floor in at
+least $90\%$ of 20 seeds.}
+\label{tab:delta-star-discretized}
+\input{generated_tables/ch6_discretized_delta_star.tex}
+\end{table}
+
+The sensitivity result needs a stricter qualification than the primary text.
+For bleeding, the threshold is a $0.100$ risk difference, and for BARC 2/3/5 it
+is $0.050$.  For MI and cardiovascular death the criterion is already met at
+$\delta=0$ in all seeds, so the reported $\mathrm{OR}=1.00$ is a failed null
+calibration check, not evidence that arbitrarily small heterogeneity is
+detectable.  Stroke does not reach the $90\%$ threshold and already has an
+$80\%$ detection fraction under the null.  Consequently, only the two bleeding
+rows provide interpretable detection thresholds in this discretized
+sensitivity run.

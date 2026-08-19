@@ -5,6 +5,9 @@
 
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{float}
+\usepackage{placeins}
+
 \graphicspath{ {images/} }
 
 % template.cls's classic PS fonts (Times/Helvetica, T1-encoded) have no
@@ -35,9 +38,9 @@
 % Front page fields — these commands are defined by template.cls.
 \titolo{CATE estimation and use in MASTER DAPT study}
 \studente{Tommaso Pioda}
-\relatore{Laura Azzimonti}
-\correlatore{Gabriele Maroni}
-\committente{EOC}
+\relatore{Gabriele Maroni}
+\correlatore{Laura Azzimonti}
+\committente{Eente ospedaliero cantonale (EOC)}
 \corso{Data Science and Artificial Intelligence}
 \modulo{Diploma Thesis}
 \anno{2026}
@@ -63,21 +66,27 @@
 \setcounter{page}{1}
 
 \chapter{From the average effect to the individual decision}
+\label{chap:01}
 \input{chapters/01_effect_to_decision}
 
 \chapter{How to estimate and validate the individual effect}
+\label{chap:02}
 \input{chapters/02_estimate_validate_effect}
 
 \chapter{Choosing whom to enroll, and verifying whether it worked}
+\label{chap:03}
 \input{chapters/03_enrollment_verification}
 
 \chapter{The data and the clinical question}
+\label{chap:04}
 \input{chapters/04_data_clinical_question}
 
 \chapter{Risk: the predictive models, and an open anomaly}
+\label{chap:05}
 \input{chapters/05_risk_predictive_models}
 
 \chapter{Heterogeneity: estimation, the trade-off plane and the decision}
+\label{chap:06}
 \input{chapters/06_heterogeneity_tradeoff}
 
 % Chapter 7 ("The origin of the negative result") is not written; its content on the
@@ -86,10 +95,12 @@
 % throughout (Chapter 8, Chapter 9) matches what is printed.
 
 \chapter{Guided enrollment applied to MASTER DAPT: an exploitability test}
+\label{chap:07}
 \label{ch:guided-enrollment-applied}
 \input{chapters/08_guided_enrollment_feasibility}
 
 \chapter{Discussion and conclusions}
+\label{chap:08}
 \input{chapters/09_discussion_conclusions}
 
 \appendix
