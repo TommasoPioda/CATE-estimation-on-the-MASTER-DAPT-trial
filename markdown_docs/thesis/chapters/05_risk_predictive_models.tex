@@ -284,3 +284,16 @@ death, which is not what the PRECISE-DAPT derivation and validation cohorts
 report: its C-index for out-of-hospital bleeding ranged from 0.66 to 0.73
 \citep{costa2017precisedapt}. Or the cohort itself might have been assembled in
 a way that removes the variation a bleeding model would need.
+
+\section{Chapter Summary}
+This chapter explores the results of the risk models fitted on the full cohort.
+Are described: the preprocessing steps of the pipeline, how the models are tuned,
+calibrated and evaluated.
+The results show that the models carry a limited but present signal for every endpoint
+with AUROC values between 0.60 and 0.76 and AUPR lifts between 1.58 and 3.70.
+In general the ischemic endpoints are predicter with better precision than 
+the bleeding endpoints, despite having fewer events.
+This is an unexpected result, since the bleeding endpoints should be the primary focus of the trial.
+Is included a discussion on the feature importance of the models used to predict the endpoints using SHAP values.
+Finally, the per-arm models used in the T-learner are described, 
+showing that the same anomaly is present when the cohort is split by treatment arm.

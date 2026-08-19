@@ -56,10 +56,10 @@ estimator's per-patient CATE. Positive $=$ abbreviating lowers the event.}
 Endpoint & Raw ATE & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. \\
 \midrule
 Bleeding             & $+0.045$ & $+0.055$ & $+0.047$ & $+0.047$ & $+0.043$ & $+0.071$ \\
-Bleeding BARC 2/3/5  & $+0.028$ & $+0.034$ & $+0.029$ & $+0.029$ & $+0.021$ & $+0.052$ \\
-MI                   & $-0.005$ & $-0.004$ & $-0.004$ & $-0.003$ & $-0.003$ & $-0.029$ \\
+Bleeding BARC 2/3/5  & $+0.028$ & $+0.037$ & $+0.029$ & $+0.029$ & $+0.021$ & $+0.052$ \\
+MI                   & $-0.005$ & $-0.002$ & $-0.004$ & $-0.003$ & $-0.003$ & $-0.029$ \\
 Cardiovascular death & $+0.003$ & $+0.002$ & $+0.003$ & $+0.003$ & $-0.005$ & $+0.001$ \\
-Stroke               & $+0.005$ & $+0.005$ & $+0.004$ & $+0.005$ & $+0.001$ & $+0.020$ \\
+Stroke               & $+0.005$ & $+0.004$ & $+0.004$ & $+0.005$ & $+0.001$ & $+0.020$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -196,10 +196,11 @@ Stroke               & $+0.004$ & 0.19 & $+0.001$ & 0.36 & $+0.003$ & 0.22 \\
 \end{tabular}
 \end{table}
 
-Not one of the fifteen entries reaches significance at the conventional 5\%
-level — the closest is the BCF on bleeding, at $p = 0.07$ and with the sign
-opposite to the causal forest's on the same endpoint — and the signs are not even
-consistent across estimators on the same endpoint. The QINI weighting agrees:
+Only the BCF result for bleeding falls below the unadjusted 5\% threshold
+($p = 0.04$), and its sign is opposite to that of the causal forest on the same
+endpoint. It is a nominal result among fifteen comparisons, not a robust
+ranking signal: the signs are not even consistent across estimators on the
+same endpoint. The QINI weighting agrees:
 under the causal forest the largest QINI is $-0.007$ on bleeding
 ($p = 0.08$) and every other value is within $0.002$ of zero, so the negative
 result is not an artefact of a weighting that over-emphasises the head of the
@@ -524,7 +525,7 @@ an interval spanning zero is net-neutral.}
 Endpoint & Event rate & ATE & 95\% CI \\
 \midrule
 NACE                 & 7.7\% & $+0.005$ & $[-0.011,\,+0.020]$ \\
-BARC 2/3/5 bleeding   & 7.8\% & $+0.027$ & $[+0.011,\,+0.042]$ \\
+BARC 2/3/5 bleeding   & 7.8\% & $+0.026$ & $[+0.010,\,+0.042]$ \\
 MACCE                 & 6.0\% & $-0.000$ & $[-0.014,\,+0.013]$ \\
 \bottomrule
 \end{tabular}
@@ -550,9 +551,9 @@ Policy & Value (NACE) & \% prolonged & Improvement vs.\ best fixed [95\% CI] \\
 \midrule
 All abbreviated   & 0.076 & 0.0   & --- \\
 All prolonged     & 0.080 & 100.0 & $-0.005$ $[-0.020,\,+0.011]$ \\
-ATE sign          & 0.087 & 40.0  & $-0.011$ $[-0.021,\,-0.002]$ \\
-Policy tree       & 0.082 & 31.1  & $-0.006$ $[-0.015,\,+0.002]$ \\
-Policy forest     & 0.087 & 31.6  & $-0.011$ $[-0.019,\,-0.003]$ \\
+ATE sign          & 0.082 & 20.0  & $-0.007$ $[-0.014, -0.0001]$ \\
+Policy tree       & 0.084 & 34.0  & $-0.008$ $[-0.017, +0.001]$ \\
+Policy forest     & 0.087 & 33.7  & $-0.011$ $[-0.020, -0.002]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -620,11 +621,11 @@ floor in $\geq 90\%$ of 20 seeds.}
 \toprule
 Endpoint & Real ATE & $\delta^*$ & Reading \\
 \midrule
-Bleeding             & $+0.045$ & $0.05$ risk diff. & as large as the entire average effect \\
+Bleeding             & $+0.045$ & $0.10$ risk diff. & more than twice the average effect \\
 Bleeding BARC 2/3/5  & $+0.028$ & $0.05$ risk diff. & larger than the average effect \\
-MI                   & $-0.005$ & $\mathrm{OR} = 3.0$ & clinically implausible \\
-Cardiovascular death & $+0.003$ & $\mathrm{OR} = 5.0$ & clinically implausible \\
-Stroke               & $+0.005$ & not reached & degenerate, see below \\
+MI                   & $-0.005$ & not interpretable & null calibration fails \\
+Cardiovascular death & $+0.003$ & not interpretable & null calibration fails \\
+Stroke               & $+0.005$ & not reached & null calibration fails \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -642,36 +643,19 @@ formality.}
 \end{figure}
 
 \paragraph{Reading the number honestly.}
-The protocol is able to detect induced treatment-effect heterogeneity:
-Figure~\ref{fig:delta-sensitivity} shows that, for four of the five endpoints,
-the observed heterogeneity departs from the placebo floor as the injected
-heterogeneity increases. This provides evidence that the analysis pipeline
-has sufficient sensitivity to detect heterogeneity when it is present.
+The current sensitivity results are interpretable only for the two bleeding endpoints.
+For bleeding, the minimum detectable risk difference is 0.100, more than twice
+the observed average effect of 0.045. For BARC 2/3/5 bleeding it is 0.050,
+larger than the observed average effect of 0.028. These results exclude only
+large heterogeneity; they do not establish that smaller patient-level effects
+are absent.
 
-However, $\delta^* = 0.05$ for bleeding represents a substantial degree of
-heterogeneity, comparable to the overall average treatment effect observed in
-the trial. The analysis therefore excludes heterogeneity of this magnitude,
-rather than heterogeneity in general. At $\delta = 0.02$, corresponding to
-approximately half of the average effect and still clinically meaningful,
-the protocol detects heterogeneity in 80\% of seeds, below the 90\% threshold;
-at $\delta = 0.01$, detection falls to 50\%. Accordingly, the results support
-the conclusion that clinically detectable heterogeneity was not identified,
-rather than that treatment-effect heterogeneity is absent.
-
-For the ischemic endpoints, the interpretation is different. Detectable effect
-modification would require odds ratios in the range of 3--5, which represents
-a very large degree of heterogeneity and is unlikely to be detectable in a
-cohort of this size. The appropriate conclusion for myocardial infarction and
-cardiovascular death is therefore not that heterogeneity is absent, but that
-it is not reliably measurable in this cohort. The $\delta^*$ values quantify
-the magnitude of heterogeneity that the analysis can detect and provide a
-quantitative basis for this conclusion.
-The stroke row is not interpretable and is reported as such. Under the
-null, where the observed score should beat its floor in about half the seeds by
-construction, it does so in 85\% — the protocol is broken on that endpoint
-before any heterogeneity is injected. The cause is visible in the same output:
-$\mu(x)$ generates roughly 14 synthetic strokes against 35 real ones, and at
-that event count the AUTOC and its floor are both essentially degenerate.
+The ischemic rows fail the null-calibration check. At zero injected
+heterogeneity, MI and cardiovascular death already meet the nominal detection
+criterion, while stroke reaches 80 percent of seeds without reaching the
+required 90 percent. These artifacts do not demonstrate sensitivity to small
+heterogeneity and the associated thresholds must not be interpreted as valid
+power estimates.
 
 \section{What This Chapter Establishes}
 
