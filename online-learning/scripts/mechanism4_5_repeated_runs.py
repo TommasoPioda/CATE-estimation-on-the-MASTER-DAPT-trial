@@ -1,5 +1,6 @@
 """Repeated-run harness for Mechanisms 4 and 5 (UCB1 / Thompson-sampling pairwise duel),
-win-win (`conflict`) and trade-off (`net_benefit`) score regimes.
+trade-off (`conflict = bleed - isch`) and win-win
+(`net_benefit = bleed + isch`) score regimes.
 
 `03_online_learning_duel_bandits_refactored.ipynb`'s own "Multi-seed robustness" section
 (cells 24-26) already runs this design once, but only ever displays/saves a partial summary
@@ -7,8 +8,9 @@ win-win (`conflict`) and trade-off (`net_benefit`) score regimes.
 was executed, and the run was never written to disk) -- there is no complete, reproducible
 record of it. This script re-implements the same design as a standalone, saved run: one seed
 cohort is drawn and hyper-tuned ONCE (`seed=42`, `N_TRIALS=20` Optuna trials on the bleeding
-AUTOC lower bound), then reused for every replication -- only the arrival order (`enrol_seed`)
-varies across runs, exactly as the notebook's own markdown describes it. This is lighter than
+AUTOC lower bound), then reused for every replication together with the same arrival order.
+`enrol_seed` changes only the Thompson draw and the coin-flip baseline RNG; it does not
+reshuffle `prep['order']`. This is lighter than
 Mechanisms 1-3 (which retune per replication): re-tuning per replication here would multiply
 the cost of an already expensive online loop (a full causal-forest refit every 100 enrolments,
 ~18 refits per run) by another factor of N_RUNS. Backs "Mechanisms 4 and 5 on the Trade-off
@@ -44,8 +46,10 @@ sys.path.insert(0, CF_DIR)
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
 from online_learning_utils import (z, fit_cate, conflict_from_model,  # noqa: E402
                                     net_benefit_from_model, weighted_isch, tune_on_seed,
-                                    policy_ucb, policy_thompson,
                                     DEFAULT_CF_PARAMS, DEFAULT_NUISANCE_PARAMS)
+from online_learning_policies import (  # noqa: E402
+    SCORE_CONVENTION, policy_thompson, policy_ucb,
+)
 from run_archiving import start_run_archive  # noqa: E402
 
 RUN_DIR = start_run_archive(OL_DIR, "mechanism4_5")
@@ -200,6 +204,7 @@ if __name__ == "__main__":
     out = Parallel(n_jobs=N_JOBS, backend="loky", verbose=10)(
         delayed(one_run)(r) for r in range(N_RUNS))
     results_df = pd.DataFrame([row for run_rows in out for row in run_rows])
+    results_df["score_convention"] = SCORE_CONVENTION
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed / 60:.1f} min", flush=True)
 

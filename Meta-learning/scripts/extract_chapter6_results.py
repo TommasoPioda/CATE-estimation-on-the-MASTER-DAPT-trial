@@ -20,6 +20,7 @@ import argparse
 import json
 import re
 import sys
+from io import StringIO
 from pathlib import Path
 
 import joblib
@@ -344,6 +345,30 @@ def extract() -> dict[str, str]:
     return outputs
 
 
+def _matches_versioned_csv(path: Path, recomputed_text: str) -> bool:
+    """Compare extracted CSVs while ignoring immaterial floating-point noise."""
+
+    if not path.exists():
+        return False
+    versioned_text = path.read_text(encoding="utf-8")
+    if versioned_text == recomputed_text:
+        return True
+
+    versioned = pd.read_csv(path)
+    recomputed = pd.read_csv(StringIO(recomputed_text))
+    if list(versioned.columns) != list(recomputed.columns) or versioned.shape != recomputed.shape:
+        return False
+    for column in versioned.columns:
+        left = versioned[column]
+        right = recomputed[column]
+        if pd.api.types.is_numeric_dtype(left) and pd.api.types.is_numeric_dtype(right):
+            if not np.allclose(left, right, rtol=0.0, atol=1e-12, equal_nan=True):
+                return False
+        elif not left.fillna("").equals(right.fillna("")):
+            return False
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -354,7 +379,11 @@ def main() -> None:
     args = parser.parse_args()
     outputs = extract()
     if args.check:
-        stale = [name for name, text in outputs.items() if not (OUTPUT_DIR / name).exists() or (OUTPUT_DIR / name).read_text(encoding="utf-8") != text]
+        stale = [
+            name
+            for name, text in outputs.items()
+            if not _matches_versioned_csv(OUTPUT_DIR / name, text)
+        ]
         if stale:
             raise SystemExit("Stale Chapter 6 extracted results: " + ", ".join(stale))
         print("Chapter 6 extracted results are current.")

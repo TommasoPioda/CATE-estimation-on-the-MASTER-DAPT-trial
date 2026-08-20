@@ -8,7 +8,7 @@ answering four questions:
 \begin{itemize}
   \item Is there evidence of treatment-effect heterogeneity across patients?
   \item If so, does the treatment benefit some patients more than others?
-  \item Can we derive decisions ranking the patients by their predicted benefit, 
+  \item Can we derive decisions ranking the patients by their predicted benefit,
   exploiting the estimated heterogeneity with an online learning approach?
   \item How large would have the hetorogeneity needed to be in order to be detected by the five eistimators of Chapter~2 (\S~\ref{sec:five-estimators})
         (\S~\ref{sec:delta})?
@@ -67,7 +67,7 @@ Stroke               & $+0.005$ & $+0.004$ & $+0.004$ & $+0.005$ & $+0.001$ & $+
 The two bleeding related endpoints agree on the effect of the treatment:
 prolonging the therapy costs roughly four to five percentage points
 of bleeding risk, which is the trial's own published conclusion, reached here
-by five estimators that share no code path beyond the preprocessing. 
+by five estimators that share no code path beyond the preprocessing.
 
 On the ischemic side, all estimators except the interaction forest return effects within $[-0.005,\,+0.005]$
 , with MI consistently favouring prolonged therapy. The BCF
@@ -94,9 +94,9 @@ anything real.
 
 \paragraph{Dispersion, and a noise floor to compare it against.}
 Table~\ref{tab:cate-dispersion} reports the standard deviation of the
-per-patient CATE for each estimator. The five columns disagree by an order of
-magnitude — from $0.003$ to $0.093$ on the same patients and the same endpoint
-— which is itself the first indication that what is being measured is a
+per-patient CATE for each estimator. The five columns disagree by more than an
+order of magnitude for several endpoints — for example, from $0.005$ to $0.087$
+on BARC 2/3/5 — which is itself the first indication that what is being measured is a
 property of the estimators rather than of the cohort. If the spread reflected
 real variation in treatment response, it would not depend so strongly on who
 is measuring it.
@@ -204,7 +204,7 @@ same endpoint. The QINI weighting agrees:
 under the causal forest the largest QINI is $-0.007$ on bleeding
 ($p = 0.08$) and every other value is within $0.002$ of zero, so the negative
 result is not an artefact of a weighting that over-emphasises the head of the
-ranking. 
+ranking.
 
 The BLP slope (\S~\ref{sec:validation}) provides a similarly weak indication
 of treatment-effect heterogeneity.
@@ -228,7 +228,7 @@ The two remaining estimators are evaluated with weaker but independent
 protocols and reach the same place. The in-context model's bootstrapped TOC
 bands cover zero on every endpoint, and its strongest Spearman correlation
 between any covariate and the predicted CATE is $0.21$ — no patient
-characteristic meaningfully moves its estimate. 
+characteristic meaningfully moves its estimate.
 The interaction forest points
 the same way from inside its own design matrix: the treatment column carries
 between $0.0009$ and $0.0018$ of the forest's total splitting importance
@@ -285,19 +285,19 @@ needed in order to find it.
 
 Following Chapter 2, the causal forest's hyperparameters are tuned on the same
 criterion used to evaluate it: the cross-validated lower confidence bound of
-the AUTOC on the bleeding endpoint, 
+the AUTOC on the bleeding endpoint,
 \[
 \mathrm{AUTOC} - z \cdot \mathrm{SE}
 \]
-averaged over folds. The search is deliberately wide and it is run as a parallel 
+averaged over folds. The search is deliberately wide and it is run as a parallel
 Optuna study reporting the results in a shared journal;
-the configuration reported here was selected over 23,361 completed trials. 
+the configuration reported here was selected over 23,361 completed trials.
 Two methods are used to avoid the winner's curse. First the performance of the model
 is evaluated against the lower bound of the AUTOC calculated with the formula cited above.
 This penalizes configurations whose apparently strong ranking performance is accompanied
 by high uncertainty, reducing the chance of selecting a model simply because of a
 favourable but unstable cross-validation estimate. Secondly if the model returns a
-constant cate across the patients, the AUTOC is set to zero, so that 
+constant cate across the patients, the AUTOC is set to zero, so that
 the model cannot win by returning a degenerate ranking.
 
 That second safeguard is motivated by an earlier diagnostic result. Under one
@@ -339,8 +339,8 @@ Stroke               & $0.004$ / $0.000$ & $0.004$ / $0.003$ & $0.004$ / $0.006$
 \end{tabular}
 \end{table}
 
-Even varying the model configurations from the most to the least regularized, 
-the mean CATE does not variate at all: bleeding stays between 0.045 and 0.047 across all configurations,
+Even varying the model configurations from the most to the least regularized,
+the mean CATE varies little: bleeding stays between 0.045 and 0.047 across all configurations,
 while the dispersion grows by a factor of four.
 Under the regularized preset the three ischemic endpoints collapse to a constant: stroke
 takes exactly one distinct value across all 4,579 patients, and cardiovascular
@@ -351,7 +351,7 @@ average effects.
 
 A quantity that is invariant to model capacity is a property of the data; a
 quantity that scales with model capacity is a property of the model.
-This results clearly illustrate that the averge treatment effect is 
+This results clearly illustrate that the averge treatment effect is
 property of the data, while the heterogeneity is property of the model.
 We have to understand that the heterogeneity could be just product of the
 noise present in the data and the models are just overfitting to the noise.
@@ -462,7 +462,7 @@ plane is thus a precise picture of the whole chapter — the effect is real,
 strong and essentially the same for everyone.
 
 \paragraph{A caution about the conflict subgroup.}
-When we sort by CAE the training test and we use the top 15\% by conflict 
+When we sort by CAE the training test and we use the top 15\% by conflict
 score produces a subgroup of 687 patients
 whose \emph{observed} event rates are very high: 24.6\% bleeding under
 prolonged therapy against 3.7\% under abbreviated, a raw difference of 20.8
@@ -526,7 +526,7 @@ Endpoint & Event rate & ATE & 95\% CI \\
 \midrule
 NACE                 & 7.7\% & $+0.005$ & $[-0.011,\,+0.020]$ \\
 BARC 2/3/5 bleeding   & 7.8\% & $+0.026$ & $[+0.010,\,+0.042]$ \\
-MACCE                 & 6.0\% & $-0.000$ & $[-0.014,\,+0.013]$ \\
+MACCE                 & 6.0\% & $-0.000$ & $[-0.014,\,+0.014]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -663,11 +663,11 @@ Four conclusions emerge from the analyses, in the order in which they were
 established. First, the average treatment effect in MASTER DAPT is recovered
 consistently across five independent estimator families and agrees with the
 published trial results, supporting the validity of the estimation framework.
-Second, the estimated patient-level variation does not exceed the heterogeneity
-observed under treatment-label permutation, does not persist in doubly robust
-held-out evaluation under either weighting scheme, and increases with model
-capacity in a pattern consistent with estimation artefacts rather than a
-stable property of the data. Third, the trade-off plane that would underpin a
+Second, estimated patient-level variation changes markedly with the estimator
+and model capacity. The BCF bleeding spread modestly exceeds its permuted-treatment
+floor, but this separation does not persist in doubly robust held-out evaluation
+under either weighting scheme and therefore does not support a stable property of
+the data. Third, the trade-off plane that would underpin a
 personalized treatment rule forms a single compact distribution, with no
 patient whose position in the clinically relevant quadrant remains supported
 by the bootstrap. Finally, direct evaluation of treatment policies through
@@ -676,23 +676,23 @@ policy improves upon abbreviated therapy across the considered weighting of
 the bleeding--ischemic trade-off.
 
 The sensitivity analysis places these findings in context. For the bleeding
-endpoints, the protocol would have detected heterogeneity comparable to the
-trial's average treatment effect, yet no such heterogeneity is observed. For
+endpoints, the protocol detects only heterogeneity larger than the corresponding
+average treatment effect; no such large heterogeneity is observed. For
 the ischemic endpoints, reliable detection would require substantially larger
 effect modification, making the question difficult to resolve with this
 cohort alone.
 
 MASTER DAPT enrolls only patients already flagged as high bleeding risk
 (ARC-HBR criterion, \citealp{valgimigli2021appendix}), so predicted bleeding risk varies little across the cohort,
-leaving the causal forest little covariate-space variation to exploit 
+leaving the causal forest little covariate-space variation to exploit
 regardless of the 506 observed events.
 
-On the ischemic side, MACCE (death, MI, stroke) shows a null ATE in Table 6.5 
-($-0.000$, CI $[-0.014,+0.013]$) while the bleeding component is significant 
-($+0.027$): a null composite is consistent with a genuine absence of effect on 
-each component, but equally consistent with opposite-direction effects (e.g. MI and stroke) 
-cancelling in the sum. Together, the two facts explain a strong average effect 
-alongside near-zero estimated heterogeneity: trial selection compresses the risk 
+On the ischemic side, MACCE (death, MI, stroke) shows a null ATE in Table 6.5
+($-0.000$, CI $[-0.014,+0.014]$) while the bleeding component is significant
+($+0.026$): a null composite is consistent with a genuine absence of effect on
+each component, but equally consistent with opposite-direction effects (e.g. MI and stroke)
+cancelling in the sum. Together, the two facts explain a strong average effect
+alongside near-zero estimated heterogeneity: trial selection compresses the risk
 variation on the bleeding side, aggregation masks it on the ischemic side.
 
 \section{Supplementary Results with Discretized Covariates}

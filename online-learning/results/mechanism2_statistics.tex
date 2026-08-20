@@ -6,22 +6,20 @@
 \toprule
 Variant & Endpoint & Included & Discarded & $p$-value \\
 \midrule
-angle_conflict & bleed & 11.23 $\pm$ 0.61\% & 10.89 $\pm$ 0.69\% & $0.376$ \\
-angle_conflict & isch & 4.52 $\pm$ 0.60\% & 4.42 $\pm$ 0.57\% & $0.317$ \\
-angle_net_benefit & bleed & 11.23 $\pm$ 0.61\% & 10.89 $\pm$ 0.69\% & $0.376$ \\
-angle_net_benefit & isch & 4.52 $\pm$ 0.60\% & 4.42 $\pm$ 0.57\% & $0.317$ \\
-conflict & bleed & 11.17 $\pm$ 0.60\% & 10.95 $\pm$ 0.61\% & $0.477$ \\
-conflict & isch & 4.45 $\pm$ 0.60\% & 4.49 $\pm$ 0.60\% & $0.304$ \\
-isch & bleed & 11.25 $\pm$ 0.60\% & 10.87 $\pm$ 0.66\% & $0.421$ \\
-isch & isch & 4.66 $\pm$ 0.55\% & 4.28 $\pm$ 0.51\% & $0.383$ \\
-minus_isch & bleed & 10.92 $\pm$ 0.58\% & 11.20 $\pm$ 0.61\% & $0.469$ \\
-minus_isch & isch & 4.27 $\pm$ 0.64\% & 4.67 $\pm$ 0.65\% & $0.347$ \\
-net_benefit & bleed & 11.00 $\pm$ 0.61\% & 11.12 $\pm$ 0.64\% & $0.507$ \\
-net_benefit & isch & 4.31 $\pm$ 0.53\% & 4.63 $\pm$ 0.56\% & $0.376$ \\
-random & bleed & 11.07 $\pm$ 0.64\% & 11.05 $\pm$ 0.58\% & $0.486$ \\
-random & isch & 4.48 $\pm$ 0.39\% & 4.46 $\pm$ 0.38\% & $0.561$ \\
+Angle net-benefit (legacy $+45^\circ$) & bleed & 11.23 $\pm$ 0.61\% & 10.89 $\pm$ 0.69\% & $0.376$ \\
+Angle net-benefit (legacy $+45^\circ$) & isch & 4.52 $\pm$ 0.60\% & 4.42 $\pm$ 0.57\% & $0.317$ \\
+Conflict ($b-i$) & bleed & 11.00 $\pm$ 0.61\% & 11.12 $\pm$ 0.64\% & $0.507$ \\
+Conflict ($b-i$) & isch & 4.31 $\pm$ 0.53\% & 4.63 $\pm$ 0.56\% & $0.376$ \\
+$+$isch & bleed & 11.25 $\pm$ 0.60\% & 10.87 $\pm$ 0.66\% & $0.421$ \\
+$+$isch & isch & 4.66 $\pm$ 0.55\% & 4.28 $\pm$ 0.51\% & $0.383$ \\
+$-$isch & bleed & 10.92 $\pm$ 0.58\% & 11.20 $\pm$ 0.61\% & $0.469$ \\
+$-$isch & isch & 4.27 $\pm$ 0.64\% & 4.67 $\pm$ 0.65\% & $0.347$ \\
+Net-benefit / win-win ($b+i$) & bleed & 11.17 $\pm$ 0.60\% & 10.95 $\pm$ 0.61\% & $0.477$ \\
+Net-benefit / win-win ($b+i$) & isch & 4.45 $\pm$ 0.60\% & 4.49 $\pm$ 0.60\% & $0.304$ \\
+Random & bleed & 11.07 $\pm$ 0.64\% & 11.05 $\pm$ 0.58\% & $0.486$ \\
+Random & isch & 4.48 $\pm$ 0.39\% & 4.46 $\pm$ 0.38\% & $0.561$ \\
 \bottomrule
 \end{tabular}
-\caption{Event rates for included and discarded patients across the repeated runs of Mechanism~2. Values are mean $\pm$ standard deviation across runs. The $p$-value is the median two-sided Fisher exact test comparing included and discarded patients within each run.}
+\caption{Event rates for included and discarded patients across the repeated runs of Mechanism~2. Conflict denotes $b-i$ and net-benefit/win-win denotes $b+i$. The checked-in Angle estimate is the legacy $+45^\circ$ rule; no $-45^\circ$ Angle-conflict estimate is inferred from it. Values are mean $\pm$ standard deviation across runs. The $p$-value is the median two-sided Fisher exact test comparing included and discarded patients within each run.}
 \label{tab:mechanism2_event_rates}
 \end{table}

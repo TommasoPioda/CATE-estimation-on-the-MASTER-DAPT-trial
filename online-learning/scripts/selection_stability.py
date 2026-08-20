@@ -20,7 +20,7 @@ and `random`, a patient's selection is noise: they are picked because this parti
 resample nudged them across a boundary, not because the model knows something about them.
 
   python online-learning/scripts/selection_stability.py --n-seeds 100 --workers 12
-  python online-learning/scripts/selection_stability.py --rule topright  # the win-win corner instead
+  python online-learning/scripts/selection_stability.py --rule angle_conflict
 
 Caveat on `placebo`: permuting T destroys the bleeding ATE as well as the heterogeneity, so
 it is a null for "any structure at all", not for heterogeneity alone. It is the floor, not a
@@ -43,6 +43,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from tqdm import tqdm
 
+from online_learning_policies import score_angle_conflict, score_angle_net_benefit
 from online_learning_utils import plane_coords
 
 
@@ -111,27 +112,22 @@ def plane(C):
     return plane_coords(df, ISCH_WEIGHTS)
 
 
-def duel_by_angle(i, j, x, y):
-    """nb 01's rule, vectorised over pair arrays `i`/`j`: keep the patient nearest the **+45°
-    win-win diagonal** (top-right: high bleed AND high ischaemic benefit of shortening). Same
-    tie-breaks as the notebook (`i` wins only on a strict `>`, so ties go to `j`): among two
-    win-win (Q1) patients keep the one further out; among two anti-win-win (Q3) keep the
-    less-bad (closer to the origin); otherwise keep the one whose angle is closest to 45°."""
-    ai, aj = np.degrees(np.arctan2(y[i], x[i])), np.degrees(np.arctan2(y[j], x[j]))
-    di = np.abs((ai - 45 + 180) % 360 - 180)          # angular distance to the +45° diagonal
-    dj = np.abs((aj - 45 + 180) % 360 - 180)
-    mi, mj = np.hypot(x[i], y[i]), np.hypot(x[j], y[j])
-    both_q1 = (x[i] > 0) & (y[i] > 0) & (x[j] > 0) & (y[j] > 0)
-    both_q3 = (x[i] < 0) & (y[i] < 0) & (x[j] < 0) & (y[j] < 0)
-    win_i = np.where(both_q1, mi > mj, np.where(both_q3, mi < mj, di < dj))
-    return np.where(win_i, i, j)
+def angle_scores(rule, x, y):
+    """Score the complete reference plane with the shared +45/-45 Angle policies."""
+    frame = pd.DataFrame({"x_plane": x, "y_plane": y})
+    uncertainty = pd.DataFrame({"uncertainty": np.zeros(len(frame))})
+    idx = np.arange(len(frame))
+    scorer = {
+        "angle_net_benefit": score_angle_net_benefit,
+        "angle_conflict": score_angle_conflict,
+    }[rule]
+    return scorer(frame, uncertainty, idx, ISCH_WEIGHTS, c=0.0)
 
 
 def duel_by_conflict(i, j, x, y):
-    # The linear-sum comparison arm. On the centred plane both axes carry IQR 1, so this is the
-    # EQUAL-weight conflict score; `conflict_from_model`'s own `bleed + weighted_isch` keeps the
-    # raw IQRs, where bleed's is 2.4x the composite's, and so weights bleeding that much more.
-    c = x + y
+    # Linear trade-off arm: conflict = bleeding benefit - ischaemic benefit. On this centred
+    # plane both axes carry IQR 1, so the subtraction gives them equal scale.
+    c = x - y
     return np.where(c[i] > c[j], i, j)
 
 
@@ -155,12 +151,14 @@ def make_pairs(n, seed=0):
 
 
 def select(rule, x, y, pairs):
-    """Indices the model's rule selects: one winner per bracket pair (top half for topright)."""
+    """Indices selected by one explicit rule: one winner per bracket pair."""
     if rule == 'topright':
         return np.argsort(-(z(x) + z(y)))[:len(x) // 2]
     i, j = pairs
-    duel = duel_by_angle if rule == 'angle' else duel_by_conflict
-    return duel(i, j, x, y)
+    if rule in {"angle_net_benefit", "angle_conflict"}:
+        scores = angle_scores(rule, x, y)
+        return np.where(scores[i] > scores[j], i, j)
+    return duel_by_conflict(i, j, x, y)
 
 
 def one_seed(args):
@@ -242,8 +240,12 @@ def main():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--n-seeds', type=int, default=100)
     p.add_argument('--workers', type=int, default=12)
-    p.add_argument('--rule', choices=['angle', 'conflict', 'topright'], default='angle',
-                   help="selection rule from nb 01 (default: angle = duel_by_angle)")
+    p.add_argument(
+        '--rule',
+        choices=['angle_net_benefit', 'angle_conflict', 'conflict', 'topright'],
+        default='angle_net_benefit',
+        help='explicit selection rule (Angle net-benefit: +45; Angle conflict: -45)',
+    )
     p.add_argument('--arms', default='real,placebo,random')
     args = p.parse_args()
 

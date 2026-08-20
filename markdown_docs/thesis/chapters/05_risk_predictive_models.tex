@@ -24,7 +24,7 @@ judged.
 \paragraph{One detail about what these models predict}
 In the full-cohort models the randomized assignment is among the covariates,
 so what is being predicted is the risk of an event \emph{under the treatment
-the patient actually received}. That is the quantity Chapter 1 warns against
+the patient actually received}. That is the quantity Chapter 2 warns against
 using as a decision rule, and it is the right quantity here: this chapter
 measures how well outcomes can be anticipated, not how treatment changes them.
 The separation between the two is the subject of Chapter 6, and the per-arm
@@ -111,9 +111,9 @@ Stroke               &  35 & $0.60 \pm 0.08$ & $0.62 \pm 0.11$ & $0.67 \pm 0.13$
 \caption{Pooled out-of-fold receiver operating characteristic (left panel)
 and precision-recall (right panel) curves for the soft voting ensemble,
 all five endpoints. Each endpoint is identified by its name from
-Table~\ref{tab:risk-auroc}: bleeding (light blue), bleeding BARC 2/3/5 (green),
-myocardial infarction (dark red), cardiovascular death (dark brown), and stroke
-(light green). Every patient is scored once by a model fitted without them. In
+Table~\ref{tab:risk-auroc}: bleeding (light blue), bleeding BARC 2/3/5 (dark blue),
+myocardial infarction (dark red), cardiovascular death (green), and stroke
+(grey). Every patient is scored once by a model fitted without them. In
 the right-hand panel the dotted horizontal lines mark the chance level of each
 curve, which is the endpoint's event rate.}
 \label{fig:roc-pr}
@@ -269,11 +269,13 @@ original trial report \citep{valgimigli2021masterdapt}.
 \section{The Anomaly, Left Open}
 
 This chapter has produced the components the next one needs, and one finding
-it cannot explain on its own. Bleeding — the endpoint with the most events,
+it cannot explain on its own. Bleeding, the endpoint with the most events,
 the one the trial was designed around, and the one whose predictors are best
-represented in the covariate set — is the endpoint predicted worst, in every
+represented in the covariate set, is the endpoint predicted worst, in every
 model family, in both treatment arms, and in an independent earlier modelling
-pass. Cardiovascular death in is predicted best even if the provided positive samples are much
+pass.
+Cardiovascular death in is predicted best even if the provided positive
+samples are much
 fewer than the one present for the bleeding endpoints.
 
 Three readings are available at this point. The covariate set might simply

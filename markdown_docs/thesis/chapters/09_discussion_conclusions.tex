@@ -49,7 +49,7 @@ from random enrollment. Under Mechanism~2, reversing the ischemic score reverses
 change in observed ischemic rate ($+0.14$ percentage points, $p<0.001$, versus $-0.15$
 percentage points, $p=0.015$). This mirror response indicates that the estimated
 ischemic axis contains a
-selection signal. Net-benefit also lowers the ischemic rate under Mechanisms~1, 2, 4 and
+selection signal. Conflict also lowers the ischemic rate under Mechanisms~1, 2, 4 and
 5, while some rules move bleeding as well. A CATE ranking can thus be too weak or
 unstable for held-out causal validation and still be associated with cohort composition
 when repeatedly used as a selection score.
@@ -57,10 +57,10 @@ when repeatedly used as a selection score.
 \vspace{10pt}
 
 That association should not be overinterpreted. The largest single-axis separation is
-observed under Mechanism~1 with the $-$isch rule: the enrolled cohort's ischemic event
-rate is $0.83$ percentage points lower than that of the left-out group ($p<0.001$).
-Against random enrollment, however, the selected-cohort difference for the same rule is
-$-0.10$ percentage points. The largest significant movement of both bleeding and
+observed under Mechanism~1 with the conflict rule: the enrolled cohort's ischemic
+event rate is $0.52$ percentage points lower than that of the left-out group
+($p<0.001$). Against random enrollment, the selected-cohort difference for the same
+rule is $-0.16$ percentage points. The largest significant movement of both bleeding and
 ischemic rates in the same comparison occurs under Mechanism~2 and remains below half a
 percentage point on either axis ($-0.28$ and $-0.15$ percentage points). Directions vary
 across policies and mechanisms, and some significant movements oppose the intended
@@ -71,22 +71,20 @@ clinically preferable cohort.
 
 \section{Interpretation of the Heterogeneity Results}
 
-For bleeding, the minimum reliably detectable heterogeneity is approximately $0.05$ on
-the absolute-risk scale, comparable to the entire average treatment effect. At
-$\delta=0.02$, a still clinically relevant modifier, the protocol succeeds in 80\% of
-simulations rather than the pre-specified 90\%. The data therefore argue against large,
+For overall bleeding, the minimum reliably detectable heterogeneity is $0.10$ on the
+absolute-risk scale, more than twice the average effect; for BARC 2/3/5 bleeding it is
+$0.05$, also larger than the average effect. The data therefore argue against large,
 readily exploitable bleeding-effect heterogeneity, while remaining compatible with
 smaller heterogeneity.
 
 \vspace{10pt}
 
-For myocardial infarction and cardiovascular death, reliable detection requires injected
-effect modification corresponding to odds ratios of approximately 3 and 5. With only 109
-and 81 events, respectively, realistic heterogeneity is not reliably measurable. Stroke,
-with 35 observed events, cannot be assessed using the present sensitivity protocol
-because its null simulation is already degenerate. These endpoints should consequently
-be described as underpowered or non-interpretable for heterogeneity, rather than as
-showing evidence of a constant effect.
+For myocardial infarction and cardiovascular death, the sensitivity protocol fails its
+null-calibration check, so it does not yield interpretable detection thresholds. Stroke,
+with 35 observed events, also fails to reach the required detection rate and has an
+unstable null calibration. These endpoints should consequently be described as
+underpowered or non-interpretable for heterogeneity, rather than as showing evidence of
+a constant effect.
 
 \vspace{10pt}
 

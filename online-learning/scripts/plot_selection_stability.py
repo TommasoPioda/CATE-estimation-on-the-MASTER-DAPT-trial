@@ -3,13 +3,14 @@
 selection_stability.py answers "is the selection noise" with two summary numbers
 (jaccard, decisive) and two plots. This script reads its CSV output and asks a
 sharper, spatial question: does `real` beat the `placebo`/`random` noise floors
-uniformly, or only far from the +45 deg decision boundary duel_by_angle selects
-on -- and for which patients does `real` disagree with `placebo` specifically?
+uniformly, or only far from the selected Angle boundary (+45 degrees for
+`angle_net_benefit`, -45 degrees for `angle_conflict`) -- and for which patients does
+`real` disagree with `placebo` specifically?
 
 Needs selection_frequency_{rule}.csv + stability_report_{rule}.csv, already
 written by selection_stability.py into Meta-learning/models/CausalForest/STABILITY/.
 
-    python online-learning/scripts/plot_selection_stability.py --rule angle
+    python online-learning/scripts/plot_selection_stability.py --rule angle_net_benefit
 """
 import argparse
 import os
@@ -27,6 +28,7 @@ STAB_DIR = os.path.join(ROOT, 'Meta-learning', 'models', 'CausalForest', 'STABIL
 # Fixed hue per arm, reused across every plot below -- colorblind-safe qualitative triplet.
 ARM_COLOR = {'real': '#1b7837', 'placebo': '#b35806', 'random': '#7570b3'}
 DECISIVE_LO, DECISIVE_HI = 0.1, 0.9        # same thresholds as selection_stability.decisive()
+ANGLE_TARGET = {"angle_net_benefit": "+45°", "angle_conflict": "-45°"}
 
 
 def load(rule):
@@ -36,8 +38,12 @@ def load(rule):
     return freq, rep, arms
 
 
-def angle_distance(x, y):
-    """Angular distance (deg) to the +45 win-win diagonal duel_by_angle selects on."""
+def angle_distance(x, y, rule):
+    """Angular distance to the explicit policy target on the original plane."""
+    if rule == "angle_conflict":
+        y = -np.asarray(y)
+    elif rule != "angle_net_benefit":
+        raise ValueError(f"{rule!r} is not an Angle rule")
     a = np.degrees(np.arctan2(y, x))
     return np.abs((a - 45 + 180) % 360 - 180)
 
@@ -66,13 +72,15 @@ def plot_ecdf(freq, rep, arms, rule):
 def plot_boundary_diagnostic(freq, arms, rule, n_bins=10):
     """Decisiveness vs distance to the decision boundary, per arm.
 
-    If the model reads real structure, patients far from the +45 diagonal should
+    If the model reads real structure, patients far from the policy's target diagonal should
     be picked (or not) reliably -- decisiveness should RISE with distance for
     `real`. If it's noise, decisiveness stays flat near 0 everywhere, same as
     `placebo`/`random`: a bootstrap refit or a coin flip doesn't care how far a
     patient sits from the boundary.
     """
-    d = angle_distance(freq['bleed_ref'].to_numpy(), freq['isch_ref'].to_numpy())
+    d = angle_distance(
+        freq['bleed_ref'].to_numpy(), freq['isch_ref'].to_numpy(), rule
+    )
     bins = pd.qcut(d, n_bins, duplicates='drop')
     mid = pd.Series(d).groupby(bins, observed=True).mean()
 
@@ -83,7 +91,7 @@ def plot_boundary_diagnostic(freq, arms, rule, n_bins=10):
         se = decisiveness.groupby(bins, observed=True).sem()
         ax.errorbar(mid, m, yerr=se, color=ARM_COLOR.get(arm, 'grey'), lw=2,
                     marker='o', ms=4, label=arm)
-    ax.set(xlabel='angular distance to the +45\N{DEGREE SIGN} boundary (deciles)',
+    ax.set(xlabel=f'angular distance to the {ANGLE_TARGET[rule]} boundary (deciles)',
            ylabel='decisiveness  (0 = coin flip, 1 = always/never picked)',
            title='Does decisiveness grow away from the decision boundary?')
     ax.legend(fontsize=8)
@@ -142,7 +150,12 @@ def plot_decisive_map(freq, rule):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('--rule', default='angle', help="matches the --rule selection_stability.py was run with")
+    p.add_argument(
+        '--rule',
+        choices=['angle_net_benefit', 'angle_conflict', 'conflict', 'topright'],
+        default='angle_net_benefit',
+        help='matches the explicit --rule used by selection_stability.py',
+    )
     args = p.parse_args()
 
     freq, rep, arms = load(args.rule)
@@ -150,7 +163,8 @@ def main():
     print(rep.round(3))
 
     plot_ecdf(freq, rep, arms, args.rule)
-    plot_boundary_diagnostic(freq, arms, args.rule)
+    if args.rule in ANGLE_TARGET:
+        plot_boundary_diagnostic(freq, arms, args.rule)
     plot_real_vs_placebo(freq, args.rule)
     plot_decisive_map(freq, args.rule)
     print(f'\nfigures -> {STAB_DIR}')

@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from scipy.stats import fisher_exact
 
+from online_learning_policies import SCORE_CONVENTION
 from run_archiving import start_run_archive
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +30,64 @@ ENDPOINTS = {
 }
 
 results = pd.read_parquet(RESULTS_FILE)
+
+
+def normalise_saved_policy_ids(df):
+    """Return policy identifiers under the current score convention.
+
+    The checked-in Mechanism 2 artifact predates ``SCORE_CONVENTION``: its scalar
+    identifiers were reversed (``conflict`` stored the win-win sum and
+    ``net_benefit`` stored the conflict difference), and both Angle identifiers
+    contain the same +45-degree result. Numeric values are never changed here.
+
+    New, tagged artifacts already contain genuinely distinct +45/-45 Angle runs and
+    therefore pass through unchanged. Unknown, missing or mixed tags fail loudly.
+    """
+    out = df.copy()
+    if "score_convention" in out.columns:
+        tags = set(out["score_convention"].dropna().astype(str))
+        if out["score_convention"].isna().any() or tags != {SCORE_CONVENTION}:
+            raise ValueError(f"Unsupported score_convention values: {sorted(tags)}")
+        return out, False
+
+    out["variant"] = (
+        out["variant"]
+        .replace({"conflict": "__legacy_win_win__", "net_benefit": "conflict"})
+        .replace({"__legacy_win_win__": "net_benefit"})
+    )
+
+    angle_nb = out[out["variant"] == "angle_net_benefit"].drop(columns="variant")
+    angle_conflict = out[out["variant"] == "angle_conflict"].drop(columns="variant")
+    if not angle_conflict.empty:
+        if angle_nb.empty:
+            out.loc[
+                out["variant"] == "angle_conflict", "variant"
+            ] = "angle_net_benefit"
+        else:
+            order = [c for c in ("run", "group") if c in angle_nb.columns]
+            if order:
+                angle_nb = angle_nb.sort_values(order).reset_index(drop=True)
+                angle_conflict = angle_conflict.sort_values(order).reset_index(drop=True)
+            if not angle_nb.equals(angle_conflict):
+                raise ValueError(
+                    "Legacy Angle identifiers are not duplicates; refusing to infer "
+                    "a -45-degree run"
+                )
+            out = out[out["variant"] != "angle_conflict"].copy()
+
+    out.loc[
+        out["variant"] == "angle_net_benefit", "variant"
+    ] = "angle_net_benefit_legacy"
+    out["score_convention"] = SCORE_CONVENTION
+    return out, True
+
+
+results, normalised_legacy = normalise_saved_policy_ids(results)
+if normalised_legacy:
+    print(
+        "Normalised legacy scalar identifiers; duplicate +45-degree "
+        "angle_conflict rows omitted (no -45-degree result inferred)."
+    )
 
 required = {
     "variant",
@@ -82,6 +141,7 @@ for (variant, run), df_run in results.groupby(["variant", "run"]):
 
         rows.append({
             "variant": variant,
+            "score_convention": SCORE_CONVENTION,
             "run": int(run),
             "endpoint": endpoint,
             "included_n": included_n,
@@ -142,10 +202,21 @@ def format_p(p):
 
 latex_rows = []
 
+VARIANT_LABELS = {
+    "conflict": r"Conflict ($b-i$)",
+    "net_benefit": r"Net-benefit / win-win ($b+i$)",
+    "angle_net_benefit": r"Angle net-benefit ($+45^\circ$)",
+    "angle_net_benefit_legacy": r"Angle net-benefit (legacy $+45^\circ$)",
+    "angle_conflict": r"Angle conflict ($-45^\circ$)",
+    "minus_isch": r"$-$isch",
+    "isch": r"$+$isch",
+    "random": "Random",
+}
+
 for _, row in summary_df.iterrows():
 
     latex_rows.append(
-        f"{row['variant']} & "
+        f"{VARIANT_LABELS.get(row['variant'], row['variant'])} & "
         f"{row['endpoint']} & "
         f"{format_rate(row['included_rate_mean'], row['included_rate_std'])} & "
         f"{format_rate(row['discarded_rate_mean'], row['discarded_rate_std'])} & "
@@ -166,7 +237,7 @@ latex_table = "\n".join([
     *latex_rows,
     r"\bottomrule",
     r"\end{tabular}",
-    r"\caption{Event rates for included and discarded patients across the repeated runs of Mechanism~2. Values are mean $\pm$ standard deviation across runs. The $p$-value is the median two-sided Fisher exact test comparing included and discarded patients within each run.}",
+    r"\caption{Event rates for included and discarded patients across the repeated runs of Mechanism~2. Conflict denotes $b-i$ and net-benefit/win-win denotes $b+i$. The checked-in Angle estimate is the legacy $+45^\circ$ rule; no $-45^\circ$ Angle-conflict estimate is inferred from it. Values are mean $\pm$ standard deviation across runs. The $p$-value is the median two-sided Fisher exact test comparing included and discarded patients within each run.}",
     r"\label{tab:mechanism2_event_rates}",
     r"\end{table}",
 ])

@@ -71,7 +71,7 @@ outcomes coded as adverse events, the conditional average treatment effect
 \]
 is therefore the excess event risk caused by prolonging, which is exactly the
 \emph{benefit of abbreviating}. A positive $\tau(x)$ means that patients with
-profile $x$ are in a superior position with respect to the abbreviated strategy; a negative $\tau(x)$
+profile $x$ have superior benefits with the abbreviated strategy; a negative $\tau(x)$
 means they are more favorable to the prolonged one; 
 a value near zero means the
 choice is immaterial for that patient type. This convention is used without
@@ -123,8 +123,8 @@ First, \emph{every} patient in this cohort is at high bleeding risk, because
 that was an eligibility criterion \citep{valgimigli2021appendix} and not an accident of the randomization.
 The cohort is therefore a deliberately restricted slice of the PCI population,
 not a sample of it: the spread of bleeding risk within it is compressed by
-construction The restricted range of 
-bleeding risk in this cohort limits the model's ability to distinguish between patients.
+construction the restricted range of 
+bleeding risk in this cohort is expected to limits the model's ability to distinguish between patients.
 
 Second, ischemic events are an order of magnitude rarer than bleeding events,
 with cardiovascular death and stroke both below one hundred observations. Any
@@ -202,12 +202,12 @@ concentrate in the few patients with the most unusual covariate profiles. Hotell
 $T^2$ statistic was computed for every patient on the first ten principal components of
 the full standardized design, and compared against the $\chi^2_{10}$ distribution that
 it follows under normality. The result is reported in Figure~\ref{fig:outliers}. The
-99.5\% quantile of that distribution, $T^2 = 25.2$, flags 162 of the 4,579 patients
-(3.5\%) as extreme outliers, and the 99\% quantile, $T^2 = 23.2$, flags 206.
+99.5\% quantile of that distribution, $T^2 = 25.2$, flags 184 of the 4,579 patients
+(4.0\%) as extreme outliers, and the 99\% quantile, $T^2 = 23.2$, flags 231.
 
-These patients do carry a higher event rate: cardiovascular death and stroke occur
-roughly 3.4 and 3.5 times more often among them than among the rest of the cohort. The
-group is nevertheless too small to account for the events. It contains 11.1\% of the
+These 184 patients do carry a higher event rate: cardiovascular death and stroke occur
+roughly 3.75 and 3.08 times more often among them than among the rest of the cohort. The
+group is nevertheless too small to account for the events. It contains 13.6\% of the
 cardiovascular deaths and 11.4\% of the strokes, so close to nine ischemic events in ten
 occur in patients whose covariate profile is not extreme. Screening on multivariate
 extremes therefore isolates a higher-risk group but leaves most of the ischemic events

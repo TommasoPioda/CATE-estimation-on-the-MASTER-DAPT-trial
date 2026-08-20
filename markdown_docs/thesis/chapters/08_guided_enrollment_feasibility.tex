@@ -33,18 +33,43 @@ The bleeding CATE and the weighted ischemic CATE.
 This multidimensionality allows for several ways to combine them into a single scalar score.
 The six non-random policy variants and the random control are explained below.
 
+Write $b$ for bleeding benefit of shortening and $i$ for the weighted ischemic
+benefit, with positive values favouring shortening on both axes. The policy names and
+formulas are fixed as follows.
+
 \begin{itemize}
-    \item The \emph{\textbf{win-win score}} combines the two components, prioritising patients in the top-right quadrant, where both bleeding and ischemic outcomes are expected to improve.
-    
-    \item The \emph{\textbf{trade-off score}} subtracts the ischemic component from the bleeding component, prioritising patients in the bottom-right quadrant, where a reduction in bleeding risk is accompanied by an increase in ischemic risk.
-            This is used mostly as a control against the win-win score, to see if the mechanism can distinguish between the two.
-    
-    \item The \emph{\textbf{diagonal scores}} uses the geometry of the treatment-effect plane directly. Patients in the win-win quadrant are ranked above those outside it; within each quadrant, ties are resolved according to distance from the origin or proximity to the $+45^\circ$ diagonal.
-    
-    \item The \emph{\textbf{pure ischemic score}} rank patients according to the ischemic component alone, using the opposite direction as control.
-    
-    \item The \emph{\textbf{random policy}} enrolls patients without using their estimated CATEs, this policy is our "0" value.
+    \item \emph{\textbf{Net-benefit / win-win}} is the scalar sum
+          $s_{\mathrm{NB}}=b+i$. It rewards simultaneous improvement in bleeding and
+          ischemic outcomes and points toward the top-right quadrant.
+
+    \item \emph{\textbf{Conflict / trade-off}} is the scalar difference
+          $s_{\mathrm{conflict}}=b-i$. It increases when bleeding benefit and ischemic
+          benefit disagree and points toward the bottom-right direction.
+
+    \item \emph{\textbf{Angle net-benefit}} uses median-centred, IQR-rescaled
+          coordinates $(x,y)$ and targets $+45^\circ$, with centred Q1 as its preferred
+          tier.
+
+    \item \emph{\textbf{Angle conflict}} applies $y\mapsto-y$ before quadrant,
+          magnitude and angular-distance calculations; this is the $-45^\circ$ direction
+          on the original centred plane and makes original Q4 its preferred tier.
+
+    \item The two \emph{\textbf{pure ischemic}} controls rank $i$ and $-i$.
+
+    \item The \emph{\textbf{random policy}} ignores estimated CATEs and defines the
+          no-guidance control.
 \end{itemize}
+
+\paragraph{Saved-result convention.}
+The saved scalar-policy artifacts were generated before the identifiers were corrected:
+the legacy key \texttt{conflict} stored $b+i$, whereas \texttt{net\_benefit} stored
+$b-i$. The table generator now normalises those two identifiers without changing any
+numerical value, so every displayed ``Conflict'' row denotes $b-i$ and every displayed
+``Net-benefit'' row denotes $b+i$. New artifacts carry an explicit convention tag. The
+saved Angle outputs still predate the distinct $+45^\circ/-45^\circ$ implementation.
+The table generator therefore reports the legacy $+45^\circ$ estimate once, as Angle
+net-benefit, and suppresses the duplicate legacy angle-conflict identifier. A current
+Angle-conflict estimate requires rerunning the corresponding mechanism.
 
 Throughout this chapter, the selection scores use the aggregation of the three
 ischemic endpoints weighted by the same ISCH\_WEIGHTS used in Chapter 6. The observed
@@ -56,14 +81,18 @@ as in Chapter 6 throughout.
 
 \vspace{10pt}
 
-The diagonal-score uses raw coordinates rather than a linear combination
-to rank the patients, so it is not a scalar score in the same sense as the others.
-Each policy is run over 100 independent seed cohorts.
+The Angle scores use median-centred, IQR-rescaled plane coordinates rather than a
+linear combination, so they are not scalar sums/differences in the same sense as the two
+composite policies.
+Mechanisms~1--3 use 100 seeded replications, paired across policies by run identifier.
+Mechanisms~4--5 use 50 replications of one shared tuned seed cohort and one fixed arrival
+order; the replication seed changes only the Thompson draw and the coin-flip baseline.
 
 \paragraph{The Starting point.}
 All the mechanisms in this chapter start from the same amount of 1.000 patients drawn 
 at random from the full cohort of 4,579-patients. Once the seed is sampled the 
-forest is tuned 20 times on the seed cohort, by the same cross-validated AUTOC lower-bound criterion
+forest hyperparameters are optimized over 20 Optuna trials on the seed cohort, by the same
+cross-validated AUTOC lower-bound criterion
 on the bleeding endpoint used throughout this chapter; the tuned configuration is then
 kept fixed for the rest of the run.
 
@@ -103,7 +132,7 @@ selection in later rounds.
 \end{figure}
 
 Figure \ref{fig:ch8-policy-comparison} reveals a clear separation between the policies 
-on the ischemic axis. In particular, the $-$isch and net-benefit policies progressively 
+on the ischemic axis. In particular, the $-$isch and conflict policies progressively
 produce enrolled cohorts with lower ischemic event rates than the corresponding 
 left-out groups. The remaining policies show substantially weaker or negligible 
 separation between the two groups.
@@ -122,7 +151,7 @@ separation between the two groups.
 \end{table}
 
 Table \ref{tab:ch8-ischaemic-rate-comparison} quantifies this separation at the end
-of the enrollment process. The $-$isch and net-benefit policies yield significantly
+of the enrollment process. The $-$isch and conflict policies yield significantly
 lower ischemic event rates among enrolled than left-out patients, whereas the other
 policies do not show a significant separation.
 
@@ -140,10 +169,10 @@ policies do not show a significant separation.
 \end{table}
 
 The analogous bleeding comparison in Table~\ref{tab:ch8-bleeding-rate-comparison}
-shows significant positive separations for Conflict ($+0.68$ pp), both angle rules
+shows significant positive separations for Net-benefit ($+0.68$ pp), the legacy Angle-net-benefit rule
 ($+0.61$ pp), and $+$isch ($+0.62$ pp), all with $p<0.001$. The $-$isch rule instead
 selects a cohort with a bleeding rate $0.40$ percentage points below the left-out group
-($p=0.003$). Net-benefit and random show no significant separation.
+($p=0.003$). Conflict and random show no significant separation.
 
 \begin{table}[htbp]
     \centering
@@ -161,7 +190,7 @@ To assess whether this separation corresponds to a meaningful improvement over r
 enrollment, Table \ref{tab:ch8-selected-rates-vs-random} compares the event rate among 
 selected patients under each policy with that obtained under the random control. The 
 comparison is paired by run across 100 simulations. On the ischemic axis, the $-$isch 
-and net-benefit policies significantly reduce the event rate relative to random
+and conflict policies significantly reduce the event rate relative to random
 enrollment. The remaining policies do not differ significantly from random enrollment
 on the ischemic axis.
 
@@ -173,22 +202,22 @@ on the ischemic axis.
     \caption{Mean number of ischemic (top row) and bleeding (bottom row) events,
     averaged over 100 runs, among the actively selected cohort excluding the
     1,000-patient seed (left column) and among the patients still left out (right
-    column), as enrollment progresses under the five non-random policies and
+    column), as enrollment progresses under the six non-random policies and
     random enrollment.}
     \label{fig:ch8-policy-evolution}
 \end{figure}
 
 In the ischemic--enrolled panel of Figure~\ref{fig:ch8-policy-evolution}, the
-curves for Conflict, the two angle policies and random enrollment stay close
+curves for Net-benefit, the duplicated legacy $+45^\circ$ Angle entries and random enrollment stay close
 together throughout enrollment: at $n=3500$ their actively selected-group ischemic rates
 span only $4.45\%$--$4.47\%$, a range of $0.02$ percentage points
 (Table~\ref{tab:ch8-ischaemic-rate-comparison}). Visual proximity does not settle
 whether a policy differs from random selection, because
 Table~\ref{tab:ch8-selected-rates-vs-random} pairs each policy against random
 enrollment within the same 100 seed replications, so the run-to-run variation
-common to both curves cancels out of the comparison. Under this pairing, Conflict's
-$-0.01$ percentage point shift and the angle rules' $-0.02$ shift are not significant
-($p=0.918$ and $p=0.859$, respectively). In contrast, net-benefit and $-$isch reduce
+common to both curves cancels out of the comparison. Under this pairing, Net-benefit's
+$-0.01$ percentage point shift and the legacy Angle-net-benefit rule's $-0.02$ shift are not significant
+($p=0.918$ and $p=0.859$, respectively). In contrast, conflict and $-$isch reduce
 the ischemic rate relative to random by $0.16$ pp ($p<0.001$) and $0.12$ pp
 ($p=0.012$).
 
@@ -196,10 +225,10 @@ the ischemic rate relative to random by $0.16$ pp ($p<0.001$) and $0.12$ pp
 
 The bleeding axis, the horizontal axis, shows a different pattern. A positive difference relative to random
 corresponds to selecting a cohort with a higher bleeding event rate, which is the 
-desired direction when trading bleeding against ischemic risk. Conflict, both angle
-policies and $+$isch significantly increase the bleeding rate relative to random
+desired direction when trading bleeding against ischemic risk. Net-benefit, the legacy Angle-net-benefit
+rule and $+$isch significantly increase the bleeding rate relative to random
 enrollment ($+0.19$, $+0.17$ and $+0.17$ pp, respectively), while $-$isch significantly
-decreases it by $0.14$ pp. Net-benefit does not significantly alter the bleeding event
+decreases it by $0.14$ pp. Conflict does not significantly alter the bleeding event
 rate.
 
 No experimentation was made on the final cohort size, wich was set to 3500 patients.
@@ -222,7 +251,8 @@ bandit mechanisms reach.
 
 \paragraph{Selection rules.}
 All the policies introduced earlier in this chapter rank the random sample here.
-Each rule is run over 100 independent seed cohorts, each tuned and refit independently.
+Each rule is run over 100 run-specific seed cohorts paired across policies by run
+identifier; the model is tuned and refit separately in each replication.
 
 \paragraph{Results.}
 
@@ -233,7 +263,7 @@ Each rule is run over 100 independent seed cohorts, each tuned and refit indepen
 \input{generated_tables/ch8_mechanism2.tex}
 \caption{Bleeding and weighted ischemic event rates among patients included in and
 discarded from the cohort under Mechanism 2, by selection policy, averaged over 100
-independent seed-cohort replications of 1,789 included against 1,790 discarded.
+seeded replications of 1,789 included against 1,790 discarded.
 Ischemic combines death, MI and stroke through the ISCH\_WEIGHTS composite defined in
 Section~\ref{sec:ch8-premise}. Diff.\ is the included-minus-discarded difference; SEM
 is the standard error of the paired per-run differences; $p$ is from a
@@ -248,31 +278,30 @@ directions: $+0.14$ pp and $-0.15$ pp relative to the discarded group ($p<0.001$
 and $p=0.015$). This is the symmetric response the mirror-test logic introduced earlier
 in this chapter was built to detect, and it indicates that the ischemic axis, taken
 in isolation, is associated with which patients subsequently experience an ischemic
-event. Net-benefit also lowers the ischemic rate, by $0.12$ pp ($p=0.010$), with no matching change on
+event. Conflict also lowers the ischemic rate, by $0.12$ pp ($p=0.010$), with no matching change on
 bleeding ($-0.13$ pp, $p=0.282$); the same pairing, a significant ischemic effect
-and no bleeding effect, appears for net-benefit under Mechanism~1, where it lowers
+and no bleeding effect, appears for conflict under Mechanism~1, where it lowers
 the ischemic rate of the selected cohort by $0.52$ pp relative to the left-out group
 ($p<0.001$, Table~\ref{tab:ch8-ischaemic-rate-comparison}) without a significant
-bleeding effect ($p=0.106$, Table~\ref{tab:ch8-selected-rates-vs-random}). Conflict
-and the two angle variants show no significant change on the ischemic axis
-($p=0.618$ for conflict, $p=0.101$ for both angle rules), and random enrollment
+bleeding effect ($p=0.106$, Table~\ref{tab:ch8-selected-rates-vs-random}). Net-benefit
+and the legacy Angle-net-benefit rule show no significant change on the ischemic axis
+($p=0.618$ for net-benefit and $p=0.101$ for the legacy Angle estimate), while random enrollment
 leaves it at $+0.01$ pp ($p=0.695$).
 
 \vspace{10pt}
 
-The bleeding axis shows a partial version of the reverse pairing. Both angle variants
-raise the included group's bleeding rate by $0.34$ pp ($p=0.006$); $+$isch raises it by
-$0.39$ pp ($p=0.001$) and $-$isch lowers it by $0.28$ pp ($p=0.016$). Conflict's
+The bleeding axis shows a partial version of the reverse pairing. The legacy
+Angle-net-benefit rule raises the included group's bleeding rate by $0.34$ pp ($p=0.006$); $+$isch raises it by
+$0.39$ pp ($p=0.001$) and $-$isch lowers it by $0.28$ pp ($p=0.016$). Net-benefit's
 bleeding effect, significant under the two-sample test used in an earlier pass over
 this data, does not reach conventional significance under the paired Wilcoxon test
 ($+0.22$ pp, $p=0.053$): the sign is unchanged, but the per-replication variance is
 wide enough that the difference is not distinguishable from zero once the pairing by
-seed cohort is respected. Net-benefit and random show no significant change on bleeding
-($p=0.282$ and $p=0.640$). Angle conflict and angle net-benefit produce numerically identical
-cohorts on both axes: the geometric rule ranks patients by quadrant and by proximity
-to the $+45^\circ$ diagonal on coordinates computed once from the bleeding and
-ischemic CATEs, so its output does not depend on which of the two linear scores is
-passed to it.
+seed cohort is respected. Conflict and random show no significant change on bleeding
+($p=0.282$ and $p=0.640$). This saved Angle estimate is labelled legacy because it
+predates the split and uses the $+45^\circ$ scorer, now Angle net-benefit. The current
+Angle-conflict policy reflects $y$ before all geometric operations and targets
+$-45^\circ$; it is not assigned the legacy value and cannot be assessed until rerun.
 
 \section{Mechanism 3 on the Trade-off Plane}
 
@@ -297,65 +326,18 @@ arriving stream is exhausted, at 2,789 of the 4,579 patients: the 1,000-patient 
 \paragraph{Duel rules.}
 Every non-random policy introduced earlier in this chapter reduces naturally to a
 pairwise comparison and is run here as a duel rule, together with Random as a control:
-Conflict, Net-benefit, Angle conflict, Angle net-benefit, $-$isch and $+$isch. Under a
-pairwise duel, Angle conflict and Angle net-benefit coincide, as they do under
-Mechanism 2's batch ranking: the angle score is read from each candidate's position on
-the median-centred bleeding-ischemic trade-off plane, computed once from the same
-per-endpoint CATEs, so its value does not depend on which of the two frames supplies
-it. Every duel between the two therefore has the same winner, and the two policies
-enroll identical cohorts on every one of the 100 replications; they are reported below
-as a single rule, Angle. Each duel rule is
-run over 100 independent seed cohorts, each tuned and refit independently, to average
-out the noise of a single arrival order.
+Net-benefit, Conflict, Angle conflict, Angle net-benefit, $-$isch and $+$isch.
+Angle conflict and Angle net-benefit are distinct duel rules: the former reflects the
+centred ischemic coordinate and targets $-45^\circ$; the latter keeps the original
+coordinate and targets $+45^\circ$. The saved Mechanism~3 artifact predates this split,
+so its duplicated Angle identifiers contain the same legacy $+45^\circ$ winners. The
+numerical tables report those winners once as legacy Angle net-benefit; no current
+Angle-conflict estimate is reported. Each duel rule is run over 100 run-specific seed
+cohorts paired across policies by run identifier; the model is tuned and refit separately
+in each replication to average out the noise of a single arrival order.
 
 \paragraph{Results.}
 
-\iffalse
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=1.2\textwidth]{duel_included_excluded_event_rates.png}
-    \caption{Observed bleeding, cardiovascular death, myocardial infarction and stroke
-    rates among duel winners (included) and duel losers (excluded) under Mechanism 3,
-    for the Conflict, Net-benefit, Angle, $-$isch and $+$isch duel rules and the Random
-    control. Bars show the mean over 100 independent seed-cohort replications; error
-    bars show one standard deviation across replications.}
-    \label{fig:ch8-duel-rates}
-\end{figure}
-
-
-Figure~\ref{fig:ch8-duel-rates} shows the four endpoints side by side for every duel
-rule. The included and excluded bars are visibly separated for $+$isch on all four
-endpoints and for Angle on bleeding, MI and stroke; elsewhere they mostly overlap.
-Table~\ref{tab:ch8-duel-rate-comparison}, in Appendix~\ref{app:supplementary-tables},
-breaks the same comparison down by individual endpoint against the combined standard
-error of the two group means.
-
-The $+$isch rule shows the most consistent separation: duel winners carry a higher
-event rate than duel losers on every endpoint, including bleeding, which the rule does
-not target ($+0.31$ pp bleeding, $+0.12$ pp death, $+0.18$ pp MI, $+0.14$ pp stroke, all
-$p<0.001$). The mirrored rule, $-$isch, lowers bleeding ($-0.23$ pp, $p=0.004$) and
-stroke ($-0.06$ pp, $p=0.016$), but raises death instead of lowering it ($+0.07$ pp,
-$p=0.052$) and does not reach significance on MI ($p=0.106$): the score a duel winner
-is chosen on is an aggregate of the three ischemic components, and winning the
-aggregate does not guarantee winning on each of them individually. Angle reaches
-significance on bleeding, MI and stroke, in the same direction as $+$isch: duel winners
-run $+0.18$ pp higher on bleeding ($p=0.048$), $+0.16$ pp higher on MI ($p<0.001$) and
-$+0.13$ pp higher on stroke ($p<0.001$), the opposite of what its win-win criterion is
-meant to produce. Conflict and Net-benefit separate only on MI ($+0.18$ pp and $+0.14$ pp,
-both $p\leq0.002$); every other endpoint under either rule is indistinguishable from
-duel losers. Random shows no significant difference on any endpoint, the smallest
-$p$-value being $0.065$ on death, which sets the baseline against which the other five
-rules' significant differences are read.
-
-Across all five non-random rules, a duel win correlates more often with a higher event
-rate than with a lower one: 9 of the 11 significant cells in
-Table~\ref{tab:ch8-duel-rate-comparison} run positive, and the two negative exceptions
-both belong to $-$isch, on stroke, one of the three endpoints its score is built from,
-and on bleeding, which is not part of that score at all. A rule built to prefer the
-patient with the better predicted trade-off tends, in this cohort, to prefer the
-patient whose predicted CATEs run larger across every endpoint, beyond the single axis
-the rule reads.
-\fi
 
 \begin{table}[htbp]
     \centering
@@ -366,7 +348,7 @@ the rule reads.
     and duel losers (excluded) under Mechanism 3, by duel rule. Ischemic combines
     death, MI and stroke through the same ISCH\_WEIGHTS composite defined in
     Section~\ref{sec:ch8-premise}. Results are averaged over 100
-    independent seed-cohort replications, each enrolling 1,789 winners against 1,789
+    seeded replications, each enrolling 1,789 winners against 1,789
     losers. Diff.\ is the included-minus-excluded difference; SEM is the standard
     error of the paired per-run differences; $p$ is from a paired two-sided
     Wilcoxon signed-rank test on the per-replication included-minus-excluded
@@ -382,20 +364,20 @@ stroke) rather than collapsed into the ischemic composite.
 \vspace{10pt}
 
 Table~\ref{tab:ch8-duel-composite-comparison} restates the same duels on the two-axis
-format used elsewhere in this chapter. $+$isch and Angle stay significant on the
+format used elsewhere in this chapter. $+$isch and legacy Angle net-benefit stay significant on the
 ischemic composite, in the same direction already seen component by component
-($+0.15$ pp, $p<0.001$ and $+0.13$ pp, $p<0.001$). Net-benefit and $-$isch do not: the
-composite difference is $+0.04$ pp ($p=0.231$) for net-benefit and $+0.02$ pp
-($p=0.615$) for $-$isch. Net-benefit's strongest individual component, MI, does reach
-significance on its own ($p=0.022$); $-$isch's strongest component, stroke, does not
+($+0.15$ pp, $p<0.001$ and $+0.13$ pp, $p<0.001$). Conflict and $-$isch do not: the
+composite difference is $+0.04$ pp ($p=0.231$) for conflict and $+0.02$ pp
+($p=0.615$) for $-$isch. Conflict's strongest individual component, MI, does reach
+significance on its own ($p=0.020$); $-$isch's strongest component, stroke, does not
 ($p=0.100$). Under both rules the MI and stroke components run in opposite directions
 (Table~\ref{tab:ch8-duel-rate-comparison}), so the composite cancels what the
 components show, the same cancellation Chapter 6 reports for the trial's own
 ischemic score, reproduced here inside a selection rule's own target variable.
-Conflict's composite stays significant ($+0.09$ pp, $p=0.003$), carried by the same MI
+Net-benefit's composite stays significant ($+0.09$ pp, $p=0.003$), carried by the same MI
 effect that dominates its per-endpoint breakdown; averaging in the near-null death and
 stroke components shrinks the point estimate from MI's own $+0.18$ pp without erasing
-it. Angle's bleeding effect does not reach significance under this paired test
+it. The legacy Angle-net-benefit bleeding effect does not reach significance under this paired test
 ($p=0.268$): the sign is the same as $+$isch's, but the per-replication variance is
 wide enough that the difference is not distinguishable from zero once the seed-cohort
 pairing is used correctly.
@@ -412,11 +394,11 @@ random component. Thompson sampling instead draws one sample per candidate from 
 distribution centred on the model's score, with the model's own uncertainty as the scale,
 and keeps the higher draw. A coin-flip random baseline, drawn from the same arriving
 pairs, grows alongside the guided cohort so both are compared at a common $n$; enrollment
-reaches the same 2,789-patient cohort as Mechanism 3.
+reaches the same final cohort size of 2,789 patients as Mechanism 3.
 
 \paragraph{Selection rules.}
 Both bandit rules are run under the two linear scores introduced earlier in this chapter,
-conflict and net-benefit, for four policy-regime combinations. Fifty replications share
+net-benefit and conflict, for four policy-regime combinations. Fifty replications share
 one seed cohort, tuned once, and one arrival order; only the coin-flip random baseline
 and, for Thompson, the sampling draw itself vary from one replication to the next. UCB1's
 rule has no random component, so its own enrolled cohort is identical across all fifty
@@ -442,19 +424,19 @@ replications; only its matched random baseline differs run to run.
     \label{tab:ch8-bandit-rate-comparison}
 \end{table}
 
-On the bleeding axis, UCB1 under conflict raises the selected group's rate by $0.28$ pp
-relative to random ($p<0.001$), matching the direction already reported for conflict and
-the angle rules under Mechanisms 1 and 2. Under net-benefit it instead lowers bleeding,
-by $0.19$ pp ($p<0.001$). Thompson under net-benefit points the same direction,
+On the bleeding axis, UCB1 under net-benefit raises the selected group's rate by $0.28$ pp
+relative to random ($p<0.001$), matching the direction already reported for net-benefit and the legacy
+Angle-net-benefit results under Mechanisms 1 and 2. Under conflict it instead lowers bleeding,
+by $0.19$ pp ($p<0.001$). Thompson under conflict points the same direction,
 $-0.14$ pp, but does not reach conventional significance under the paired Wilcoxon test
 ($p=0.059$, against $p=0.043$ under the two-sample test used in an earlier pass over
-this data); conflict shows no effect ($+0.01$ pp, $p=0.915$).
+this data); net-benefit shows no effect ($+0.01$ pp, $p=0.915$).
 
 \vspace{10pt}
 
-On the ischemic axis, net-benefit again lowers the rate for both policies: $-0.03$ pp
+On the ischemic axis, conflict again lowers the rate for both policies: $-0.03$ pp
 for UCB1 ($p=0.003$) and $-0.06$ pp for Thompson ($p<0.001$), continuing the pattern
-already reported for net-benefit under Mechanisms 1 and 2. Under conflict, UCB1 shows no
+already reported for conflict under Mechanisms 1 and 2. Under net-benefit, UCB1 shows no
 effect ($+0.02$ pp, $p=0.141$) and Thompson shows a small increase ($+0.05$ pp,
 $p=0.003$), opposite to the direction the win-win rule is built to select for.
 
@@ -463,14 +445,15 @@ $p=0.003$), opposite to the direction the win-win rule is built to select for.
 Because the fifty replications share one arrival order and UCB1's rule has no random
 component, its own selected-group event rate does not vary across replications; the SEM
 reported for UCB1 above comes entirely from its random baseline. Thompson's sampling step
-gives its own selected cohort run-to-run variation, so both arms of its comparison carry
-independent variance.
+gives its own selected cohort run-to-run variation, so both arms vary across replications.
+Their variation is paired rather than independent because both arms are constructed from
+the same arriving patient pairs.
 
 \vspace{10pt}
 
 \section{Chapter Summary}
 
-Across the five mechanisms, the net-benefit score is the only one that lowers the
+Across the five mechanisms, the conflict score is the only one that lowers the
 ischemic event rate in every mechanism where it is tested as a whole-cohort or
 sample-and-select rule: $-0.52$ pp under Mechanism 1
 (Table~\ref{tab:ch8-ischaemic-rate-comparison}), $-0.12$ pp under Mechanism 2
@@ -479,7 +462,7 @@ $p=0.003$) to $-0.06$ pp (Thompson, $p<0.001$) under Mechanisms 4 and 5
 (Table~\ref{tab:ch8-bandit-rate-comparison}). Run as
 a pairwise duel under Mechanism 3, the same score does not reach significance on the
 ischemic composite ($+0.04$ pp, $p=0.231$) or on bleeding ($p=0.225$); the composite
-null hides a significant MI effect ($+0.14$ pp, $p=0.022$) that cancels against a
+null hides a significant MI effect ($+0.14$ pp, $p=0.020$) that cancels against a
 non-significant stroke trend running the opposite way
 (Table~\ref{tab:ch8-duel-rate-comparison}, Table~\ref{tab:ch8-duel-composite-comparison}).
 
@@ -494,23 +477,25 @@ finding that MI and stroke largely cancel inside the aggregate score.
 
 \vspace{10pt}
 
-The bleeding axis moves, but not in one direction. The two angle rules raise
-it under Mechanism 2 ($+0.34$ pp, $p=0.006$; Conflict points the same way but no longer
+The bleeding axis moves, but not in one direction. The legacy Angle-net-benefit result
+raises it under Mechanism 2 ($+0.34$ pp, $p=0.006$; Net-benefit points the same way but no longer
 reaches conventional significance under the paired test, $+0.22$ pp, $p=0.053$), and
-UCB1 raises it further under Mechanism 4 ($+0.28$ pp, $p<0.001$); net-benefit instead
+UCB1 raises it further under Mechanism 4 ($+0.28$ pp, $p<0.001$); conflict instead
 lowers it under Mechanism 4 ($-0.19$ pp UCB1, $p<0.001$), a direction Thompson points
 the same way under Mechanism 5 without reaching significance ($-0.14$ pp, $p=0.059$),
 and without lowering it under Mechanism 1 or 2 ($p=0.106$ and $p=0.282$).
 
 \vspace{10pt}
 
-Two policy-mechanism combinations move both axes significantly in the same direction at
-once. Under Mechanism 2, $-$isch lowers bleeding by $0.28$ pp ($p=0.016$) and the
-ischemic rate by $0.15$ pp ($p=0.015$); under Mechanism 4, UCB1 with the net-benefit
-score lowers bleeding by $0.19$ pp ($p<0.001$) and the ischemic rate by $0.03$ pp
-($p=0.003$). Neither score was built to move both axes together: $-$isch ranks patients
-by the ischemic component alone, and its bleeding effect follows from the correlation
-between the two CATEs rather than from a joint selection rule.
+Four policy--mechanism combinations move both axes significantly in the same direction
+at once. Under Mechanism 2, $-$isch lowers bleeding by $0.28$ pp ($p=0.016$) and the
+ischemic rate by $0.15$ pp ($p=0.015$), whereas $+$isch raises them by $0.39$ pp
+($p=0.001$) and $0.14$ pp ($p<0.001$), respectively. Under Mechanism 3, $+$isch again
+raises both axes ($+0.31$ pp, $p=0.014$, and $+0.15$ pp, $p<0.001$). Under Mechanism 4,
+UCB1 with the conflict score lowers bleeding by $0.19$ pp ($p<0.001$) and the
+ischemic rate by $0.03$ pp ($p=0.003$). The bleeding movement under $-$isch follows
+from correlation between the two CATEs, because that rule ranks patients on the
+ischemic component alone.
 
 \vspace{10pt}
 
@@ -519,9 +504,9 @@ distinguishable from random selection once its premise, a real trade-off between
 well-separated risk axes, is gone. Several policy--mechanism combinations produce a
 significant separation on at least one axis. The largest absolute separation between the
 actively selected and left-out groups under Mechanism~1 is $+0.68$ percentage points on
-bleeding for Conflict; the corresponding selected-versus-random difference is $+0.19$
+bleeding for Net-benefit; the corresponding selected-versus-random difference is $+0.19$
 percentage points. On the ischemic axis, the largest Mechanism~1 separation is $-0.52$
-percentage points for net-benefit, or $-0.16$ percentage points against random. The
+percentage points for conflict, or $-0.16$ percentage points against random. The
 largest simultaneous movement of both axes in an included-versus-discarded comparison occurs for $-$isch under
 Mechanism~2, with changes of $-0.28$ percentage points for bleeding and $-0.15$
 percentage points for ischemic events. The compression described in Chapter~6 narrows

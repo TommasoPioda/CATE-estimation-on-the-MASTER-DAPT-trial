@@ -1,57 +1,33 @@
-"""Repeated-run harness for Mechanism 3 (pairwise duel enrolment), across all seven policies
-from `05_online_learning_policy_comparison_exp.ipynb`'s POLICIES registry.
+"""Repeated-run harness for Mechanism 3 (pairwise duel enrolment), all seven policies.
 
-`02_online_learning_duel_refactored.ipynb` (mechanism 3) only compares two duel regimes in its
-own 50-seed repeated-run cell (cell 23): `angle-conflict` (`duel_by_angle`) and `net-benefit`
-(`duel_by_net_benefit`). This script keeps mechanism 3's own machinery exactly as-is -- phase 1
-seed + hyper-tune (`N_TRIALS=20` Optuna trials, AUTOC lower bound on bleeding, retuned every
-replication like mechanisms 1-3, see `mechanism4_5_repeated_runs.py`'s docstring for why 4-5
-tune once instead), phase 2 pairwise duel with the uncertainty-driven exploration wrapper
-(`policy()`, p_unc decaying from 1.0 to 0.05 over the first ~300 enrolments) and a refit every
-`REFIT_EVERY=100` patients -- and widens which score decides each duel to the full policy
-registry nb05 compares (`POLICIES`, cells 9-10 of nb05): `conflict`, `net_benefit`, `-isch`,
-`+isch`, `angle_conflict`, `angle_net_benefit`, `random`. The policy definitions (frame/score
-lambdas, `_ucb`, `ischemic_damage_from_model`, `ischemic_gain_from_model`) are copied from nb05
-rather than imported (same reasoning as `mechanism2_repeated_runs.py`'s local
-`acquisition_score*`: a notebook cannot be imported as a module), and using the standard
-`ISCH_WEIGHTS = {'death': .2, 'mi': .4, 'stroke': .4}` used throughout this chapter (nb05 cell 4
-currently overrides this to an isolated `{'death': 0, 'mi': 0, 'stroke': 1}` for a separate
-stroke-only experiment; not used here).
+The seed/tuning, uncertainty-driven exploration, refit schedule, and pairwise arrival
+mechanism are unchanged. Only policy scoring is centralised in
+`online_learning_policies.py`:
 
-A pairwise duel reduces cleanly to any of nb05's `score(frame, unc, idx, c)` functions: both
-`_ucb` and `acquisition_score_angle` already index by an arbitrary candidate list, so scoring
-just the pair `idx=[i, j]` and keeping whichever of the two scores higher IS the duel -- no
-per-policy branching needed. This is not merely analogous to nb02's own hand-written duels, it
-is IDENTICAL to them at `c=0`: comparing z-scored values preserves order, so `_ucb(...)` at
-policy `net_benefit` reduces to exactly `duel_by_net_benefit`'s comparison, and (per
-`acquisition_score_angle`'s own docstring: verified to match `duel_by_angle` on 100% of 50,000
-random pairs) `acquisition_score_angle(...)` at policy `angle_conflict` reduces to exactly
-`duel_by_angle`. `conflict`, `-isch`, `+isch` and `angle_net_benefit` are new combinations nb02
-never ran pairwise. `c=0.0` throughout (nb02's own primary runs carry no UCB1 bonus inside the
-duel score itself -- all of mechanism 3's exploration comes from the separate `policy()`
-wrapper -- matching `mechanism2_repeated_runs.py`'s "same defaults, same c=0.0" choice).
-`random` skips the forest entirely in phase 2 (`frame=None`, matching nb05's own control arm),
-though phase 1 still tunes a seed model for it -- nb05's own driver does not special-case it
-either, so this keeps every policy on the identical code path.
+* `angle_net_benefit` obtains the common plane coordinates (x, y) and targets +45 degrees;
+* `angle_conflict` obtains the same coordinates, reflects y, and therefore targets
+  -45 degrees on the original plane;
+* `conflict` is ``bleed - weighted_isch`` and `net_benefit` / win-win is
+  ``bleed + weighted_isch``; `-isch` and `+isch` retain their single-axis formulas;
+* `random` remains a coin flip and does not fit a phase-2 model.
 
-One deliberate deviation from a literal `pol['frame']` call: `net_benefit_from_model` (unlike
-`conflict_from_model`) does not precompute `x_plane`/`y_plane`, so `angle_net_benefit` would
-otherwise hit `plane_coords`'s O(n) fallback on every duel (~3500/run) instead of once per
-refit -- exactly what that function's own docstring warns against ("fine per call, but do not
-put the fallback inside a per-duel loop"). `_build_frame` below precomputes them once per
-refit for every policy so the fallback is never on the hot path.
+The Angle names identify the requested geometric direction. Their scorers deliberately
+ignore the scalar `conflict` and `net_benefit` columns. Both receive the same
+`conflict_from_model` frame solely because it precomputes `x_plane` and `y_plane`; their
+only mathematical difference is y versus -y. At `c=0`, a pair is won by whichever patient
+has the higher shared Angle score. Exploration remains entirely in the separate `policy()`
+wrapper, as in the original mechanism.
 
 Run (from anywhere):
     M3_N_RUNS=50 M3_N_TRIALS=20 python3 online-learning/scripts/mechanism3_repeated_runs.py
 
-Env overrides (all optional): M3_N_SEED, M3_N_RUNS, M3_N_TRIALS, M3_POLICIES (comma-separated
-subset of conflict,net_benefit,-isch,+isch,angle_conflict,angle_net_benefit,random), M3_N_STOP
-(early-stop enrolled count, for a fast smoke test), M3_OUT (output parquet filename).
+Environment overrides: M3_N_SEED, M3_N_RUNS, M3_N_TRIALS, M3_POLICIES
+(comma-separated subset of conflict,net_benefit,-isch,+isch,angle_conflict,
+angle_net_benefit,random), M3_N_STOP, and M3_OUT.
 
-Saves long-format results (one row per policy/run/endpoint/group) to
-`results/results_mechanism3_duel_policies.parquet` and prints the mean/std summary, same shape
-as nb02's own cell 23/24 ("included" = the duel winners minus the seed, "excluded" = the duel
-losers).
+The script writes long-format results to
+`results/results_mechanism3_duel_policies.parquet`. Existing result files are not updated
+until this script is deliberately rerun.
 """
 import os
 import sys
@@ -72,8 +48,13 @@ sys.path.insert(0, CF_DIR)
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
 from online_learning_utils import (z, fit_cate, conflict_from_model,  # noqa: E402
                                     net_benefit_from_model, weighted_isch, plane_coords,
-                                    acquisition_score_angle, tune_on_seed, policy,
+                                    tune_on_seed,
                                     DEFAULT_CF_PARAMS, DEFAULT_NUISANCE_PARAMS)
+from online_learning_policies import (  # noqa: E402
+    SCORE_CONVENTION, policy,
+    score_angle_conflict, score_angle_net_benefit,
+    score_conflict, score_minus_isch, score_net_benefit, score_plus_isch,
+)
 from run_archiving import start_run_archive  # noqa: E402
 
 RUN_DIR = start_run_archive(OL_DIR, "mechanism3")
@@ -93,8 +74,8 @@ N = len(T)
 ONLINE_TARGETS = list(ENDPOINTS)
 Yv = y[[ENDPOINTS[k] for k in ONLINE_TARGETS]].to_numpy()
 BLEED_IDX = ONLINE_TARGETS.index("bleed")
-# Standard weighting used throughout the chapter (nb05 cell 4 currently overrides this to an
-# isolated {"death": 0, "mi": 0, "stroke": 1} for a separate stroke-only experiment).
+# Standard chapter weighting. The main nb05 uses this composite; its separate `_stroke`
+# sensitivity notebook currently isolates MI with {"death": 0, "mi": 1, "stroke": 0}.
 ISCH_WEIGHTS = {"death": 0.2, "mi": 0.4, "stroke": 0.4}
 
 print(f"patients: {N} | prolonged: {int(T.sum())} shortened: {int((T == 0).sum())}", flush=True)
@@ -107,11 +88,8 @@ def uncertainty_from_model(model):
     return df
 
 
-# ---------------------------------------------------------------------------
-# nb05's policy registry (cells 9-10), copied rather than imported -- ischemic_damage_from_model
-# / ischemic_gain_from_model / _ucb / POLICIES only exist as notebook cells, same reasoning as
-# mechanism2_repeated_runs.py's local acquisition_score*.
-# ---------------------------------------------------------------------------
+# Frame construction stays with the experiment; every acquisition score is imported from
+# online_learning_policies.py so the mechanisms cannot silently diverge.
 def ischemic_damage_from_model(model, X, endpoints, weights, targets, scale=True):
     from sklearn.preprocessing import RobustScaler
     cate = model.predict_cate(X.values)
@@ -134,35 +112,34 @@ def ischemic_gain_from_model(model, X, endpoints, weights, targets, scale=True):
     return df
 
 
-def _ucb(value, uncertainty, idx, c):
-    idx = np.asarray(idx)
-    return z(value).to_numpy()[idx] + c * np.clip(uncertainty["uncertainty"].to_numpy()[idx], 0, None)
-
 
 POLICIES = {
     "conflict": dict(
         frame=lambda model: conflict_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: _ucb(frame["conflict"], unc, idx, c),
+        score=score_conflict,
     ),
     "net_benefit": dict(
         frame=lambda model: net_benefit_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: _ucb(frame["net_benefit"], unc, idx, c),
+        score=score_net_benefit,
     ),
     "-isch": dict(
         frame=lambda model: ischemic_damage_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: _ucb(frame["-isch"], unc, idx, c),
+        score=score_minus_isch,
     ),
     "+isch": dict(
         frame=lambda model: ischemic_gain_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: _ucb(frame["+isch"], unc, idx, c),
+        score=score_plus_isch,
     ),
     "angle_net_benefit": dict(
-        frame=lambda model: net_benefit_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: acquisition_score_angle(frame, unc, idx, ISCH_WEIGHTS, c=c),
+        # The Angle scorer uses only x_plane/y_plane, never the scalar conflict column.
+        frame=lambda model: conflict_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
+        score=lambda frame, unc, idx, c: score_angle_net_benefit(
+            frame, unc, idx, ISCH_WEIGHTS, c=c),
     ),
     "angle_conflict": dict(
         frame=lambda model: conflict_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS),
-        score=lambda frame, unc, idx, c: acquisition_score_angle(frame, unc, idx, ISCH_WEIGHTS, c=c),
+        score=lambda frame, unc, idx, c: score_angle_conflict(
+            frame, unc, idx, ISCH_WEIGHTS, c=c),
     ),
     "random": dict(frame=None, score=None),
 }
@@ -212,7 +189,7 @@ REFIT_EVERY = 100
 
 def run_online(prep, n_steps, policy_key, *, c=C_EXPLORE, n_jobs=32, lgbm_n_jobs=16, n_stop=None):
     """PHASE 2 -- nb02's own pairwise-duel loop, generalised over `POLICIES[policy_key]` instead
-    of a hardcoded `duel_by_angle`/`duel_by_net_benefit`. Patients arrive two at a time
+    of hardcoded notebook-local duel functions. Patients arrive two at a time
     (`order[pos:pos+2]`); with probability `p_unc` (decaying from 1.0 to 0.05, nb02's own
     schedule) the more uncertain of the two is kept (exploration, via the imported `policy()`
     wrapper), otherwise the pair is scored by `POLICIES[policy_key]['score']` and the higher
@@ -328,6 +305,7 @@ if __name__ == "__main__":
     out = Parallel(n_jobs=N_JOBS, backend="loky", verbose=10)(
         delayed(one_run)(p, r) for p, r in tasks)
     results_df = pd.DataFrame([row for run_rows in out for row in run_rows])
+    results_df["score_convention"] = SCORE_CONVENTION
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed/60:.1f} min", flush=True)
 

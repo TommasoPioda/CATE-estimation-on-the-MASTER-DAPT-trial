@@ -1,12 +1,12 @@
-"""Repeated-run harness for Mechanism 2 (sample-and-select-best-half), all three variants.
+"""Repeated-run harness for Mechanism 2 (sample-and-select-best-half), all seven policies.
 
-`04_online_learning_sample_select_half.ipynb` only has a 30-run repeated simulation
-(cell 18) for the win-win / `conflict` selection rule; the trade-off (`net_benefit`) and
-diagonal (`angle`) variants are single-seed only in that notebook. This script extends the
-same 30-run design to all three, reusing the live `online_learning_utils.py` and the
-notebook's own algorithm (its three near-identical `run_sample_select_enrollment*`
-functions are collapsed into one, parametrized by `score_kind`; same defaults, same
-`c=0.0`, same seed/refit schedule). Backs "Mechanism 2 on the Trade-off Plane" in
+The notebook's near-identical enrollment loops are collapsed into one, parametrized by
+`score_kind`, with the same defaults, `c=0.0`, and seed/refit schedule. Policy scores come
+from `online_learning_policies.py`. In particular, `angle_net_benefit` targets +45 degrees
+with (x, y), while `angle_conflict` targets -45 degrees by scoring (x, -y). The scalar
+policies use `net_benefit = bleed + weighted_isch` (win-win) and
+`conflict = bleed - weighted_isch` (trade-off). This backs
+"Mechanism 2 on the Trade-off Plane" in
 `markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex` (chapter 7 as
 compiled).
 
@@ -14,8 +14,9 @@ Run (from anywhere, ~12 min on a 192-core box):
     M2_N_RUNS=30 M2_N_TRIALS=20 python3 online-learning/scripts/mechanism2_repeated_runs.py
 
 Env overrides (all optional): M2_N_SEED, M2_N_RUNS, M2_N_TRIALS, M2_VARIANTS
-(comma-separated subset of conflict,net_benefit,angle), M2_N_STOP (early-stop enrolled
-count, for a fast smoke test), M2_OUT (output parquet filename).
+(comma-separated subset of random,conflict,net_benefit,angle_conflict,
+angle_net_benefit,minus_isch,isch), M2_N_STOP (early-stop enrolled count, for a fast smoke
+test), M2_OUT (output parquet filename).
 
 Saves long-format results (one row per variant/run/group) to
 `results/results_mechanism2_sample_select.parquet` and prints the mean/std summary used to
@@ -40,8 +41,13 @@ sys.path.insert(0, CF_DIR)
 from casual_multioutput_pipeline import CausalMultiOutputPipeline, CF_MODEL_PRESETS  # noqa: E402
 from online_learning_utils import (z, fit_cate, conflict_from_model,  # noqa: E402
                                     net_benefit_from_model, weighted_isch,
-                                    acquisition_score_angle, tune_on_seed,
+                                    tune_on_seed,
                                     DEFAULT_CF_PARAMS, DEFAULT_NUISANCE_PARAMS)
+from online_learning_policies import (  # noqa: E402
+    SCORE_CONVENTION,
+    score_angle_conflict, score_angle_net_benefit,
+    score_conflict, score_minus_isch, score_net_benefit, score_plus_isch,
+)
 from run_archiving import start_run_archive  # noqa: E402
 
 RUN_DIR = start_run_archive(OL_DIR, "mechanism2")
@@ -73,28 +79,6 @@ def uncertainty_from_model(model):
     return df
 
 
-def acquisition_score(conflict, uncertainty, idx, c=1.0):
-    idx = np.asarray(idx)
-    value = z(conflict["conflict"]).to_numpy()[idx]
-    bonus = np.clip(uncertainty["uncertainty"].to_numpy()[idx], 0, None)
-    return value + c * bonus
-
-
-def acquisition_score_net_benefit(net_benefit, uncertainty, idx, c=1.0):
-    idx = np.asarray(idx)
-    value = z(net_benefit["net_benefit"]).to_numpy()[idx]
-    bonus = np.clip(uncertainty["uncertainty"].to_numpy()[idx], 0, None)
-    return value + c * bonus
-
-def acquisition_score_isch(isch, uncertainty, idx, c=1.0):
-    idx = np.asarray(idx)
-    value = z(isch).to_numpy()[idx]
-    bonus = np.clip(
-        uncertainty["uncertainty"].to_numpy()[idx],
-        0,
-        None
-    )
-    return value + c * bonus
 
 def seed_draw(n_seed, seed=0, n_test=0, verbose=True):
     rng = np.random.default_rng(seed)
@@ -144,9 +128,7 @@ def _rates(yy):
 
 def run_sample_select_enrollment(prep, score_kind, sample_size=100, c=0.0, seed=SEED,
                                   fit_n_jobs=32, lgbm_n_jobs=16, n_stop=None):
-    """score_kind in {'conflict', 'net_benefit', 'angle'} -- one generic loop replacing the
-    notebook's three near-identical copies (run_sample_select_enrollment /
-    _net_benefit / _angle), same algorithm, same defaults (c=0.0)."""
+    """Run one of the seven registered policies with the shared sample/select loop."""
     cf_params, nuisance_params = prep["cf_params"], prep["nuisance_params"]
     enrolled = list(prep["seed_idx"])
     discarded = []
@@ -158,8 +140,10 @@ def run_sample_select_enrollment(prep, score_kind, sample_size=100, c=0.0, seed=
     conflict = conflict_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS)
 
     net_benefit = (
-    net_benefit_from_model(
-        model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS) if score_kind in {"net_benefit", "angle_net_benefit"} else None )
+        net_benefit_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS)
+        if score_kind == "net_benefit"
+        else None
+    )
     uncertainty = uncertainty_from_model(model)
 
     while pool:
@@ -169,17 +153,21 @@ def run_sample_select_enrollment(prep, score_kind, sample_size=100, c=0.0, seed=
         sample = rng.choice(np.asarray(pool), size=n_sample, replace=False).tolist()
 
         if score_kind == "conflict":
-            score = acquisition_score(conflict, uncertainty, sample, c=c)
+            score = score_conflict(conflict, uncertainty, sample, c=c)
         elif score_kind == "net_benefit":
-            score = acquisition_score_net_benefit(net_benefit, uncertainty, sample, c=c)
+            score = score_net_benefit(net_benefit, uncertainty, sample, c=c)
         elif score_kind == "angle_conflict":
-            score = acquisition_score_angle(conflict, uncertainty, sample, ISCH_WEIGHTS, c=c)
+            score = score_angle_conflict(
+                conflict, uncertainty, sample, ISCH_WEIGHTS, c=c
+            )
         elif score_kind == "angle_net_benefit":
-            score = acquisition_score_angle(net_benefit, uncertainty, sample, ISCH_WEIGHTS, c=c)
+            score = score_angle_net_benefit(
+                conflict, uncertainty, sample, ISCH_WEIGHTS, c=c
+            )
         elif score_kind == "minus_isch":
-            score = acquisition_score_isch(-conflict['y_plane'], uncertainty, sample, c=c)
+            score = score_minus_isch(conflict, uncertainty, sample, c=c)
         elif score_kind == "isch":
-            score = acquisition_score_isch(conflict['y_plane'], uncertainty, sample, c=c)
+            score = score_plus_isch(conflict, uncertainty, sample, c=c)
         elif score_kind == "random":
             score = rng.random(n_sample)
         else:
@@ -197,7 +185,7 @@ def run_sample_select_enrollment(prep, score_kind, sample_size=100, c=0.0, seed=
         model = fit_cate(enrolled, Xn, Yv, T, CausalMultiOutputPipeline, cf_params, nuisance_params,
                           n_jobs=fit_n_jobs, lgbm_n_jobs=lgbm_n_jobs)
         conflict = conflict_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS)
-        if score_kind in {"net_benefit", "angle_net_benefit"}:
+        if score_kind == "net_benefit":
             net_benefit = net_benefit_from_model(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS)
         uncertainty = uncertainty_from_model(model)
 
@@ -247,6 +235,7 @@ if __name__ == "__main__":
     out = Parallel(n_jobs=N_JOBS, backend="loky", verbose=10)(
         delayed(one_run)(v, r) for v, r in tasks)
     results_df = pd.DataFrame([row for run_rows in out for row in run_rows])
+    results_df["score_convention"] = SCORE_CONVENTION
     elapsed = time.time() - t0
     print(f"TOTAL ELAPSED: {elapsed/60:.1f} min", flush=True)
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from chapter8_table_utils import (
@@ -38,6 +37,10 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 RESULTS_DIR = REPO_ROOT / "online-learning" / "results"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "markdown_docs" / "thesis" / "generated_tables"
 AUDIT_NAME = "chapter8_table_audit.csv"
+SCORE_CONVENTION = (
+    "conflict=bleed-isch;net_benefit=bleed+isch;"
+    "angle_net_benefit=+45;angle_conflict=-45"
+)
 
 M1_SOURCE = RESULTS_DIR / "results_policy_comparison_full.parquet"
 M2_SOURCE = RESULTS_DIR / "results_mechanism2_sample_select.parquet"
@@ -68,7 +71,8 @@ M2_ORDER = [
 M3_ORDER = [
     ("conflict", "Conflict"),
     ("net_benefit", "Net-benefit"),
-    ("angle_net_benefit", "Angle"),
+    ("angle_net_benefit", "Angle net-benefit"),
+    ("angle_conflict", "Angle conflict"),
     ("-isch", "$-$isch"),
     ("+isch", "$+$isch"),
     ("random", "Random"),
@@ -80,7 +84,47 @@ def _read(source: Path, required: set[str]) -> pd.DataFrame:
         raise FileNotFoundError(source)
     data = pd.read_parquet(source)
     require_columns(data, required, source)
+
+    if "score_convention" in data.columns:
+        conventions = set(data["score_convention"].dropna().astype(str))
+        if conventions != {SCORE_CONVENTION}:
+            raise ValueError(f"Unexpected score convention in {source}: {conventions}")
+        data.attrs["legacy_score_convention"] = False
+        return data
+
+    # Legacy artifacts were generated when the scalar identifiers were attached to the
+    # opposite formulas: `conflict` stored bleed+isch and `net_benefit` stored bleed-isch.
+    # Swap identifiers only; numerical values are never changed. New producers write the
+    # explicit `score_convention` column above and therefore bypass this migration.
+    data = data.copy()
+    for column in ("policy", "variant", "regime"):
+        if column not in data.columns:
+            continue
+        data[column] = data[column].replace(
+            {"conflict": "__legacy_win_win__", "net_benefit": "conflict"}
+        ).replace({"__legacy_win_win__": "net_benefit"})
+    data.attrs["legacy_score_convention"] = True
+    print(f"normalised legacy scalar labels: {source.relative_to(REPO_ROOT)}")
     return data
+
+
+def _table_order(
+    order: list[tuple[str, str]], data: pd.DataFrame
+) -> list[tuple[str, str]]:
+    """Return labels that do not present legacy +45 output as Angle conflict.
+
+    Untagged artifacts predate the directional split: both Angle identifiers invoked
+    the same +45-degree scorer. The valid legacy estimate is therefore reported once,
+    as Angle net-benefit. The current -45-degree Angle conflict estimate is unavailable
+    until that mechanism is rerun. Tagged future artifacts report both policies.
+    """
+    if not data.attrs.get("legacy_score_convention", False):
+        return order
+    return [
+        (key, r"Angle NB (legacy)" if key == "angle_net_benefit" else label)
+        for key, label in order
+        if key != "angle_conflict"
+    ]
 
 
 def _require_run_count(data: pd.DataFrame, by: list[str], expected: int, context: str) -> None:
@@ -129,6 +173,7 @@ def build_mechanism1(audit: list[dict[str, object]]) -> dict[str, str]:
         "new_bleed_n", "left_bleed_n",
     }
     data = _read(M1_SOURCE, required)
+    table_order = _table_order(M1_ORDER, data)
     final = data.loc[data["n"] == M1_CHECKPOINT].copy()
     if final.empty:
         raise ValueError(f"{M1_SOURCE} has no n={M1_CHECKPOINT} checkpoint")
@@ -151,7 +196,7 @@ def build_mechanism1(audit: list[dict[str, object]]) -> dict[str, str]:
         final[selected_col] = final[f"new_{endpoint}_n"] / final["new_n"]
         final[left_col] = final[f"left_{endpoint}_n"] / final["left_n"]
         rows: list[str] = []
-        for key, label in M1_ORDER:
+        for key, label in table_order:
             subset = final.loc[final["policy"] == key]
             result = paired_columns_summary(
                 subset, run_col="run", a_col=selected_col, b_col=left_col
@@ -181,7 +226,7 @@ def build_mechanism1(audit: list[dict[str, object]]) -> dict[str, str]:
         )
 
     rows = []
-    for key, label in [item for item in M1_ORDER if item[0] != "random"]:
+    for key, label in [item for item in table_order if item[0] != "random"]:
         values: dict[str, PairedSummary] = {}
         for endpoint in ("isch", "bleed"):
             rate_col = f"selected_{endpoint}_rate"
@@ -223,6 +268,7 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
         "variant", "run", "group", "n", "bleed_rate", "isch_weighted_rate"
     }
     data = _read(M2_SOURCE, required)
+    table_order = _table_order(M2_ORDER, data)
     if set(data["variant"]) != {key for key, _ in M2_ORDER}:
         raise ValueError("Mechanism 2 policy set does not match the Chapter 8 table")
     _require_run_count(data, ["variant", "group"], 100, "Mechanism 2")
@@ -231,7 +277,7 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
         raise ValueError(f"Unexpected Mechanism 2 group sizes: {size_sets.to_dict()}")
 
     rows = []
-    for key, label in M2_ORDER:
+    for key, label in table_order:
         subset = data.loc[data["variant"] == key]
         for endpoint, value_col in (
             ("Bleeding", "bleed_rate"),
@@ -279,22 +325,23 @@ def _mechanism3_wide() -> pd.DataFrame:
     wide["Ischaemic"] = sum(
         weight * wide[endpoint] for endpoint, weight in ISCH_WEIGHTS.items()
     )
+    wide.attrs["legacy_score_convention"] = data.attrs.get(
+        "legacy_score_convention", False
+    )
 
-    angle_a = wide.loc[wide["policy"] == "angle_net_benefit"].sort_values(["run", "group"])
-    angle_b = wide.loc[wide["policy"] == "angle_conflict"].sort_values(["run", "group"])
-    for column in ("Bleeding", "Ischaemic"):
-        if not np.allclose(angle_a[column].to_numpy(), angle_b[column].to_numpy()):
-            raise ValueError("Mechanism 3 angle policies are no longer identical")
     return wide
 
 
 def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
     data = _mechanism3_wide()
+    table_order = _table_order(M3_ORDER, data)
+    if set(data["policy"]) != {key for key, _ in M3_ORDER}:
+        raise ValueError("Mechanism 3 policy set does not match the Chapter 8 table")
     _require_run_count(data, ["policy", "group"], 100, "Mechanism 3")
     if set(data["n"]) != {1789}:
         raise ValueError("Unexpected Mechanism 3 group size")
     rows = []
-    for key, label in M3_ORDER:
+    for key, label in table_order:
         subset = data.loc[data["policy"] == key]
         for endpoint in ("Bleeding", "Ischaemic"):
             result = paired_groups_summary(
@@ -310,7 +357,7 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
                 audit,
                 source=M3_SOURCE,
                 table="ch8_mechanism3",
-                policy="angle" if key.startswith("angle_") else key,
+                policy=key,
                 endpoint=endpoint,
                 group_a="included",
                 group_b="excluded",

@@ -41,15 +41,18 @@ benefit on another.}
 Table~\ref{tab:ch8-ischaemic-rate-comparison} in Chapter~\ref{ch:guided-enrollment-applied}
 reports the enrolled-vs-left-out ischemic separation under the standard composite
 weighting, $\text{ISCH\_WEIGHTS} = \{\text{death}: 0.2, \text{mi}: 0.4, \text{stroke}: 0.4\}$.
-Tables~\ref{tab:appendix-mech1-mi-only} and~\ref{tab:appendix-mech1-stroke-only} repeat
-the same Mechanism~1 run with the composite collapsed onto a single endpoint at a time
+Tables~\ref{tab:appendix-mech1-mi-only} and~\ref{tab:appendix-mech1-stroke-only} report
+separate legacy Mechanism~1 sensitivity runs that stopped at $n=4200$, rather than the
+current main configuration's $n=3500$, with the composite collapsed onto a single endpoint at a time
 ($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 1, \text{stroke}: 0\}$ and
 $\{\text{death}: 0, \text{mi}: 0, \text{stroke}: 1\}$ respectively), to check whether the
 composite's separation is driven by one endpoint or holds across endpoints. The sign of
 the separation is not stable across endpoints: policies that enrol lower-MI patients
 first (Table~\ref{tab:appendix-mech1-mi-only}) tend to enrol higher-stroke patients first
 (Table~\ref{tab:appendix-mech1-stroke-only}), so the endpoint-level pictures partly cancel
-inside the pooled composite.
+inside the pooled composite. Throughout these tables, Conflict denotes
+$\text{bleeding}-\text{ischemic}$ and Net-benefit/win-win denotes
+$\text{bleeding}+\text{ischemic}$.
 
 \begin{table}[htbp]
     \centering
@@ -59,10 +62,9 @@ inside the pooled composite.
         \toprule
         Policy & Selected (\%) & Left-out (\%) & Diff. (pp) & SEM (pp) & $p$ \\
         \midrule
-        Conflict          & 4.24 & 6.38 & $-2.14$ & 0.19 & $<0.001$ \\
-        Net-benefit       & 4.56 & 3.68 & $+0.88$ & 0.14 & $<0.001$ \\
-        Angle net-benefit & 4.22 & 6.55 & $-2.33$ & 0.19 & $<0.001$ \\
-        Angle conflict    & 4.22 & 6.55 & $-2.33$ & 0.19 & $<0.001$ \\
+        Net-benefit          & 4.24 & 6.38 & $-2.14$ & 0.19 & $<0.001$ \\
+        Conflict       & 4.56 & 3.68 & $+0.88$ & 0.14 & $<0.001$ \\
+        Angle NB (legacy $+45^\circ$) & 4.22 & 6.55 & $-2.33$ & 0.19 & $<0.001$ \\
         Random            & 4.48 & 4.39 & $+0.09$ & 0.12 & 0.458 \\
         $-$isch           & 4.65 & 2.97 & $+1.68$ & 0.14 & $<0.001$ \\
         $+$isch           & 4.19 & 6.82 & $-2.63$ & 0.21 & $<0.001$ \\
@@ -73,7 +75,9 @@ inside the pooled composite.
     ($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 1, \text{stroke}: 0\}$).
     Results are averaged over 100 runs, with 379 patients remaining outside the enrolled
     cohort. A negative difference indicates a lower MI event rate among enrolled
-    patients.}
+    patients. The Angle estimate predates the directional split and is the legacy
+    $+45^\circ$ rule, now Angle net-benefit; Angle conflict ($-45^\circ$) was not
+    rerun and is therefore not reported.}
     \label{tab:appendix-mech1-mi-only}
 \end{table}
 
@@ -85,10 +89,9 @@ inside the pooled composite.
         \toprule
         Policy & Selected (\%) & Left-out (\%) & Diff. (pp) & SEM (pp) & $p$ \\
         \midrule
-        Conflict          & 4.60 & 3.39 & $+1.21$ & 0.11 & $<0.001$ \\
-        Net-benefit       & 4.34 & 5.59 & $-1.25$ & 0.15 & $<0.001$ \\
-        Angle net-benefit & 4.60 & 3.37 & $+1.23$ & 0.12 & $<0.001$ \\
-        Angle conflict    & 4.60 & 3.33 & $+1.28$ & 0.12 & $<0.001$ \\
+        Net-benefit          & 4.60 & 3.39 & $+1.21$ & 0.11 & $<0.001$ \\
+        Conflict       & 4.34 & 5.59 & $-1.25$ & 0.15 & $<0.001$ \\
+        Angle NB (legacy $+45^\circ$) & 4.60 & 3.37 & $+1.23$ & 0.12 & $<0.001$ \\
         Random            & 4.48 & 4.39 & $+0.09$ & 0.12 & 0.458 \\
         $-$isch           & 4.41 & 4.95 & $-0.54$ & 0.14 & $<0.001$ \\
         $+$isch           & 4.69 & 2.59 & $+2.10$ & 0.13 & $<0.001$ \\
@@ -99,7 +102,9 @@ inside the pooled composite.
     ($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 0, \text{stroke}: 1\}$).
     Results are averaged over 100 runs, with 379 patients remaining outside the enrolled
     cohort. A negative difference indicates a lower stroke event rate among enrolled
-    patients.}
+    patients. The Angle estimate predates the directional split and is the legacy
+    $+45^\circ$ rule, now Angle net-benefit; Angle conflict ($-45^\circ$) was not
+    rerun and is therefore not reported.}
     \label{tab:appendix-mech1-stroke-only}
 \end{table}
 
@@ -119,44 +124,48 @@ weighted ischemic composite used elsewhere in that chapter.
         \toprule
         Duel rule & Endpoint & Included (\%) & Excluded (\%) & Diff. (pp) & SEM (pp) & $p$ \\
         \midrule
-        Conflict    & Bleeding & 11.09 & 11.03 & $+0.06$ & 0.12 & 0.771 \\
-        Conflict    & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.449 \\
-        Conflict    & MI       & 2.48  & 2.31  & $+0.18$ & 0.05 & 0.001 \\
-        Conflict    & Stroke   & 0.76  & 0.75  & $+0.02$ & 0.03 & 0.519 \\
+        Net-benefit    & Bleeding & 11.09 & 11.03 & $+0.06$ & 0.12 & 0.780 \\
+        Net-benefit    & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.445 \\
+        Net-benefit    & MI       & 2.48  & 2.31  & $+0.18$ & 0.05 & 0.001 \\
+        Net-benefit    & Stroke   & 0.76  & 0.75  & $+0.02$ & 0.03 & 0.557 \\
         \midrule
-        Net-benefit & Bleeding & 11.00 & 11.12 & $-0.13$ & 0.11 & 0.234 \\
-        Net-benefit & Death    & 1.77  & 1.75  & $+0.01$ & 0.05 & 0.626 \\
-        Net-benefit & MI       & 2.46  & 2.32  & $+0.14$ & 0.06 & 0.022 \\
-        Net-benefit & Stroke   & 0.73  & 0.78  & $-0.05$ & 0.03 & 0.179 \\
+        Conflict & Bleeding & 11.00 & 11.12 & $-0.13$ & 0.11 & 0.225 \\
+        Conflict & Death    & 1.77  & 1.75  & $+0.01$ & 0.05 & 0.627 \\
+        Conflict & MI       & 2.46  & 2.32  & $+0.14$ & 0.06 & 0.020 \\
+        Conflict & Stroke   & 0.73  & 0.78  & $-0.05$ & 0.03 & 0.165 \\
         \midrule
-        Angle       & Bleeding & 11.15 & 10.97 & $+0.18$ & 0.12 & 0.253 \\
-        Angle       & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.266 \\
-        Angle       & MI       & 2.48  & 2.31  & $+0.16$ & 0.06 & 0.004 \\
-        Angle       & Stroke   & 0.82  & 0.69  & $+0.13$ & 0.03 & $<0.001$ \\
+        Angle NB (legacy) & Bleeding & 11.15 & 10.97 & $+0.18$ & 0.12 & 0.268 \\
+        Angle NB (legacy) & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.266 \\
+        Angle NB (legacy) & MI       & 2.48  & 2.31  & $+0.16$ & 0.06 & 0.004 \\
+        Angle NB (legacy) & Stroke   & 0.82  & 0.69  & $+0.13$ & 0.03 & $<0.001$ \\
         \midrule
-        $-$isch     & Bleeding & 10.95 & 11.17 & $-0.23$ & 0.10 & 0.040 \\
-        $-$isch     & Death    & 1.79  & 1.73  & $+0.07$ & 0.04 & 0.115 \\
-        $-$isch     & MI       & 2.43  & 2.36  & $+0.07$ & 0.05 & 0.305 \\
-        $-$isch     & Stroke   & 0.72  & 0.78  & $-0.06$ & 0.03 & 0.100 \\
+        $-$isch     & Bleeding & 10.95 & 11.17 & $-0.23$ & 0.10 & 0.038 \\
+        $-$isch     & Death    & 1.79  & 1.73  & $+0.07$ & 0.04 & 0.124 \\
+        $-$isch     & MI       & 2.43  & 2.36  & $+0.07$ & 0.05 & 0.296 \\
+        $-$isch     & Stroke   & 0.72  & 0.78  & $-0.06$ & 0.03 & 0.092 \\
         \midrule
-        $+$isch     & Bleeding & 11.22 & 10.90 & $+0.31$ & 0.10 & 0.013 \\
-        $+$isch     & Death    & 1.82  & 1.70  & $+0.12$ & 0.05 & 0.014 \\
+        $+$isch     & Bleeding & 11.22 & 10.90 & $+0.31$ & 0.10 & 0.014 \\
+        $+$isch     & Death    & 1.82  & 1.70  & $+0.12$ & 0.05 & 0.013 \\
         $+$isch     & MI       & 2.49  & 2.30  & $+0.18$ & 0.06 & 0.003 \\
         $+$isch     & Stroke   & 0.82  & 0.69  & $+0.14$ & 0.03 & $<0.001$ \\
         \midrule
-        Random      & Bleeding & 11.02 & 11.10 & $-0.08$ & 0.10 & 0.487 \\
-        Random      & Death    & 1.79  & 1.72  & $+0.07$ & 0.05 & 0.150 \\
-        Random      & MI       & 2.37  & 2.42  & $-0.05$ & 0.05 & 0.370 \\
-        Random      & Stroke   & 0.76  & 0.75  & $+0.01$ & 0.03 & 0.851 \\
+        Random      & Bleeding & 11.02 & 11.10 & $-0.08$ & 0.10 & 0.492 \\
+        Random      & Death    & 1.79  & 1.72  & $+0.07$ & 0.05 & 0.155 \\
+        Random      & MI       & 2.37  & 2.42  & $-0.05$ & 0.05 & 0.383 \\
+        Random      & Stroke   & 0.76  & 0.75  & $+0.01$ & 0.03 & 0.847 \\
         \bottomrule
     \end{tabular}
     \caption{Observed event rate among duel winners (included) and duel losers
     (excluded) at the end of Mechanism 3's run, by endpoint and duel rule. Results are
-    averaged over 100 independent seed-cohort replications, each enrolling 1,789
+    averaged over 100 seeded replications, each enrolling 1,789
     winners against 1,789 losers. A negative difference indicates a lower event rate
-    among duel winners than duel losers; SEM combines the two groups' standard errors
-    of the mean in quadrature; $p$ is from a paired two-sided Wilcoxon signed-rank test
+    among duel winners than duel losers; SEM is the standard error of the paired
+    per-replication differences; $p$ is from a paired two-sided Wilcoxon signed-rank test
     on the per-replication included-minus-excluded difference, the non-parametric
-    counterpart that does not assume the difference is normally distributed.}
+    counterpart that does not assume the difference is normally distributed. The
+    reported Angle estimates predate the split and correspond to the legacy
+    $+45^\circ$ rule, now Angle net-benefit. Angle conflict reflects the ischemic
+    coordinate and targets $-45^\circ$; its estimates require rerunning Mechanism~3
+    and are therefore not reported.}
     \label{tab:ch8-duel-rate-comparison}
 \end{table}
