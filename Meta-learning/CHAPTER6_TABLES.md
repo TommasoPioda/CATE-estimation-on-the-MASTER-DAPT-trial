@@ -1,10 +1,29 @@
 # Tabelle del Capitolo 6
 
+**OBSOLETO (2026-08-20).** La sezione "Supplementary Results with Discretized
+Covariates" è stata rimossa da `06_heterogeneity_tradeoff.tex`. La premessa
+sotto (discretizzazione presente solo nel T-learner) valeva per l'artefatto
+`Meta-learning/models/T-learner/RF/*.joblib` salvato fino ad allora, ma non
+per il codice corrente di `04_fit_calibrated_models.ipynb`, che non costruisce
+alcun discretizzatore. L'artefatto era rimasto disallineato dal notebook che
+lo produce; è stato rigenerato ri-eseguendo `04_fit_calibrated_models.ipynb` e
+`05_calibrated_cate_estimation.ipynb`, e la nuova pipeline salvata è
+`imputer -> scaler -> classifier`, identica nella forma a causal forest, BCF,
+CausalPFN e interaction forest. I valori CATE ricalcolati dal nuovo artefatto
+coincidono (a meno del rumore di arrotondamento) con la colonna T-learner già
+presente in Table~6.1 del capitolo: la tabella principale non era mai stata
+costruita dalla versione discretizzata. Gli script sotto (`extract_chapter6_results.py`,
+`generate_chapter6_tables.py`) e i CSV/`.tex` con prefisso `*_discretized*`
+restano nel repo ma non sono più referenziati dal capitolo: rigenerarli oggi
+riprodurrebbe semplicemente i numeri della tabella principale, non un'analisi
+di sensitività alla preprocessing. Il testo originale di questa nota è
+conservato sotto per riferimento.
+
 Le sette tabelle originarie di `06_heterogeneity_tradeoff.tex` non vengono
 sovrascritte. I risultati ottenuti con le covariate discretizzate sono aggiunti
 in fondo al capitolo, con label e file distinti (`*-discretized`).
 
-### Nota di provenienza sulla discretizzazione
+### Nota di provenienza sulla discretizzazione (storica, non più valida)
 
 L'ispezione degli artefatti mostra una discretizzazione esplicita nel T-learner:
 le pipeline joblib contengono un `KBinsDiscretizer` a quattro bin. Nei percorsi

@@ -57,10 +57,10 @@ when repeatedly used as a selection score.
 \vspace{10pt}
 
 That association should not be overinterpreted. The largest single-axis separation is
-observed under Mechanism~1 with the conflict rule: the enrolled cohort's ischemic
-event rate is $0.52$ percentage points lower than that of the left-out group
-($p<0.001$). Against random enrollment, the selected-cohort difference for the same
-rule is $-0.16$ percentage points. The largest significant movement of both bleeding and
+observed under Mechanism~1 with Angle conflict: the enrolled cohort's ischemic event
+rate is $0.67$ percentage points lower than that of the left-out group ($p<0.001$).
+Against random enrollment, the selected-cohort difference for the same rule is $-0.20$
+percentage points. The largest significant movement of both bleeding and
 ischemic rates in the same comparison occurs under Mechanism~2 and remains below half a
 percentage point on either axis ($-0.28$ and $-0.15$ percentage points). Directions vary
 across policies and mechanisms, and some significant movements oppose the intended
@@ -144,7 +144,7 @@ subgroup.
 \vspace{10pt}
 
 The guided-enrollment experiments have design-specific limitations. Mechanism~1 is
-evaluated after approximately 92\% of the cohort has been enrolled, leaving limited scope
+evaluated after approximately 76\% of the cohort has been enrolled, leaving limited scope
 for selection to change cohort composition. Mechanisms~2--5 operate at a smaller final
 cohort but do not provide the matched-size, non-adaptive randomized-arrival baseline
 needed to determine whether target precision can be reached with fewer patients. The
@@ -168,6 +168,11 @@ a dataset would test the range-restriction explanation directly and provide enou
 to evaluate ischemic components separately rather than only through a weighted aggregate.
 External validation should pre-specify estimators, endpoints and multiplicity adjustment.
 
+\vspace{10pt}
+The ischemic composite used throughout this thesis fixes the weights on death, MI and stroke
+before enrollment begins. An adaptive variant that updates these weights during enrollment,
+based on the ischemic event rates observed so far in the trial, could track which endpoint is
+driving risk in the enrolling cohort and adjust patient selection accordingly.
 \vspace{10pt}
 
 Within the present data, the sensitivity analysis should be extended to all five

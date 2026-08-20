@@ -31,7 +31,10 @@ characteristics. This is precisely what the Conditional Average Treatment Effect
 \tau(x) = \mathbb{E}\left[Y(1) - Y(0) \mid X = x\right]
 \]
 formalizes: the expected causal effect of treatment
-relative to control, given that a patient has covariate profile $x$. Identifying patients
+relative to control, given that a patient has covariate profile $x$, where
+$Y(1)$ and $Y(0)$ denote the outcome a patient would experience under
+treatment and under control, respectively. Throughout this thesis, $T=1$
+denotes prolonged DAPT and $T=0$ abbreviated DAPT. Identifying patients
 with large versus small (or even negative) CATE values is the goal of treatment effect
 heterogeneity (HTE) analysis, which is increasingly recognized as essential for both
 clinical practice and efficient trial design.
@@ -43,9 +46,10 @@ Patients Post Bioresorbable Polymer Coated Stent Implantation with an
 Abbreviated versus Standard DAPT Regimen}; \citet{valgimigli2021masterdapt})
 provides the primary clinical reference for this thesis. MASTER DAPT was a
 multicenter, open-label, randomized noninferiority trial coordinated by the
-European Cardiovascular Research Institute (ECRI) and funded by Terumo. A
-total of 4,579 patients at high bleeding risk (HBR) were enrolled across
-140 sites in 30 countries between February 2017 and December 2019. Patients
+European Cardiovascular Research Institute (ECRI) and funded by Terumo. Screening
+was conducted across 140 sites in 30 countries between February 2017 and
+December 2019. Of those screened, 4,579 patients at high bleeding risk (HBR)
+were randomized. Patients
 who had received a biodegradable-polymer sirolimus-eluting stent during
 percutaneous coronary intervention (PCI) were randomized, one month after
 the index procedure, to either an abbreviated Dual Antiplatelet Therapy
@@ -64,7 +68,8 @@ While MASTER DAPT established average-level conclusions, it enrolled a
 clinically heterogeneous population in which the optimal DAPT duration
 is likely to vary substantially across patients. Patients with primarily
 ischemic risk profiles may benefit from longer protection, while those with
-dominant bleeding risk may suffer more harm from prolonged therapy. This
+dominant bleeding risk may suffer more harm from prolonged (i.e., standard)
+therapy. This
 clinical heterogeneity motivates reanalyzing and redesigning the trial through
 a CATE-lens.
 

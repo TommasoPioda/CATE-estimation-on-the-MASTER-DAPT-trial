@@ -26,6 +26,12 @@ construction. The ischemic axis combines myocardial infarction, stroke and
 cardiovascular death into a single weighted score, with weights $0.4$ for
 MI, $0.4$ for stroke and $0.2$ for cardiovascular death,
 weights were chosen arbitrarily to reflect the relative severity of the three events.
+Before the two axes are combined into any of the scores below, each raw CATE column ---
+bleeding and the three ischemic endpoints --- is rescaled by its own interquartile range (a
+\texttt{RobustScaler} with centering turned off), so that the frequent bleeding endpoint
+does not dominate the rarer ischemic ones purely because of its larger raw magnitude; the
+median is not subtracted, so a raw CATE of zero keeps its meaning as the "no effect"
+reference on the rescaled axis as well.
 Both axes carry the effect of \emph{abbreviating} the therapy, so a positive
 value on either axis always favours abbreviation
 (Figure~\ref{fig:tradeoff-zones}). In the bottom-right quadrant, abbreviating
@@ -94,12 +100,16 @@ enrolled there is no model with which to choose one. Candidates are then
 presented according to the mechanism's own rule and scored by the model as it
 currently stands. The winning candidate enters the cohort with the treatment
 they actually received and the outcome they actually had --- no counterfactual
-is ever invented. The candidate not chosen is not returned to the pool for a
-later comparison: each patient is proposed at most once over the course of a
-run, so being passed over is a permanent exclusion from the enrolled cohort,
-not a deferral. The model is refitted every $r$ enrollments, so that each
-decision is taken by a model that has already learned from every enrollment
-before it.
+is ever invented. For Mechanisms 2 through 5, the candidate not chosen is not
+returned to the pool for a later comparison: each patient is proposed at most
+once over the course of a run, so being passed over is a permanent exclusion
+from the enrolled cohort, not a deferral. Mechanism 1 is the exception:
+because it re-scores the entire remaining pool every round rather than a
+fixed sample or pair, a patient left out of one round's batch is simply
+re-scored in the next round and remains eligible until the run ends, so being
+passed over there is not permanent. The model is refitted every $r$
+enrollments, so that each decision is taken by a model that has already
+learned from every enrollment before it.
 
 \paragraph{The seed, and why nothing is tuned after it.}
 The seed is the last cohort drawn at random. After that, patients are selected
@@ -245,7 +255,15 @@ of the second choice across the five mechanisms, and each pairs naturally with a
 particular visibility scheme. Write $s(x)$ for the trade-off score of the current model
 and $u(x)$ for its own uncertainty on patient $x$: the standard error the forest reports
 on the estimated effect, composited across the endpoints and standardized on the same
-z-scored scale as $s(x)$, so the two are commensurable. The simplest rule ignores $u(x)$
+z-scored scale as $s(x)$, so the two are commensurable. Concretely, $s(x) = \text{bleed}(x)
+- \text{isch}(x)$ for the trade-off score used by the \emph{conflict} rule and $s(x) =
+\text{bleed}(x) + \text{isch}(x)$ for the win-win score used by \emph{net benefit}, where
+$\text{bleed}(x)$ is the rescaled bleeding CATE and $\text{isch}(x)$ the same $0.4/0.4/0.2$
+weighted ischemic composite as the trade-off plane above; the two Angle rules read the
+identical $(x, y)$ plane coordinates instead of collapsing them to this scalar difference
+or sum, and target $\pm 45\degree$ on that plane. $u(x)$ is composited the same way: the
+z-scored bleeding standard error plus the same $0.4/0.4/0.2$-weighted sum of the z-scored
+ischemic standard errors. The simplest rule ignores $u(x)$
 entirely and keeps the higher-scoring candidate; this is the default for Mechanism~1 and
 for Mechanism~2, whose own exploration weight (below) is left at zero throughout this
 work.

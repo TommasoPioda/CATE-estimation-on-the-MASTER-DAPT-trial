@@ -17,9 +17,9 @@ the cost of an already expensive online loop (a full causal-forest refit every 1
 Plane" in markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex.
 
 Run (from anywhere):
-    M45_N_RUNS=50 python3 online-learning/scripts/mechanism4_5_repeated_runs.py
+    M45_N_RUNS=100 python3 online-learning/scripts/mechanism4_5_repeated_runs.py
 
-Env overrides (all optional): M45_N_RUNS (default 50), M45_N_STOP (early-stop enrolled count,
+Env overrides (all optional): M45_N_RUNS (default 100), M45_N_STOP (early-stop enrolled count,
 for a fast smoke test).
 
 Saves long-format results (one row per policy/regime/run/group) to

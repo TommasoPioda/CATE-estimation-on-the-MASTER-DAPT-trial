@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Extract the numerical inputs used by the Chapter 6 table generator.
 
+OBSOLETE (2026-08-20): this script and its output were built to document a
+"discretized-covariate" rerun premised on the T-learner's saved pipeline
+containing a KBinsDiscretizer that the other four estimator families did
+not. That premise no longer holds: the T-learner artifact had drifted from
+04_fit_calibrated_models.ipynb's current code (which never builds a
+discretizer) and has since been regenerated to match it. The
+"Supplementary Results with Discretized Covariates" section was removed
+from 06_heterogeneity_tradeoff.tex accordingly; re-running this script now
+just reproduces the in-text Table 6.1 numbers. Kept for provenance, not
+referenced by the chapter.
+
 Run this script from any directory with the project virtual environment::
 
     .venv/bin/python Meta-learning/scripts/extract_chapter6_results.py
@@ -10,8 +21,6 @@ artifacts on the full cohort and extracts results that exist only as executed
 notebook output (CausalPFN, DRTester and the BCF placebo experiment).  The four
 CSV files written under ``Meta-learning/models/Chapter6`` are the explicit
 bridge between expensive model artifacts and the lightweight LaTeX generator.
-They belong to the discretized-covariate rerun requested as a separate block at
-the end of the chapter; they do not replace the original in-text results.
 """
 
 from __future__ import annotations

@@ -340,7 +340,10 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
     _require_run_count(data, ["policy", "group"], 100, "Mechanism 3")
     if set(data["n"]) != {1789}:
         raise ValueError("Unexpected Mechanism 3 group size")
-    rows = []
+    
+    bleeding_rows = []
+    ischaemic_rows = []
+
     for key, label in table_order:
         subset = data.loc[data["policy"] == key]
         for endpoint in ("Bleeding", "Ischaemic"):
@@ -352,7 +355,14 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_a="included",
                 group_b="excluded",
             )
-            rows.append(_standard_row(label, endpoint, result))
+            
+            row = _standard_row(label, endpoint, result)
+            
+            if endpoint == "Bleeding":
+                bleeding_rows.append(row)
+            else:
+                ischaemic_rows.append(row)
+
             _record(
                 audit,
                 source=M3_SOURCE,
@@ -363,14 +373,22 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_b="excluded",
                 summary=result,
             )
+
+    header = [
+        "Duel rule & Included (\\%) & Excluded (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
+    ]
+
     return {
-        "ch8_mechanism3.tex": render_tabular(
-            alignment="llrrrrr",
-            header_lines=[
-                "Duel rule & Endpoint & Included (\\%) & Excluded (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
-            ],
-            rows=rows,
-        )
+        "ch8_mechanism3_bleeding.tex": render_tabular(
+            alignment="lrrrrr",
+            header_lines=header,
+            rows=bleeding_rows,
+        ),
+        "ch8_mechanism3_ischaemic.tex": render_tabular(
+            alignment="lrrrrr",
+            header_lines=header,
+            rows=ischaemic_rows,
+        ),
     }
 
 
@@ -379,7 +397,7 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
         "policy", "regime", "run", "group", "n", "bleed_rate", "isch_weighted_rate"
     }
     data = _read(M45_SOURCE, required)
-    _require_run_count(data, ["policy", "regime", "group"], 50, "Mechanisms 4/5")
+    _require_run_count(data, ["policy", "regime", "group"], 100, "Mechanisms 4/5")
     if set(data["n"]) != {2789}:
         raise ValueError("Unexpected Mechanisms 4/5 group size")
     order = [
@@ -477,7 +495,7 @@ def main() -> int:
     for name, content in expected.items():
         (args.output_dir / name).write_text(content, encoding="utf-8")
     print(f"Wrote {len(outputs)} LaTeX tables and {AUDIT_NAME} to {args.output_dir}")
-    print(f"Audit rows: {len(audit)}; source runs: M1=100, M2=100, M3=100, M4/5=50")
+    print(f"Audit rows: {len(audit)}; source runs: M1=100, M2=100, M3=100, M4/5=100")
     return 0
 
 

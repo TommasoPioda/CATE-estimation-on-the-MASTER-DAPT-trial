@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Generate the seven supplementary discretized-covariate tables in Chapter 6.
 
+OBSOLETE (2026-08-20): the "Supplementary Results with Discretized
+Covariates" section this script fed has been removed from
+06_heterogeneity_tradeoff.tex; see extract_chapter6_results.py for why.
+Kept for provenance, not referenced by the chapter.
+
 Usage, from the repository root::
 
     .venv/bin/python Meta-learning/scripts/generate_chapter6_tables.py

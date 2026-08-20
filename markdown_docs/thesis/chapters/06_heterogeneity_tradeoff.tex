@@ -27,9 +27,10 @@ established in Chapter~2, their failure modes do not overlap, so a result
 common to all five is hard to attribute to any single one of them.
 
 \paragraph{The common protocol.}
-All estimators use the same preprocessing pipeline, with k-NN imputation and
-robust scaling fitted only on the training data. Heterogeneity is evaluated
-by fitting the model on 70\% of the data, ranking the held-out 30\% by
+All five estimators share the same preprocessing: k-NN imputation and robust
+scaling of the 63 numeric covariates, fitted only on the training data.
+Heterogeneity is evaluated by fitting the model on 70\% of the data, ranking
+the held-out 30\% by
 predicted CATE, and applying the doubly robust tester of Chapter~2
 (\S~\ref{sec:validation}) with the known randomization propensity, reporting
 the BLP slope, AUTOC, and QINI defined there.
@@ -55,11 +56,11 @@ estimator's per-patient CATE. Positive $=$ abbreviating lowers the event.}
 \toprule
 Endpoint & Raw ATE & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. \\
 \midrule
-Bleeding             & $+0.045$ & $+0.055$ & $+0.047$ & $+0.047$ & $+0.043$ & $+0.071$ \\
-Bleeding BARC 2/3/5  & $+0.028$ & $+0.037$ & $+0.029$ & $+0.029$ & $+0.021$ & $+0.052$ \\
-MI                   & $-0.005$ & $-0.002$ & $-0.004$ & $-0.003$ & $-0.003$ & $-0.029$ \\
-Cardiovascular death & $+0.003$ & $+0.002$ & $+0.003$ & $+0.003$ & $-0.005$ & $+0.001$ \\
-Stroke               & $+0.005$ & $+0.004$ & $+0.004$ & $+0.005$ & $+0.001$ & $+0.020$ \\
+Bleeding             & $+0.045$ & $+0.054$ & $+0.044$ & $+0.047$ & $+0.043$ & $+0.075$ \\
+Bleeding BARC 2/3/5  & $+0.028$ & $+0.037$ & $+0.026$ & $+0.029$ & $+0.021$ & $+0.053$ \\
+MI                   & $-0.005$ & $-0.002$ & $-0.004$ & $-0.003$ & $-0.003$ & $-0.033$ \\
+Cardiovascular death & $+0.003$ & $+0.002$ & $+0.002$ & $+0.003$ & $-0.005$ & $-0.002$ \\
+Stroke               & $+0.005$ & $+0.004$ & $+0.004$ & $+0.005$ & $+0.001$ & $+0.016$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -75,8 +76,10 @@ also gives credible intervals: $[+0.030,\,+0.067]$ for bleeding, excluding
 zero, compared with $[-0.011,\,+0.005]$ for MI and $[-0.004,\,+0.010]$ for
 cardiovascular death, both spanning zero.
 
-The interaction forest is the main outlier, overstating all effects and MI
-by a factor of six. This is expected because its in-sample CATE estimates
+The interaction forest is the main outlier: it overstates the bleeding-side
+effects by roughly 70--90\% and MI by a factor of six; on cardiovascular
+death, the endpoint closest to zero, it returns the opposite sign instead of
+a larger magnitude. This is expected because its in-sample CATE estimates
 come from an outcome-prediction model and can absorb prognostic differences.
 Consequently, the S-learner's dispersion can be viewed as an \emph{upper
 bound} on genuine heterogeneity: if even this bound is uninformative, the
@@ -95,7 +98,7 @@ anything real.
 \paragraph{Dispersion, and a noise floor to compare it against.}
 Table~\ref{tab:cate-dispersion} reports the standard deviation of the
 per-patient CATE for each estimator. The five columns disagree by more than an
-order of magnitude for several endpoints — for example, from $0.005$ to $0.087$
+order of magnitude for several endpoints — for example, from $0.005$ to $0.088$
 on BARC 2/3/5 — which is itself the first indication that what is being measured is a
 property of the estimators rather than of the cohort. If the spread reflected
 real variation in treatment response, it would not depend so strongly on who
@@ -116,11 +119,11 @@ to support it.}
 \toprule
 Endpoint & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. & Placebo floor \\
 \midrule
-Bleeding             & 0.037 & 0.006 & 0.039 & 0.093 & 0.091 & 0.031 \\
-Bleeding BARC 2/3/5  & 0.031 & 0.005 & 0.028 & 0.059 & 0.087 & 0.026 \\
-MI                   & 0.032 & 0.003 & 0.016 & 0.009 & 0.058 & --- \\
-Cardiovascular death & 0.022 & 0.002 & 0.020 & 0.006 & 0.051 & --- \\
-Stroke               & 0.012 & 0.006 & 0.013 & 0.006 & 0.052 & --- \\
+Bleeding             & 0.035 & 0.006 & 0.039 & 0.092 & 0.093 & 0.031 \\
+Bleeding BARC 2/3/5  & 0.032 & 0.005 & 0.028 & 0.059 & 0.088 & 0.026 \\
+MI                   & 0.032 & 0.003 & 0.016 & 0.009 & 0.059 & --- \\
+Cardiovascular death & 0.022 & 0.002 & 0.020 & 0.006 & 0.050 & --- \\
+Stroke               & 0.011 & 0.006 & 0.013 & 0.006 & 0.051 & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -330,31 +333,39 @@ dispersion moves.}
 \cmidrule(lr){2-5}
 Endpoint & Regularized & Medium & Flexible & Tuned (Optuna) \\
 \midrule
-Bleeding             & $0.046$ / $0.004$ & $0.045$ / $0.006$ & $0.046$ / $0.016$ & $0.047$ / $0.006$ \\
-Bleeding BARC 2/3/5  & $0.028$ / $0.002$ & $0.026$ / $0.005$ & $0.026$ / $0.014$ & $0.029$ / $0.004$ \\
-MI                   & $-0.004$ / $0.000$ & $-0.005$ / $0.004$ & $-0.005$ / $0.012$ & $-0.004$ / $0.003$ \\
-Cardiovascular death & $0.003$ / $0.000$ & $0.003$ / $0.004$ & $0.004$ / $0.011$ & $0.003$ / $0.004$ \\
-Stroke               & $0.004$ / $0.000$ & $0.004$ / $0.003$ & $0.004$ / $0.006$ & $0.004$ / $0.007$ \\
+Bleeding             & $0.047$ / $0.003$ & $0.049$ / $0.006$ & $0.055$ / $0.011$ & $0.044$ / $0.006$ \\
+Bleeding BARC 2/3/5  & $0.027$ / $0.001$ & $0.028$ / $0.003$ & $0.037$ / $0.009$ & $0.026$ / $0.005$ \\
+MI                   & $-0.004$ / $0.000$ & $-0.004$ / $0.004$ & $-0.015$ / $0.010$ & $-0.004$ / $0.003$ \\
+Cardiovascular death & $0.003$ / $0.000$ & $0.001$ / $0.002$ & $0.000$ / $0.005$ & $0.002$ / $0.002$ \\
+Stroke               & $0.004$ / $0.000$ & $0.016$ / $0.002$ & $0.016$ / $0.006$ & $0.004$ / $0.006$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Even varying the model configurations from the most to the least regularized,
-the mean CATE varies little: bleeding stays between 0.045 and 0.047 across all configurations,
-while the dispersion grows by a factor of four.
-Under the regularized preset the three ischemic endpoints collapse to a constant: stroke
-takes exactly one distinct value across all 4,579 patients, and cardiovascular
-death and MI take three, spanning a range of $2 \times 10^{-5}$ and
-$1 \times 10^{-4}$ respectively. Under the flexible preset the same endpoints
-show dispersions of $0.011$ and $0.012$, comfortably larger than their own
-average effects.
+Varying the model configuration from the most to the least regularized moves
+the dispersion far more than the mean, but the mean is not fully invariant
+either. On bleeding the dispersion grows from $0.003$ to $0.011$, a factor of
+roughly four, while the mean ranges from $0.044$ (tuned) to $0.055$ (flexible).
+On stroke the mean itself jumps: $0.004$ under the regularized preset, $0.016$
+under both the medium and the flexible presets, back down to $0.004$ under the
+tuned model, whose hyperparameters are selected by the AUTOC-based criterion
+rather than by capacity alone. Under the regularized preset the three ischemic
+endpoints collapse to a single value each across all 4,579 patients: death, MI
+and stroke all reach exactly zero dispersion. Under the flexible preset
+cardiovascular death and MI show dispersions of $0.005$ and $0.010$,
+comfortably larger than their own raw average effects of $0.003$ and $0.005$.
 
-A quantity that is invariant to model capacity is a property of the data; a
-quantity that scales with model capacity is a property of the model.
-This results clearly illustrate that the averge treatment effect is
-property of the data, while the heterogeneity is property of the model.
-We have to understand that the heterogeneity could be just product of the
-noise present in the data and the models are just overfitting to the noise.
+A quantity that is invariant to model capacity is more plausibly a property of
+the data; a quantity that scales with model capacity is more plausibly a
+property of the model. The dispersion is the clearer case: it moves from
+exactly zero to several times its regularized value as capacity grows, on
+every endpoint. The mean moves too, though less sharply, and the two
+movements are not independent: a model with enough capacity to manufacture
+dispersion out of noise can also shift its own central estimate in the
+process. Read together, the ladder does not show a stable, capacity-independent
+treatment effect that gains a spurious spread as capacity grows; it shows an
+estimate that becomes less trustworthy on both counts as the model is given
+more room to fit noise.
 
 \paragraph{A note on the tuning score itself.}
 The best cross-validated AUTOC lower bound found by the search was $+0.014$ on
@@ -694,125 +705,3 @@ each component, but equally consistent with opposite-direction effects (e.g. MI 
 cancelling in the sum. Together, the two facts explain a strong average effect
 alongside near-zero estimated heterogeneity: trial selection compresses the risk
 variation on the bleeding side, aggregation masks it on the ischemic side.
-
-\section{Supplementary Results with Discretized Covariates}
-\label{sec:discretized-covariates}
-
-This section reports separately the results obtained with the discretized
-covariate representation.  They are included as a preprocessing sensitivity
-analysis and do not replace Tables~\ref{tab:ate-recovery}--\ref{tab:delta-star},
-which retain the values used in the main analysis above.  The tables in this
-section are generated directly from the saved model artefacts, executed
-notebook outputs, and result CSV files; the intermediate, non-rounded values
-and their provenance are retained in a machine-readable audit file.
-
-There is one provenance limitation.  The saved T-learner pipelines contain an
-explicit four-bin discretizer, whereas the current causal-forest, BCF and
-CausalPFN code paths load the 63 numeric columns from
-\texttt{X\_features.parquet} and expose only imputation and scaling.  The
-sensitivity notebook likewise describes its copy of this matrix as ``raw
-numeric features.''  The block below is retained under the discretized-run
-label to keep the two result versions separate, as intended, but the current
-artefacts alone do not establish that every estimator received the same
-continuous-variable discretization.  A strictly harmonized comparison would
-require refitting all estimator families from a single explicitly discretized
-design matrix.
-
-\begin{table}[H]
-\centering
-\caption{Average-effect recovery in the discretized-covariate analysis. Raw
-ATE is the observed prolonged-minus-abbreviated arm difference; the remaining
-columns are the cohort mean CATE from the saved estimator artefacts.}
-\label{tab:ate-recovery-discretized}
-\small
-\setlength{\tabcolsep}{4pt}
-\input{generated_tables/ch6_discretized_ate_recovery.tex}
-\end{table}
-
-The sign of the bleeding effect remains positive across all estimators, while
-the interaction forest is substantially less stable in magnitude, especially
-for the rare ischemic endpoints.  This is why the discretized results are kept
-as a separate robustness analysis instead of silently replacing the primary
-table.
-
-\begin{table}[H]
-\centering
-\caption{Cross-patient CATE dispersion in the discretized-covariate analysis.
-The BCF column is the posterior mean of $\mathrm{sd}(\tau(x))$; its placebo
-floor is available for the two bleeding endpoints.}
-\label{tab:cate-dispersion-discretized}
-\small
-\setlength{\tabcolsep}{4pt}
-\input{generated_tables/ch6_discretized_cate_dispersion.tex}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Held-out doubly robust validation of the discretized-covariate CATE
-rankings. The displayed values are extracted from the executed DRTester cells;
-they are not reconstructed from rounded manuscript values.}
-\label{tab:drtester-discretized}
-\input{generated_tables/ch6_discretized_drtester.tex}
-\end{table}
-
-The BCF bleeding result is nominally significant before multiplicity adjustment
-($p=0.041$), but its sign disagrees with the causal forest on the same endpoint
-and the other fourteen comparisons do not reach $5\%$.  It is therefore a
-model-specific signal rather than cross-estimator evidence of a usable ranking.
-
-\begin{table}[H]
-\centering
-\caption{Mean and standard deviation of the per-patient CATE across the four
-saved causal-forest configurations in the discretized-covariate analysis.}
-\label{tab:flex-ladder-discretized}
-\small
-\input{generated_tables/ch6_discretized_flexibility.tex}
-\end{table}
-
-In this rerun, increasing flexibility changes not only dispersion but also some
-endpoint means: for example, the stroke mean moves from $0.004$ under the
-regularized configuration to $0.016$ under the medium and flexible
-configurations.  This reinforces the need to treat the apparent heterogeneity
-as model-dependent.
-
-\begin{table}[H]
-\centering
-\caption{Cross-fitted AIPW effects for the net-benefit analysis associated with
-the discretized-covariate rerun. Positive values favour abbreviated therapy.}
-\label{tab:nace-ate-discretized}
-\input{generated_tables/ch6_discretized_nace_ate.tex}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Cross-fitted NACE policy values associated with the
-discretized-covariate rerun. Lower policy value is better; improvement is
-relative to the better fixed arm.}
-\label{tab:policy-value-discretized}
-\small
-\input{generated_tables/ch6_discretized_policy_value.tex}
-\end{table}
-
-The fixed all-abbreviated policy remains the best policy in this version.  The
-ATE-sign and policy-forest rules have paired improvement intervals below zero;
-the policy-tree interval spans zero.
-
-\begin{table}[H]
-\centering
-\caption{Minimum detectable heterogeneity in the discretized-covariate
-sensitivity experiment. Detection is the first grid point at which the
-observed AUTOC lower bound exceeds its paired permuted-treatment floor in at
-least $90\%$ of 20 seeds.}
-\label{tab:delta-star-discretized}
-\input{generated_tables/ch6_discretized_delta_star.tex}
-\end{table}
-
-The sensitivity result needs a stricter qualification than the primary text.
-For bleeding, the threshold is a $0.100$ risk difference, and for BARC 2/3/5 it
-is $0.050$.  For MI and cardiovascular death the criterion is already met at
-$\delta=0$ in all seeds, so the reported $\mathrm{OR}=1.00$ is a failed null
-calibration check, not evidence that arbitrarily small heterogeneity is
-detectable.  Stroke does not reach the $90\%$ threshold and already has an
-$80\%$ detection fraction under the null.  Consequently, only the two bleeding
-rows provide interpretable detection thresholds in this discretized
-sensitivity run.
