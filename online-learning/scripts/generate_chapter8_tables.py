@@ -167,6 +167,14 @@ def _standard_row(label: str, endpoint: str, result: PairedSummary) -> str:
     )
 
 
+def _row_without_endpoint(label: str, result: PairedSummary) -> str:
+    return (
+        f"{label} & {format_rate(result.mean_a_pct)} & "
+        f"{format_rate(result.mean_b_pct)} & {format_diff(result.diff_pp)} & "
+        f"{format_sem(result.sem_diff_pp)} & {format_p(result.p_value)} \\\\"
+    )
+
+
 def build_mechanism1(audit: list[dict[str, object]]) -> dict[str, str]:
     required = {
         "run", "policy", "n", "new_n", "left_n", "new_isch_n", "left_isch_n",
@@ -356,7 +364,7 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_b="excluded",
             )
             
-            row = _standard_row(label, endpoint, result)
+            row = _row_without_endpoint(label, result)
             
             if endpoint == "Bleeding":
                 bleeding_rows.append(row)

@@ -60,6 +60,16 @@ formulas are fixed as follows.
           no-guidance control.
 \end{itemize}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/policy_selection_demonstration.png}
+    \caption{The selection policies used in this chapter. This figure shows the points that are chosen under each policy.
+    Darker the color of the point, lower is the probability of being selected averaged over 500 runs, 
+    selecting 2000 of 4000 randomized patients in 
+    each run using the duel mechanisms. The CATEs are estimated using the tuned causal forest of Chapter 6.
+    All the results are scaled and centered around the origin.}
+\end{figure}
+
 \paragraph{Saved-result convention.}
 The generated artifacts carry an explicit score-convention tag. Every displayed
 ``Conflict'' row therefore denotes $b-i$, every ``Net-benefit'' row denotes $b+i$, and
@@ -124,11 +134,12 @@ selection in later rounds.
 \label{fig:ch8-policy-comparison}
 \end{figure}
 
-Figure \ref{fig:ch8-policy-comparison} reveals a clear separation between the policies 
-on the ischemic axis. In particular, the $-$isch and conflict policies progressively
-produce enrolled cohorts with lower ischemic event rates than the corresponding 
-left-out groups. The remaining policies show substantially weaker or negligible 
-separation between the two groups.
+Figure \ref{fig:ch8-policy-comparison} reveals a clear separation between the policies
+on the ischemic axis. In particular, the Angle conflict, conflict and $-$isch policies
+progressively produce enrolled cohorts with lower ischemic event rates than the
+corresponding left-out groups, with Angle conflict showing the largest separation.
+The remaining policies (net-benefit, Angle net-benefit and $+$isch) show substantially
+weaker or negligible separation between the two groups.
 
 \begin{table}[H]
     \centering
@@ -144,9 +155,10 @@ separation between the two groups.
 \end{table}
 
 Table \ref{tab:ch8-ischaemic-rate-comparison} quantifies this separation at the end
-of the enrollment process. The $-$isch and conflict policies yield significantly
-lower ischemic event rates among enrolled than left-out patients, whereas the other
-policies do not show a significant separation.
+of the enrollment process. Angle conflict, conflict and $-$isch yield significantly
+lower ischemic event rates among enrolled than left-out patients, with Angle
+conflict showing the largest difference ($-0.67$ pp, $p<0.001$); the other policies
+do not show a significant separation.
 
 \begin{table}[H]
     \centering
@@ -228,6 +240,23 @@ No experimentation was made on the final cohort size, wich was set to 3500 patie
 Changing the number of patients enrolled might benefit the performance of the mechanism.
 This number was chosen arbitrarily to leave a portion of patients outside the enrolled cohort,
 to allow for a final comparison between the enrolled and left-out groups.
+
+\vspace{10pt}
+
+Tables~\ref{tab:appendix-mech1-mi-only} and~\ref{tab:appendix-mech1-stroke-only} in
+Appendix~\ref{app:supplementary-tables} repeat Mechanism~1 focussing on a single endpoint,
+ MI in one run and stroke in the other, at a shared
+$n=4200$ checkpoint.
+Every non-random policy's selected-versus-left-out separation flips
+sign between the two endpoints. Conflict and Angle conflict enrol a cohort with a higher
+MI rate than the left-out group ($+0.92$ and $+1.01$ pp) but a lower stroke rate
+($-1.22$ and $-1.34$ pp); Net-benefit and Angle net-benefit show the opposite pattern,
+enrolling fewer MI events ($-2.14$ and $-2.29$ pp) but more stroke events ($+1.25$ and
+$+1.27$ pp).
+The policy that reduces the ischemic cohort must be chosen accordingly to the endpoint of interest.
+The $\text{ISCH\_WEIGHTS}$ weighting used throughout this
+chapter, MI and stroke each at $0.4$ against death at $0.2$, is one choice among several
+under which this ranking would differ.
 
 \section{Mechanism 2 on the Trade-off Plane}
 
@@ -331,7 +360,11 @@ in each replication to average out the noise of a single arrival order.
     \small
     \setlength{\tabcolsep}{5pt}
     \medskip
+    \textbf{Ischaemic}\par\smallskip
     \input{generated_tables/ch8_mechanism3_ischaemic.tex}
+    \bigskip
+
+    \textbf{Bleeding}\par\smallskip
     \input{generated_tables/ch8_mechanism3_bleeding.tex}
     \caption{Bleeding and weighted ischemic event rates among duel winners (included)
     and duel losers (excluded) under Mechanism 3, by duel rule. Ischemic combines
@@ -359,7 +392,7 @@ ischemic composite, in the same direction already seen component by component
 composite difference is $+0.04$ pp ($p=0.231$) for conflict and $+0.02$ pp
 ($p=0.615$) for $-$isch. Conflict's strongest individual component, MI, does reach
 significance on its own ($p=0.020$); $-$isch's strongest component, stroke, does not
-($p=0.100$). Under both rules the MI and stroke components run in opposite directions
+($p=0.092$). Under both rules the MI and stroke components run in opposite directions
 (Table~\ref{tab:ch8-duel-rate-comparison}), so the composite cancels what the
 components show, the same cancellation Chapter 6 reports for the trial's own
 ischemic score, reproduced here inside a selection rule's own target variable.
@@ -423,8 +456,8 @@ effect ($0.00$ pp, $p=0.957$).
 
 On the ischemic axis, conflict again lowers the rate for both policies: $-0.02$ pp
 for UCB1 ($p=0.005$) and $-0.07$ pp for Thompson ($p<0.001$). Under net-benefit,
-UCB1 and Thompson instead show small increases of $+0.03$ and $+0.04$ pp
-(both $p=0.001$), opposite to the direction the win-win rule is built to select for.
+UCB1 and Thompson instead show small increases of $+0.03$ pp ($p=0.001$) and $+0.04$
+pp ($p<0.001$), opposite to the direction the win-win rule is built to select for.
 
 \vspace{10pt}
 
@@ -494,7 +527,7 @@ actively selected and left-out groups under Mechanism~1 is $+0.68$ percentage po
 bleeding for Net-benefit; the corresponding selected-versus-random difference is $+0.19$
 percentage points. On the ischemic axis, the largest Mechanism~1 separation is $-0.67$
 percentage points for Angle conflict, or $-0.20$ percentage points against random. The
-largest simultaneous movement of both axes in an included-versus-discarded comparison occurs for $-$isch under
-Mechanism~2, with changes of $-0.28$ percentage points for bleeding and $-0.15$
+largest simultaneous movement of both axes in an included-versus-discarded comparison occurs for $+$isch under
+Mechanism~2, with changes of $+0.39$ percentage points for bleeding and $+0.14$
 percentage points for ischemic events. The compression described in Chapter~6 narrows
 what a selection rule can find without eliminating it.
