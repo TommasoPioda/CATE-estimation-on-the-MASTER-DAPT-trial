@@ -556,7 +556,8 @@ so across the five folds its overall percentage of patients recommended prolonge
 therapy need not be 0 or 100. The remaining two learn a covariate-dependent recommendation 
 directly, by minimizing the expected event rate: an interpretable depth-2 doubly-robust 
 policy tree and a doubly-robust policy forest (200 trees, depth 3), both fitted with \texttt{econml}'s
-\texttt{DRPolicyTree} and \texttt{DRPolicyForest} under the known randomization propensity.
+\texttt{DRPolicyTree} and \texttt{DRPolicyForest}, which implement the doubly robust policy-learning
+framework of \citet{athey2021policylearning}, under the known randomization propensity.
 
 Evaluation follows the same five-fold discipline as the ATE estimates: each learned policy is fitted 
 on the training folds and scored only on the held-out fold, so no policy is evaluated on patients it 
@@ -682,6 +683,92 @@ criterion, while stroke plateaus at 73 percent of seeds without reaching the
 required 90 percent. These artifacts do not demonstrate sensitivity to small
 heterogeneity and the associated thresholds must not be interpreted as valid
 power estimates.
+
+\section{Robustness to Covariate Discretization}
+
+Every result so far treats the 63 covariates in their original, continuous form. Clinical
+risk scores built from continuous predictors are routinely categorised into ordinal bins for
+interpretability. All five estimator families were refit after applying the same
+categorisation to the covariates: the 15 of 63 covariates that take more than two distinct
+values were coarsened into four ordinal bins with scikit-learn's \texttt{KBinsDiscretizer},
+fit on the training rows of each split only. The refit uses the same 70/30 stratified split
+and the same DRTester protocol as the rest of the chapter; the tuned causal forest reuses the
+hyperparameters already selected by the Optuna search on the continuous covariates
+(\S~\ref{sec:tuned-forest}) rather than being re-tuned, so a change in the result can be
+attributed to the preprocessing step and not to a different search outcome.
+
+\begin{table}[H]
+\centering
+\caption{Mean and standard deviation (in parentheses) of the per-patient CATE under
+discretized covariates, for the same five estimators and five endpoints as
+Table~\ref{tab:ate-recovery}. Raw ATE is unaffected by covariate discretization and repeated
+for reference.}
+\label{tab:discretized-estimator}
+\small
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Endpoint & Raw ATE & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. \\
+\midrule
+Bleeding             & $+0.045$ & $+0.063\,(0.038)$ & $+0.049\,(0.005)$ & $+0.047\,(0.039)$ & $+0.044\,(0.086)$ & $+0.084\,(0.088)$ \\
+Bleeding BARC 2/3/5  & $+0.028$ & $+0.045\,(0.040)$ & $+0.031\,(0.002)$ & $+0.029\,(0.028)$ & $+0.017\,(0.064)$ & $+0.062\,(0.085)$ \\
+MI                   & $-0.005$ & $-0.002\,(0.016)$ & $-0.005\,(0.001)$ & $-0.003\,(0.015)$ & $-0.002\,(0.024)$ & $-0.043\,(0.065)$ \\
+Cardiovascular death & $+0.003$ & $+0.003\,(0.014)$ & $+0.002\,(0.001)$ & $+0.003\,(0.021)$ & $-0.002\,(0.012)$ & $-0.001\,(0.063)$ \\
+Stroke               & $+0.005$ & $+0.004\,(0.004)$ & $+0.018\,(0.001)$ & $+0.005\,(0.013)$ & $+0.001\,(0.007)$ & $+0.023\,(0.065)$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The pattern of Table~\ref{tab:ate-recovery} reproduces closely: the bleeding endpoints keep
+the same sign and order of magnitude across all five estimators, the ischemic endpoints stay
+small, and the interaction forest remains the outlier by a wide margin. One estimator-endpoint
+pair changes qualitatively. The tuned causal forest's stroke effect rises from $+0.004$ under
+continuous covariates to $+0.018$ under discretized covariates, four times the raw ATE
+($+0.005$) and, in this rerun, the largest ischemic-side effect in the table, despite using
+the identical forest hyperparameters in both cases.
+
+\begin{table}[H]
+\centering
+\caption{Doubly-robust validation of the CATE ranking under discretized covariates, held-out
+30\% split, same protocol as Table~\ref{tab:drtester}. QINI was not computed for this rerun.}
+\label{tab:discretized-drtester}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{Causal forest} & \multicolumn{2}{c}{T-learner} & \multicolumn{2}{c}{BCF} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Endpoint & AUTOC & $p$ & AUTOC & $p$ & AUTOC & $p$ \\
+\midrule
+Bleeding             & $+0.014$ & 0.14 & $-0.009$ & 0.25 & $+0.025$ & 0.04 \\
+Bleeding BARC 2/3/5  & $+0.015$ & 0.08 & $-0.016$ & 0.06 & $+0.012$ & 0.15 \\
+MI                   & $-0.001$ & 0.42 & $-0.004$ & 0.34 & $-0.002$ & 0.38 \\
+Cardiovascular death & $+0.003$ & 0.34 & $+0.002$ & 0.41 & $+0.005$ & 0.26 \\
+Stroke               & $+0.006$ & 0.10 & $+0.002$ & 0.28 & $+0.009$ & 0.04 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The BCF bleeding result reproduces almost exactly ($p=0.043$ against $p=0.04$ under
+continuous covariates). Under discretized covariates the BCF stroke result crosses the same
+unadjusted threshold ($p=0.035$), which it did not under continuous covariates ($p=0.22$),
+and the T-learner's barc\_235 result changes sign ($+0.005\to-0.016$) while remaining
+non-significant either way. Across the two preprocessing choices, fifteen comparisons in
+Table~\ref{tab:drtester} and fifteen more here produce at most one or two nominal hits each,
+at a different endpoint each time and with signs that do not agree across estimators. That
+instability is what estimation noise around a true null produces; a real ranking signal would
+not depend on whether the covariates entering the forest are continuous or binned into
+quartiles.
+
+The BCF placebo floor moves in the same direction as the main analysis: the bleeding excess
+over the floor is $0.0064$ under discretized covariates against $0.0081$ under continuous
+ones, and the BARC 2/3/5 excess is $0.0004$ against $0.0012$. The causal-forest flexibility
+ladder (Table~\ref{tab:flex-ladder}) keeps the same qualitative shape: the regularized preset
+collapses the ischemic dispersion to essentially zero and the flexible preset remains the most
+dispersed configuration on every endpoint; the tuned configuration's dispersion falls below
+the medium preset's on every endpoint, a lower position in the ladder than under continuous
+covariates.
 
 \section{Chapter Summary}
 

@@ -36,7 +36,7 @@ familiar:
 import numpy as np
 import pandas as pd
 
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import RobustScaler
 from sklearn.pipeline import Pipeline
@@ -95,9 +95,10 @@ class SLearnerInteractionDesign(BaseEstimator, TransformerMixin):
     where ``p == n_covariates_``.
     """
 
-    def __init__(self, use_knn_imputer=True, knn_neighbors=5):
+    def __init__(self, use_knn_imputer=True, knn_neighbors=5, discretizer=None):
         self.use_knn_imputer = use_knn_imputer
         self.knn_neighbors = knn_neighbors
+        self.discretizer = discretizer
 
     def _split(self, M):
         M = np.asarray(M, dtype=float)
@@ -112,12 +113,26 @@ class SLearnerInteractionDesign(BaseEstimator, TransformerMixin):
         self.imputer_ = (KNNImputer(n_neighbors=self.knn_neighbors)
                          if self.use_knn_imputer else SimpleImputer(strategy='median'))
         Xi = self.imputer_.fit_transform(Xc)
+        self.continuous_cols_ = np.flatnonzero(
+            [np.unique(Xi[:, j]).size > 2 for j in range(Xi.shape[1])]
+        )
+        self.discretizer_ = None
+        if self.discretizer is not None and self.continuous_cols_.size:
+            self.discretizer_ = clone(self.discretizer)
+            Xi[:, self.continuous_cols_] = self.discretizer_.fit_transform(
+                Xi[:, self.continuous_cols_]
+            )
         self.scaler_ = RobustScaler().fit(Xi)
         return self
 
     def transform(self, X):
         Xc, T = self._split(X)
-        Xs = self.scaler_.transform(self.imputer_.transform(Xc))
+        Xi = self.imputer_.transform(Xc)
+        if self.discretizer_ is not None:
+            Xi[:, self.continuous_cols_] = self.discretizer_.transform(
+                Xi[:, self.continuous_cols_]
+            )
+        Xs = self.scaler_.transform(Xi)
         return np.hstack([Xs, T, Xs * T])
 
     def design_feature_names(self, feature_names):
@@ -128,7 +143,7 @@ class SLearnerInteractionDesign(BaseEstimator, TransformerMixin):
 
 
 def make_interaction_forest(use_knn_imputer=True, knn_neighbors=5,
-                            rf_params=None, multioutput=True):
+                            rf_params=None, multioutput=True, discretizer=None):
     """Assemble the interaction-forest pipeline: design -> classification forest.
 
     The classifier is a ``MultiOutputClassifier(RandomForestClassifier)`` so one
@@ -149,7 +164,8 @@ def make_interaction_forest(use_knn_imputer=True, knn_neighbors=5,
     classifier = MultiOutputClassifier(base) if multioutput else base
     return Pipeline([
         ('design', SLearnerInteractionDesign(use_knn_imputer=use_knn_imputer,
-                                             knn_neighbors=knn_neighbors)),
+                                             knn_neighbors=knn_neighbors,
+                                             discretizer=discretizer)),
         ('classifier', classifier),
     ])
 

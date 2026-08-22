@@ -1,5 +1,6 @@
 from .pipeline_utils import (
     BalancedAmplifiedClassifier,
+    ContinuousFeatureDiscretizer,
     evaluate_pipeline,
     predict_proba_matrix,
     predict_with_threshold,
@@ -15,7 +16,7 @@ from .pipeline_utils import (
 )
 
 __all__ = [
-    "BalancedAmplifiedClassifier", "evaluate_pipeline", "predict_proba_matrix",
+    "BalancedAmplifiedClassifier", "ContinuousFeatureDiscretizer", "evaluate_pipeline", "predict_proba_matrix",
     "predict_with_threshold", "event_rate_thresholds", "softvote_event_rate_thresholds",
     "cv_roc_pr_curves", "softvote_cv_roc_pr_curves", "cv_calibration_curves",
     "report_test_performance", "save_pipeline", "plot_confusion_matrices",

@@ -258,6 +258,28 @@ The $\text{ISCH\_WEIGHTS}$ weighting used throughout this
 chapter, MI and stroke each at $0.4$ against death at $0.2$, is one choice among several
 under which this ranking would differ.
 
+
+\paragraph{Correlation between the tuned causal forest and Mechanism 1.}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Correlation_models_tuned_mecahansim1.png}
+    \caption{Correlation between the tuned causal forest's predicted CATEs and the observed outcomes 
+    in the enrolled cohort under Mechanism 1. The left panel shows the correlation for the 
+    bleeding endpoint, while the right panel shows the correlation for the weighted ischemic endpoint. 
+    Each point represents a patient, with color indicating the selection policy used.}
+    \label{fig:correlation_mech1}
+\end{figure}
+
+Figure~\ref{fig:correlation_mech1} shows the correlation between the predicted CATEs between the tuned causal forest and the model 
+produced by Mechanism 1 on the points left out of the enrolled cohort.
+The correlation between the two predicted 
+CATEs is modest and it shows that the correlation is stronger on the ischemic endpoints than on the
+bleeding endpoints.
+This results show that the model produced by Mechanism 1 is not replicating the same 
+CATEs as the tuned causal forest, but it is still able to select a cohort with 
+a lower ischemic event rate than the left-out group.
+
+
 \section{Mechanism 2 on the Trade-off Plane}
 
 \paragraph{The mechanism.}

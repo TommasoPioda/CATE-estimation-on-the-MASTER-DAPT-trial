@@ -50,9 +50,10 @@ Design decisions specific to this cohort (MASTER DAPT)
 import numpy as np
 import pandas as pd
 
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import KBinsDiscretizer
 from stochtree import BCFModel
 
 
@@ -82,7 +83,7 @@ class BCFMultiOutputPipeline(BaseEstimator):
     def __init__(self, use_knn_imputer=True, knn_neighbors=5, propensity=0.5,
                  num_gfr=25, num_burnin=0, num_mcmc=500,
                  num_prognostic_trees=250, num_treatment_trees=50,
-                 random_state=42):
+                 random_state=42, discretizer=None):
         self.use_knn_imputer = use_knn_imputer
         self.knn_neighbors = knn_neighbors
         self.propensity = propensity
@@ -92,9 +93,11 @@ class BCFMultiOutputPipeline(BaseEstimator):
         self.num_prognostic_trees = num_prognostic_trees
         self.num_treatment_trees = num_treatment_trees
         self.random_state = random_state
+        self.discretizer = discretizer
 
         self.imputer_x = None
         self.scaler = None
+        self.discretizer_ = None
         self.models = []
         # Per-outcome posterior of tau(x) on the training rows, shape (n_j, n_draws).
         # Cached at fit time so ATE / heterogeneity summaries need no re-prediction.
@@ -138,13 +141,40 @@ class BCFMultiOutputPipeline(BaseEstimator):
             self.imputer_x = KNNImputer(n_neighbors=self.knn_neighbors)
         else:
             self.imputer_x = SimpleImputer(strategy='median')
-        X_clean = self.imputer_x.fit_transform(X_df)
+        X_clean = pd.DataFrame(
+            self.imputer_x.fit_transform(X_df),
+            columns=self.feature_names,
+            index=X_df.index
+        )
+
+        self.continuous_cols = []
+        self.discretizer_ = None
+
+        if self.discretizer is not None:
+            self.continuous_cols = [
+                col for col in X_clean.columns
+                if X_clean[col].nunique() > 2
+            ]
+
+            if self.continuous_cols:
+                self.discretizer_ = clone(self.discretizer)
+                X_clean[self.continuous_cols] = self.discretizer_.fit_transform(
+                    X_clean[self.continuous_cols]
+                )
+
         self.scaler = RobustScaler()
         return self.scaler.fit_transform(X_clean)
 
     def _transform_x(self, X):
         X_df = pd.DataFrame(X).apply(pd.to_numeric, errors='coerce')
-        return self.scaler.transform(self.imputer_x.transform(X_df))
+        X_clean = pd.DataFrame(
+            self.imputer_x.transform(X_df), columns=self.feature_names, index=X_df.index
+        )
+        if self.discretizer_ is not None:
+            X_clean[self.continuous_cols] = self.discretizer_.transform(
+                X_clean[self.continuous_cols]
+            )
+        return self.scaler.transform(X_clean)
 
     @staticmethod
     def _as_numeric_2d(Y):

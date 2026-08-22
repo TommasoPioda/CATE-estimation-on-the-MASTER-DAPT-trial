@@ -57,7 +57,7 @@ substantial for the rarest endpoints.
 
 \paragraph{Hyperparameters}
 Each family is additionally tuned with a Tree-structured Parzen Estimator
-(Optuna), maximising mean average precision across the five endpoints under
+\citep{bergstra2011tpe} (Optuna \citep{akiba2019optuna}), maximising mean average precision across the five endpoints under
 3-fold cross-validation on the training split. Compared with each family's
 default hyperparameters, tuning yields a small mean AUPR gain: $+0.014$ for
 logistic regression, $+0.026$ for the random forest and $+0.006$ for gradient

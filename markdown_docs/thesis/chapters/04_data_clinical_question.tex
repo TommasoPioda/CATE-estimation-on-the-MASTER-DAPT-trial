@@ -12,7 +12,9 @@ Therapy (DAPT), combining aspirin with a P2Y12 inhibitor (such as clopidogrel,
 ticagrelor, or prasugrel).
 
 The optimal duration of DAPT after PCI is one of the most debated topics in
-interventional cardiology. Longer DAPT reduces ischemic risk (particularly
+interventional cardiology, and current clinical guidelines
+\citep{esc2023acs} tailor the recommended duration to the patient's bleeding
+and ischemic risk profile. Longer DAPT reduces ischemic risk (particularly
 stent thrombosis and myocardial infarction) but simultaneously increases the
 risk of bleeding complications. Major bleeding events are not merely
 nuisance side effects: they are independently associated with increased
@@ -178,7 +180,8 @@ for 80\% of the variance, which is the sense in which no dominant axis exists.}
 
 Projecting the patients onto the leading components and colouring them by outcome
 separates no endpoint, and the nonlinear embeddings agree.
-Figure~\ref{fig:embeddings} applies t-SNE and UMAP to the dataset. The two methods recover different global
+Figure~\ref{fig:embeddings} applies t-SNE \citep{vandermaaten2008tsne} and
+UMAP \citep{mcinnes2018umap} to the dataset. The two methods recover different global
 structure: t-SNE returns a single continuous cloud, whereas UMAP resolves the cohort
 into roughly a dozen discrete islands. Neither produces a region in which events
 concentrate. Every UMAP island contains patients from all three outcome groups, and in

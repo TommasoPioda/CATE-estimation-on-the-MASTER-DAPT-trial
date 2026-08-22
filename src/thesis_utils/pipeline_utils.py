@@ -1,13 +1,42 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from sklearn.base import clone, BaseEstimator, ClassifierMixin
+from sklearn.base import clone, BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score, cross_val_predict, KFold, StratifiedKFold
 from sklearn.metrics import (
     ConfusionMatrixDisplay, average_precision_score, roc_auc_score,
     precision_recall_fscore_support, roc_curve, precision_recall_curve,
 )
+
+
+class ContinuousFeatureDiscretizer(BaseEstimator, TransformerMixin):
+    """Discretize only features with more than two training values.
+
+    The wrapped discretizer is cloned and fit inside each training fold, preventing
+    leakage and keeping binary indicators unchanged.
+    """
+
+    def __init__(self, discretizer):
+        self.discretizer = discretizer
+
+    def fit(self, X, y=None):
+        X = np.asarray(X, dtype=float)
+        self.continuous_cols_ = np.flatnonzero([
+            np.unique(X[:, j]).size > 2 for j in range(X.shape[1])
+        ])
+        self.discretizer_ = None
+        if self.continuous_cols_.size:
+            self.discretizer_ = clone(self.discretizer).fit(X[:, self.continuous_cols_])
+        return self
+
+    def transform(self, X):
+        X = np.asarray(X, dtype=float).copy()
+        if self.discretizer_ is not None:
+            X[:, self.continuous_cols_] = self.discretizer_.transform(
+                X[:, self.continuous_cols_]
+            )
+        return X
 
 
 class BalancedAmplifiedClassifier(BaseEstimator, ClassifierMixin):

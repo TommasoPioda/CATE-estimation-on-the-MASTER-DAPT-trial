@@ -92,11 +92,16 @@ on the following sources.
   \item \citet{maroni2026}.
     \\\textit{Used in Ch.~5:} baseline predictive performance, SHAP-based
     interpretation and the variable dictionary of the modelling dataset.
+
+  \item \citet{esc2023acs}.
+    \\\textit{Used in Ch.~4:} the 2023 ESC guidelines for acute coronary
+    syndromes, tailoring DAPT duration to bleeding and ischemic risk, framing
+    the clinical trade-off introduced in the opening section.
 \end{enumerate}
 
 \section{Additional methodological and clinical sources}
 
-\begin{enumerate}\setcounter{enumi}{16}
+\begin{enumerate}\setcounter{enumi}{17}
   \item \citet{wager2018}.
     \\\textit{Used in Ch.~2:} the causal forest, which estimates $\tau(x)$
     directly by residualizing $Y$ and $T$ against fitted outcome and
@@ -121,11 +126,37 @@ on the following sources.
     \\\textit{Used in Ch.~3:} Thompson sampling, Mechanism~5's enrolment
     rule, which draws from each candidate's belief distribution and enrols
     whichever draw is higher.
+
+  \item \citet{shapley1953}.
+    \\\textit{Used in Ch.~5:} the Shapley value from cooperative game theory,
+    the additive-attribution concept that \citet{lundberg2017shap} generalize
+    into the SHAP feature attributions.
+
+  \item \citet{vandermaaten2008tsne}.
+    \\\textit{Used in Ch.~4:} t-SNE, one of the two nonlinear embeddings used
+    to check whether the covariate space separates by outcome.
+
+  \item \citet{mcinnes2018umap}.
+    \\\textit{Used in Ch.~4:} UMAP, the second nonlinear embedding used
+    alongside t-SNE for the same check.
+
+  \item \citet{bergstra2011tpe}.
+    \\\textit{Used in Ch.~5:} the Tree-structured Parzen Estimator behind
+    the Optuna hyperparameter search for each risk-model family.
+
+  \item \citet{akiba2019optuna}.
+    \\\textit{Used in Ch.~5:} Optuna, the hyperparameter optimization
+    framework implementing the tuning search of Ch.~5.
+
+  \item \citet{athey2021policylearning}.
+    \\\textit{Used in Ch.~6:} the doubly robust policy-learning framework
+    underlying \texttt{econml}'s \texttt{DRPolicyTree} and
+    \texttt{DRPolicyForest}.
 \end{enumerate}
 
 \section{Predictive modelling and interpretation}
 
-\begin{enumerate}\setcounter{enumi}{21}
+\begin{enumerate}\setcounter{enumi}{28}
   \item \citet{platt1999}.
     \\\textit{Used in Ch.~5:} Platt (sigmoid) calibration of the per-arm
     T-learner outcome models, fitted by internal cross-validation on the

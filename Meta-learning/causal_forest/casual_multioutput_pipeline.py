@@ -104,7 +104,8 @@ CF_MODEL_PRESETS = {
 
 class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
     def __init__(self, use_knn_imputer=True, knn_neighbors=5, cf_params=None,
-                 nuisance_params=None, n_jobs=16, lgbm_n_jobs=4):
+                 nuisance_params=None, n_jobs=16, lgbm_n_jobs=4,
+                 discretizer=None):
         self.use_knn_imputer = use_knn_imputer
         self.knn_neighbors = knn_neighbors
         self.cf_params = cf_params if cf_params is not None else {}
@@ -119,12 +120,17 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
         # lgbm_n_jobs-> OpenMP threads per nuisance LGBM (small data saturates ~4-8)
         self.n_jobs = n_jobs
         self.lgbm_n_jobs = lgbm_n_jobs
+        # Optional sklearn transformer (e.g. KBinsDiscretizer). It is fit only
+        # on training rows, after imputation, and affects columns with >2 values.
+        self.discretizer = discretizer
         self.imputer_x = None
         self.scaler = None
+        self.discretizer_ = None
+        self.continuous_cols = np.array([], dtype=int)
         self.models = []
         self.feature_names = None
         self.n_outputs = None
-        
+
     def _preprocess_data(self, X, Y, T, is_training=True):
         X_df = pd.DataFrame(X).apply(pd.to_numeric, errors='coerce')
         if is_training:
@@ -134,12 +140,25 @@ class CausalMultiOutputPipeline(BaseEstimator, TransformerMixin):
             else:
                 self.imputer_x = SimpleImputer(strategy='median')
             X_clean = self.imputer_x.fit_transform(X_df)
+            self.continuous_cols = np.flatnonzero(
+                [np.unique(X_clean[:, j]).size > 2 for j in range(X_clean.shape[1])]
+            )
+            self.discretizer_ = None
+            if self.discretizer is not None and self.continuous_cols.size:
+                self.discretizer_ = clone(self.discretizer)
+                X_clean[:, self.continuous_cols] = self.discretizer_.fit_transform(
+                    X_clean[:, self.continuous_cols]
+                )
             self.scaler = RobustScaler()
             X_scaled = self.scaler.fit_transform(X_clean)
         else:
             X_clean = self.imputer_x.transform(X_df)
+            if self.discretizer_ is not None:
+                X_clean[:, self.continuous_cols] = self.discretizer_.transform(
+                    X_clean[:, self.continuous_cols]
+                )
             X_scaled = self.scaler.transform(X_clean)
-            
+
         Y_df = pd.DataFrame(Y)
         for col in Y_df.columns:
             if Y_df[col].dtype == 'object' or Y_df[col].apply(type).eq(str).any():
