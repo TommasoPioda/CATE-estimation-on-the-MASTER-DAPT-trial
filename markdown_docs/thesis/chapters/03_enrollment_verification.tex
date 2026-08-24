@@ -86,11 +86,11 @@ forest-based effect model rather than a linear one.
 Five mechanisms are used in this work, forming a ladder from the full-pool reference to the
 realistic one rather than five competing proposals of which one is meant to win.
 \emph{The full-pool information reference} (Mechanism~1) sees the entire remaining pool at every decision
-and enrolls the best-scoring patients outright. \emph{Partially random enrollment}
+and, in its greedy form, enrolls the best-scoring patients outright. \emph{Partially random enrollment}
 (Mechanism~2) narrows that view to a random sample redrawn at each round. \emph{The
-duel} (Mechanism~3), \emph{UCB-style enrollment} (Mechanism~4) and \emph{Thompson enrollment}
-(Mechanism~5) narrow it further, down to a single pair; the latter two resolve that pair
-with the model's own uncertainty rather than the score alone. The first assumes
+duel} (Mechanism~3), \emph{UCB-style enrollment} (Mechanism~4) and \emph{Thompson-style enrollment}
+(Mechanism~5) narrow it further, down to a single pair; Mechanism~3 sometimes resolves the
+pair by uncertainty, whereas the latter two incorporate it on every decision. The first assumes
 everything an enrollment could possibly know; the last assumes only what a real one has.
 
 \paragraph{What all five share.}
@@ -161,15 +161,16 @@ configuration that performs well partly by chance.
 
 \paragraph{Mechanism 1: the full-pool information reference.}
 At every round this mechanism scores the entire not-yet-enrolled pool with the current
-model and enrolls the highest-scoring patients outright; the model is then refit on the
-enlarged cohort and the next round repeats the same ranking over whoever remains.
+model, selects a batch, refits on the enlarged cohort, and repeats over whoever remains.
+Greedy selection enrolls the highest-scoring patients outright; the reported analyses use
+the annealed Gumbel sampling specified below instead.
 Because no other mechanism below is ever shown more of the pool at once, it provides an
 information ceiling and is used as a reference to evaluate them; this wider visibility
 does not guarantee a mathematical upper bound on realized performance. It is also
 the natural setting in which to compare candidate scores or ranking rules against each
 other, since the ranking itself is never distorted by a restricted view of the pool. A
-stochastic variant of the same ranking, annealing from randomized toward greedy as
-enrollment proceeds, is discussed alongside the other mechanisms' own uncertainty rules
+stochastic form of the same ranking, annealing from randomized toward greedy as
+enrollment proceeds, is discussed alongside the other mechanisms' selection rules
 below.
 
 \paragraph{Mechanism 2: the partially random enrollment.}
@@ -219,11 +220,10 @@ width is a frequentist standard error of the forest, and treating it as the spre
 belief is a modelling choice, defensible but not derived. Second, whether the mechanism
 actually explores is an empirical question and not a property of the rule: if the
 sampling scale is small relative to the spread of the scores, the draws almost always
-order the pair the same way the scores already did, and Thompson degenerates towards
-Mechanism~3. The check is direct, and it is carried out with the mechanisms: compare the
-average uncertainty of the enrolled cohort against that of the random control arm. A
-mechanism that claims to explore and enrolls patients no more uncertain than a coin flip
-would is not exploring.
+order the pair the same way the scores already did, and the rule approaches score-only
+pairwise selection. The experiments below report cohort composition, not the average uncertainty
+of the enrolled cohort relative to Random; that diagnostic remains a useful additional
+check rather than a result reported in this thesis.
 
 \vspace{10pt}
 
@@ -247,15 +247,14 @@ selection rule costs it.
 
 \vspace{10pt}
 
-\paragraph{How each mechanism resolves uncertainty.}
+\paragraph{How mechanisms use (or ignore) uncertainty.}
 A mechanism is fixed by two independent choices: how many candidates are visible at each
-decision, already described for each mechanism above, and how that choice folds in the
-model's own uncertainty once those candidates are in view. Three rules cover every use
-of the second choice across the five mechanisms, and each pairs naturally with a
-particular visibility scheme. Write $s(x)$ for the standardized acquisition score of
-the current model and $u(x)$ for its own uncertainty on patient $x$: the standard error the
-forest reports on the estimated effect, composited across endpoints on a z-scored scale so
-the two quantities are commensurable. Concretely, the raw scalar is
+decision, already described above, and whether the rule uses the model's own uncertainty
+when choosing among them. In the reported analyses, Mechanisms~3--5 use uncertainty;
+Mechanism~2 is score-only; and Mechanism~1 uses stochastic sampling from the score rather
+than uncertainty. Write $s(x)$ for the standardized acquisition score of the current model
+and $u(x)$ for its uncertainty on patient $x$: the forest's per-patient CATE standard
+errors, composited across endpoints on a z-scored scale. Concretely, the raw scalar is
 $s_{\mathrm{raw}}(x)=\text{bleed}(x)-\text{isch}(x)$ for the trade-off score used by the
 \emph{conflict} rule and
 $s_{\mathrm{raw}}(x)=\text{bleed}(x)+\text{isch}(x)$ for the win-win score used by
@@ -265,68 +264,69 @@ $0.4/0.4/0.2$ weighted ischemic composite as the trade-off plane above. The two 
 read the identical $(x,y)$ plane coordinates instead of collapsing them to this scalar
 difference or sum, and target $\pm45^\circ$ on that plane. $u(x)$ is composited the same way:
 the z-scored bleeding standard error plus the same $0.4/0.4/0.2$-weighted sum of the
-z-scored ischemic standard errors. The simplest rule ignores $u(x)$
-entirely and keeps the higher-scoring candidate; this is the default for Mechanism~1 and
-for Mechanism~2, whose own exploration weight (below) is left at zero throughout this
-work.
+z-scored ischemic standard errors. Since this composite is a z-score, it can be negative;
+the mechanisms that require a non-negative bonus or sampling scale apply the safeguards
+specified below.
 
 \vspace{10pt}
 
-\emph{Decaying exploration probability} (Mechanism~3, and Mechanism~1's stochastic
-variant) overrides the score with a schedule that starts exploratory and decays toward
-zero as enrollment proceeds. Applied to a pair (Mechanism~3), with probability
+\emph{Decaying uncertainty override} (Mechanism~3) replaces the score with an
+uncertainty-based choice on a schedule that falls rapidly but retains a small exploration
+rate. Applied to a pair, with probability
 $p(n) = \max(e^{-n/300}, 0.05)$, where $n$ counts patients enrolled past the seed, the
 pair is resolved by keeping whichever candidate carries the larger $u(x)$ instead of the
-higher-scoring one; the rest of the time the score decides. Applied to the whole visible
-pool at once (Mechanism~1's stochastic variant), an analogous schedule acts as a
-temperature on the ranking instead of an override probability: while it is high,
-patients enter the batch with a chance related to their score rather than strictly by
-rank, so a lower-scoring candidate can still be enrolled; as the temperature decays to
-zero the batch converges to Mechanism~1's default, greedy ranking. Both forms converge to
-pure exploitation as enrollment proceeds; only the size of the visible group, and the
-exact form the decay takes, changes how that convergence is carried out.
+higher-scoring one; otherwise the score decides. Thus Mechanism~3 never becomes purely
+exploitative: its uncertainty-based override remains active in 5\% of duels.
 
-\vspace{10pt}
-
-\emph{Additive exploration bonus} (Mechanisms~2 and~4):
+Mechanism~1 uses a different form of exploration that does \emph{not} use $u(x)$. In the
+reported runs it samples batches by a Gumbel perturbation of the score ranking, with
+temperature
 \[
-  \text{score}(x) \;=\; s(x) \;+\; c \cdot u(x),
+  \tau(n_{\mathrm{tot}}) = 5\exp\!\left(-8n_{\mathrm{tot}}/N\right),
 \]
-a fixed weight $c$ added on top of the score. The bonus is floored at zero, so a patient
+where $n_{\mathrm{tot}}$ is the total number enrolled and $N=4{,}579$. Its uncertainty
+bonus is fixed at zero. A positive temperature permits lower-scoring candidates to enter
+the batch; as it becomes small the selection approaches greedy score ranking.
+
+\vspace{10pt}
+
+\emph{Additive exploration bonus} (Mechanism~4, with Mechanism~2 as its score-only
+special case):
+\[
+  \text{score}(x) \;=\; s(x) \;+\; c \cdot \max\{u(x),0\}.
+\]
+a fixed weight $c$ is added on top of the score. The bonus is floored at zero, so a patient
 the model is \emph{more} confident about than the cohort average receives no bonus, never
-a penalty. $c$ is the price paid for exploration: Mechanism~4 pays it on every duel,
-while Mechanism~2 sets it to zero and falls back to the score-only rule above on the
-sample it draws each round. The rule is deterministic: for a given pair or sample the
-same candidate always wins, so a candidate that trails on the score can only win by
-having a large enough $u(x)$ to close the gap, every time.
+a penalty. Mechanism~4 uses $c=1$ on every duel, while Mechanism~2 sets $c=0$ and falls
+back to score-only selection on the sample it draws each round. The rule is deterministic:
+for a given pair or sample the same candidate always wins, so a candidate that trails on
+the score can only win by having a large enough $u(x)$ to close the gap, every time.
 
 \vspace{10pt}
 
-For each candidate, \emph{Thompson sampling} \citep{thompson1933} (Mechanism~5) draws one value from
-$\mathcal{N}(s(x), u(x))$, the model's belief about the
-patient's value with its own uncertainty as the width of that belief, and enrolls the
-candidate with the higher draw. The scale is floored at a small $\varepsilon$, since a
-standardized uncertainty can be zero or negative and every candidate must still have a
-valid, if narrow, distribution to sample from. Unlike the additive bonus, this rule is
-not deterministic: a trailing candidate wins a fraction of the time proportional to how
-much the two distributions overlap, so exploration is spread over many marginal
-decisions rather than concentrated on the pair with the largest gap. Two runs over the
-same arrival sequence therefore produce different cohorts; this is a property to report
-rather than a defect, and one more reason every mechanism is evaluated over many
-replicated cohorts instead of a single run.
+For each candidate, \emph{Thompson-style rule} \citep{thompson1933} (Mechanism~5) draws one value from
+$\mathcal{N}(s(x),\max\{u(x),10^{-3}\})$ and enrolls the candidate with the higher draw.
+The second argument is used as a sampling scale, not as a Bayesian posterior standard
+deviation; it is a Thompson-style heuristic rather than classical posterior
+sampling. Unlike the additive bonus, this rule is not deterministic: a trailing candidate
+wins a fraction of the time proportional to how much the two sampling distributions
+overlap, so exploration is spread over many marginal decisions rather than concentrated on
+the pair with the largest gap. Two runs over the same arrival sequence therefore produce
+different cohorts; this is a property to report rather than a defect, and one more reason
+every mechanism is evaluated over many replicated cohorts instead of a single run.
 
 \vspace{10pt}
 
-Put together, the five mechanisms are five combinations of a visibility scheme and an
-uncertainty rule:
+Put together, the five mechanisms are five combinations of a visibility scheme and a
+selection rule:
 \begin{itemize}
-  \item Mechanism~1: the whole remaining pool, score-only by default, with a
-  decaying-temperature variant.
+  \item Mechanism~1: the whole remaining pool, Gumbel-perturbed score sampling with
+  an annealed temperature and no use of $u(x)$.
   \item Mechanism~2: a random sample of the pool, score-only in the results reported
-  here, built on the same additive-bonus rule as Mechanism~4.
-  \item Mechanism~3: a pair, decaying exploration probability.
-  \item Mechanism~4: a pair, additive exploration bonus.
-  \item Mechanism~5: a pair, Thompson sampling.
+  here ($c=0$), built on the same additive-bonus form as Mechanism~4.
+  \item Mechanism~3: a pair, decaying uncertainty override with a 5\% floor.
+  \item Mechanism~4: a pair, additive uncertainty bonus ($c=1$).
+  \item Mechanism~5: a pair, Thompson-style sampling.
 \end{itemize}
 
 \vspace{10pt}

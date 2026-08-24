@@ -125,7 +125,10 @@ keeping its single best candidate, every not-yet-enrolled patient is scored with
 current model, an annealed Gumbel perturbation of that ranking selects 100 patients,
 the model is refit on the enlarged cohort, and the round repeats. Enrollment stops at
 3,500 of the 4,579 patients. The temperature decreases as the cohort grows, shifting
-selection from exploration toward exploitation as described in Chapter 3.
+selection from exploration toward exploitation as described in Chapter 3. In the reported
+runs, $\tau(n_{\mathrm{tot}})=5\exp(-8n_{\mathrm{tot}}/4{,}579)$ and the uncertainty bonus is
+zero: this is stochastic exploration of the score ranking, not selection by model
+uncertainty.
 
 \paragraph{Policies.}
 The mechanism is evaluated using the six non-random policies, with random enrollment
@@ -486,14 +489,14 @@ from Random on either axis.
 
 \paragraph{The mechanism.}
 Mechanisms 4 and 5 replace Mechanism 3's decaying-probability override with two
-uncertainty-aware selection rules, the UCB-style bonus heuristic and Thompson sampling,
+uncertainty-aware selection rules: the UCB-style and Thompson-style rules,
 introduced in Chapter 3. Patients still
 arrive and duel two at a time, the winner enrolled with the treatment and outcome they
 actually received and the loser discarded, and the model is refit every 100 enrollments.
 The UCB-style heuristic keeps the candidate with the higher score-plus-uncertainty-bonus,
 a rule with no random component. It is inspired by UCB's
 optimism-under-uncertainty principle, rather than an implementation of classical UCB1.
-Thompson sampling instead draws one sample per candidate from a normal
+The Thompson-style rule instead draws one sample per candidate from a normal
 distribution centred on the model's score, with the model's own uncertainty as the scale,
 and keeps the higher draw. A coin-flip random baseline, drawn from the same arriving
 pairs, grows alongside the guided cohort so both are compared at a common $n$; enrollment
@@ -507,7 +510,7 @@ the four combinations share the same seed cohort and stream, and each post-seed 
 cohort is compared with a post-seed coin-flip baseline drawn from the same arriving pairs.
 The common 1,000-patient seed is excluded from both reported groups. The UCB-style
 heuristic is deterministic conditional on a given cohort and arrival order, whereas
-Thompson sampling adds its own run-specific sampling variation.
+the Thompson-style rule adds its own run-specific sampling variation.
 
 \paragraph{Results.}
 
@@ -552,7 +555,7 @@ both changes are increases rather than decreases.
 
 Although the UCB-style heuristic has no internal random component, its selected cohort
 varies across replications because both the initial cohort and the arrival order are
-redrawn. Thompson sampling adds sampling variation on top of those two sources. For both
+redrawn. The Thompson-style rule adds sampling variation on top of those two sources. For both
 mechanisms, the selected and random groups remain paired within a replication because
 they are constructed from the same arriving patient pairs; the reported SEM therefore
 summarizes the run-to-run variation of the paired difference.
@@ -568,7 +571,7 @@ contrast, Conflict lowers the ischemic event rate under Mechanism~1 ($-0.16$ pp,
 $p<0.001$) and Mechanism~2 ($-0.06$ pp, $p=0.008$), but the direction does not carry
 consistently into the pairwise mechanisms. The difference is $+0.02$ pp ($p=0.200$) under
 Mechanism~3, $+0.04$ pp ($p=0.031$) under the UCB-style heuristic, and $-0.02$ pp
-($p=0.360$) under Thompson sampling. The larger internal separations for Mechanisms~1 and
+($p=0.360$) under the Thompson-style rule. The larger internal separations for Mechanisms~1 and
 2 ($-0.51$ and $-0.12$ pp) answer the different question of how strongly each rule splits
 the patients it evaluates.
 
