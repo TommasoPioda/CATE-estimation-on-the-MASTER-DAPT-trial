@@ -107,9 +107,9 @@ from the enrolled cohort, not a deferral. Mechanism 1 is the exception:
 because it re-scores the entire remaining pool every round rather than a
 fixed sample or pair, a patient left out of one round's batch is simply
 re-scored in the next round and remains eligible until the run ends, so being
-passed over there is not permanent. The model is refitted every $r$
-enrollments, so that each decision is taken by a model that has already
-learned from every enrollment before it.
+passed over there is not permanent. The model is refitted every $r$ enrollments. Each refit incorporates every enrollment
+observed up to that point; decisions made between refits use that fixed model and can
+therefore lag behind the accumulated cohort by at most $r-1$ enrollments.
 
 \paragraph{The seed, and why nothing is tuned after it.}
 The seed is the last cohort drawn at random. After that, patients are selected
@@ -252,18 +252,20 @@ A mechanism is fixed by two independent choices: how many candidates are visible
 decision, already described for each mechanism above, and how that choice folds in the
 model's own uncertainty once those candidates are in view. Three rules cover every use
 of the second choice across the five mechanisms, and each pairs naturally with a
-particular visibility scheme. Write $s(x)$ for the trade-off score of the current model
-and $u(x)$ for its own uncertainty on patient $x$: the standard error the forest reports
-on the estimated effect, composited across the endpoints and standardized on the same
-z-scored scale as $s(x)$, so the two are commensurable. Concretely, $s(x) = \text{bleed}(x)
-- \text{isch}(x)$ for the trade-off score used by the \emph{conflict} rule and $s(x) =
-\text{bleed}(x) + \text{isch}(x)$ for the win-win score used by \emph{net benefit}, where
-$\text{bleed}(x)$ is the rescaled bleeding CATE and $\text{isch}(x)$ the same $0.4/0.4/0.2$
-weighted ischemic composite as the trade-off plane above; the two Angle rules read the
-identical $(x, y)$ plane coordinates instead of collapsing them to this scalar difference
-or sum, and target $\pm 45^\circ$ on that plane. $u(x)$ is composited the same way: the
-z-scored bleeding standard error plus the same $0.4/0.4/0.2$-weighted sum of the z-scored
-ischemic standard errors. The simplest rule ignores $u(x)$
+particular visibility scheme. Write $s(x)$ for the standardized acquisition score of
+the current model and $u(x)$ for its own uncertainty on patient $x$: the standard error the
+forest reports on the estimated effect, composited across endpoints on a z-scored scale so
+the two quantities are commensurable. Concretely, the raw scalar is
+$s_{\mathrm{raw}}(x)=\text{bleed}(x)-\text{isch}(x)$ for the trade-off score used by the
+\emph{conflict} rule and
+$s_{\mathrm{raw}}(x)=\text{bleed}(x)+\text{isch}(x)$ for the win-win score used by
+\emph{net benefit}; the acquisition rule uses $s(x)=z(s_{\mathrm{raw}}(x))$.
+Here $\text{bleed}(x)$ is the rescaled bleeding CATE and $\text{isch}(x)$ the same
+$0.4/0.4/0.2$ weighted ischemic composite as the trade-off plane above. The two Angle rules
+read the identical $(x,y)$ plane coordinates instead of collapsing them to this scalar
+difference or sum, and target $\pm45^\circ$ on that plane. $u(x)$ is composited the same way:
+the z-scored bleeding standard error plus the same $0.4/0.4/0.2$-weighted sum of the
+z-scored ischemic standard errors. The simplest rule ignores $u(x)$
 entirely and keeps the higher-scoring candidate; this is the default for Mechanism~1 and
 for Mechanism~2, whose own exploration weight (below) is left at zero throughout this
 work.
@@ -338,14 +340,16 @@ bias.
 The reference point that avoids this circularity is not a model at all: the mechanisms are
 evaluated on the patients' actual, observed trial outcomes.
 
-The performances of the mechanisms are evaluated by comparing the outcome-event rates of
-the enrolled cohort against the discarded one, on each axis that defines the trade-off
-quadrant (\S~\ref{sec:multi-outcome}). A mechanism that genuinely concentrates the
-cohort on that quadrant should separate the two cohorts on both axes; one that merely
-reproduces the population baseline should not. Due to the seed- and luck-based nature of
-the enrollment process, a single run would not be enough to evaluate the performances of
-the mechanisms, so the enrollment process is repeated $N$ times for each mechanism and
-the results are averaged; Chapter~\ref{ch:guided-enrollment-applied} reports the exact
+Two complementary contrasts are used. Where a mechanism records a rejected group, the first compares the post-seed enrolled cohort
+with the patients the same rule leaves out or discards, on each axis that defines the
+trade-off quadrant (\S~\ref{sec:multi-outcome}); it measures whether the rule sorts the
+patients it sees. The second compares that post-seed enrolled cohort directly with the
+post-seed cohort produced by the mechanism-matched Random rule, paired by replication; it
+answers whether guidance changes cohort composition relative to unguided enrollment. The
+common random seed is excluded from these displayed groups because no policy selected its
+members. Due to the seed- and luck-based nature of the enrollment process, a single run
+would not be enough to evaluate performance, so the enrollment process is repeated $N$
+times for each mechanism and the results are averaged; Chapter~\ref{ch:guided-enrollment-applied} reports the exact
 value of $N$ used for MASTER DAPT, together with the resulting comparison of enrolled
 versus discarded event rates.
 

@@ -1,6 +1,7 @@
 """Repeated-run harness for Mechanisms 4 and 5 (UCB-style / Thompson pairwise duel),
 trade-off (`conflict = bleed - isch`) and win-win
-(`net_benefit = bleed + isch`) score regimes.
+(`net_benefit = bleed + isch`) score regimes. At each refit the active scalar score is
+z-standardized before it is combined with the standardized uncertainty term.
 
 `03_online_learning_duel_bandits_refactored.ipynb`'s own "Multi-seed robustness" section
 (cells 24-26) already runs this design once, but only ever displays/saves a partial summary
@@ -21,6 +22,8 @@ Run (from anywhere):
 Env overrides (all optional): M45_N_SEED (default 1000), M45_N_TRIALS (default 20),
 M45_N_RUNS (default 100), and M45_N_STOP (early-stop enrolled count for a fast smoke test).
 
+The saved comparison groups exclude the common 1,000-patient seed, so selected and random
+each contain the 1,789 post-seed winners and remain comparable with Mechanisms 2 and 3.
 Saves long-format results (one row per policy/regime/run/group) to
 `results/results_mechanism4_5_bandit_duel.parquet`.
 """
@@ -182,6 +185,7 @@ def one_run(run_id):
     enrol_seed = replication_seed
     prep = seed_fit_tune(N_SEED, seed=replication_seed, n_trials=N_TRIALS,
                          n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS)
+    seed_n = len(prep["seed_idx"])
     rows = []
     for pname, select in POLICIES.items():
         for rname, regime in REGIMES.items():
@@ -189,11 +193,13 @@ def one_run(run_id):
             enrolled, rnd = run_online(prep, N_STEPS, select=sel, enrol_seed=enrol_seed,
                                         score_fn=regime["score_fn"], score_col=regime["score_col"],
                                         n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS, n_stop=N_STOP)
-            for group_name, idx in [("selected", enrolled), ("random", rnd)]:
+            for group_name, idx in [("selected", enrolled[seed_n:]),
+                                    ("random", rnd[seed_n:])]:
                 r = _rates(idx)
                 rows.append(dict(policy=pname, regime=rname, run=run_id, group=group_name,
                                   n=len(idx), replication_seed=replication_seed,
-                                  enrol_seed=enrol_seed, tuning_seed=replication_seed, **r))
+                                  enrol_seed=enrol_seed, tuning_seed=replication_seed,
+                                  n_seed=N_SEED, n_trials=N_TRIALS, seed_included=False, **r))
     return rows
 
 

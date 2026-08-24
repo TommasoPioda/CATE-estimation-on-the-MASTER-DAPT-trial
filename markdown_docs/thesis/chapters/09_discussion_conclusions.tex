@@ -44,31 +44,34 @@ demonstrated clinical value over the simpler policy supported by the trial avera
 \vspace{10pt}
 
 The guided-enrollment experiments answer a related but distinct question. Several
-selection rules produce cohorts with observed event rates that differ significantly
-from random enrollment. Under Mechanism~2, reversing the ischemic score reverses the
-change in observed ischemic rate ($+0.14$ percentage points, $p<0.001$, versus $-0.15$
-percentage points, $p=0.015$). This mirror response indicates that the estimated ischemic axis contains a selection
-signal. Conflict lowers the ischemic rate under Mechanisms~1 and 2, but the direction is
-not robust in the pairwise-duel designs: the difference is non-significant under
-Mechanism~3, significantly positive under the UCB-style heuristic, and non-significantly
-negative under Thompson sampling. A CATE ranking can thus be too weak or unstable for
-held-out causal validation and still be associated with cohort composition when
-repeatedly used as a selection score.
+selection rules produce post-seed cohorts with observed event rates that differ
+significantly from mechanism-matched Random enrollment. Under Mechanism~2, reversing the
+ischemic score changes the internal included-versus-discarded contrast from $+0.14$
+percentage points ($p<0.001$) to $-0.15$ percentage points ($p=0.015$); in the direct
+comparison with Random, the corresponding differences are $+0.07$ and $-0.08$ percentage
+points ($p=0.009$ and $p=0.011$). This mirror response indicates that the estimated
+ischemic axis contains a selection signal. Conflict lowers the direct ischemic rate under
+Mechanisms~1 and 2, but the direction is not robust in the pairwise-duel designs: the
+difference is non-significant under Mechanism~3, significantly positive under the
+UCB-style heuristic, and non-significantly negative under Thompson sampling. A CATE
+ranking can thus be too weak or unstable for held-out causal validation and still be
+associated with cohort composition when repeatedly used as a selection score.
 
 \vspace{10pt}
 
-That association should not be overinterpreted. The largest single-axis separation is
-observed under Mechanism~1 with Angle conflict: the enrolled cohort's ischemic event
-rate is $0.67$ percentage points lower than that of the left-out group ($p<0.001$).
-Against random enrollment, the selected-cohort difference for the same rule is $-0.20$
-percentage points. The largest significant movement of both bleeding and
-ischemic rates in the same comparison occurs under Mechanism~2 and remains below half a
-percentage point on either axis ($-0.28$ and $-0.15$ percentage points). Directions vary
-across policies and mechanisms, and some significant movements oppose the intended
-clinical objective. Guided enrollment is distinguishable from random
-selection in these simulations, but the thesis does not show that it identifies patients
-with larger causal benefit, improves trial precision at equal sample size, or produces a
-clinically preferable cohort.
+That association should not be overinterpreted. The largest internal single-axis
+separation is observed under Mechanism~1 with Angle conflict: the enrolled cohort's
+ischemic event rate is $0.67$ percentage points lower than that of the left-out group
+($p<0.001$). Against Random enrollment, the difference for the same rule is $-0.20$
+percentage points. Three policy--mechanism combinations move both axes significantly in a direct comparison
+with Random: Angle conflict under Mechanism~1, and $+$isch under Mechanisms~2 and 3. The
+largest absolute changes in those comparisons are $0.20$ percentage points for ischemia
+under Mechanism~1 and $0.19$ percentage points for bleeding under Mechanism~3. Directions
+vary across policies and mechanisms, and some significant movements oppose the intended
+clinical objective. Guided enrollment is distinguishable from Random selection in these
+simulations, but the thesis does not show that it identifies patients with larger causal
+benefit, improves trial precision at equal sample size, or produces a clinically
+preferable cohort.
 
 \section{Interpretation of the Heterogeneity Results}
 

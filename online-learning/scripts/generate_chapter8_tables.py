@@ -6,7 +6,7 @@ Usage, from the repository root::
     python3 online-learning/scripts/generate_chapter8_tables.py
     python3 online-learning/scripts/generate_chapter8_tables.py --check
 
-The first command writes six LaTeX ``tabular`` fragments and a machine-readable
+The first command writes nine LaTeX ``tabular`` fragments and a machine-readable
 CSV audit trail.  ``--check`` recomputes everything and fails if the committed
 outputs are stale.  No causal forests are refitted: the inputs are the saved
 per-run Parquet artifacts produced by the mechanism scripts.
@@ -310,6 +310,31 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_b="discarded",
                 summary=result,
             )
+    vs_random_rows = []
+    included = data.loc[data["group"] == "included"]
+    for key, label in [item for item in table_order if item[0] != "random"]:
+        for endpoint, value_col in (
+            ("Bleeding", "bleed_rate"),
+            ("Ischaemic", "isch_weighted_rate"),
+        ):
+            wide = included.pivot(
+                index="run", columns="variant", values=value_col
+            ).reset_index()
+            result = paired_columns_summary(
+                wide, run_col="run", a_col=key, b_col="random"
+            )
+            vs_random_rows.append(_standard_row(label, endpoint, result))
+            _record(
+                audit,
+                source=M2_SOURCE,
+                table="ch8_mechanism2_vs_random",
+                policy=key,
+                endpoint=endpoint,
+                group_a="included under policy",
+                group_b="included under random",
+                summary=result,
+            )
+
     return {
         "ch8_mechanism2.tex": render_tabular(
             alignment="llrrrrr",
@@ -317,7 +342,14 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
                 "Policy & Endpoint & Included (\\%) & Discarded (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
             ],
             rows=rows,
-        )
+        ),
+        "ch8_mechanism2_vs_random.tex": render_tabular(
+            alignment="llrrrrr",
+            header_lines=[
+                "Policy & Endpoint & Selected (\\%) & Random (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
+            ],
+            rows=vs_random_rows,
+        ),
     }
 
 
@@ -382,6 +414,28 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
                 summary=result,
             )
 
+    vs_random_rows = []
+    included = data.loc[data["group"] == "included"]
+    for key, label in [item for item in table_order if item[0] != "random"]:
+        for endpoint in ("Bleeding", "Ischaemic"):
+            wide = included.pivot(
+                index="run", columns="policy", values=endpoint
+            ).reset_index()
+            result = paired_columns_summary(
+                wide, run_col="run", a_col=key, b_col="random"
+            )
+            vs_random_rows.append(_standard_row(label, endpoint, result))
+            _record(
+                audit,
+                source=M3_SOURCE,
+                table="ch8_mechanism3_vs_random",
+                policy=key,
+                endpoint=endpoint,
+                group_a="included under policy",
+                group_b="included under random",
+                summary=result,
+            )
+
     header = [
         "Duel rule & Included (\\%) & Excluded (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
     ]
@@ -397,17 +451,35 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
             header_lines=header,
             rows=ischaemic_rows,
         ),
+        "ch8_mechanism3_vs_random.tex": render_tabular(
+            alignment="llrrrrr",
+            header_lines=[
+                "Policy & Endpoint & Selected (\\%) & Random (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
+            ],
+            rows=vs_random_rows,
+        ),
     }
 
 
 def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
     required = {
-        "policy", "regime", "run", "group", "n", "bleed_rate", "isch_weighted_rate"
+        "policy", "regime", "run", "group", "n", "bleed_rate", "isch_weighted_rate",
+        "replication_seed", "enrol_seed", "tuning_seed", "n_seed", "n_trials",
+        "seed_included",
     }
     data = _read(M45_SOURCE, required)
     _require_run_count(data, ["policy", "regime", "group"], 100, "Mechanisms 4/5")
-    if set(data["n"]) != {2789}:
+    if set(data["n"]) != {1789}:
         raise ValueError("Unexpected Mechanisms 4/5 group size")
+    if set(data["n_seed"]) != {1000} or set(data["n_trials"]) != {20}:
+        raise ValueError("Unexpected Mechanisms 4/5 seed or tuning budget")
+    if set(data["seed_included"]) != {False}:
+        raise ValueError("Mechanisms 4/5 comparison groups must exclude the seed")
+    if not (
+        data["replication_seed"].equals(data["enrol_seed"])
+        and data["replication_seed"].equals(data["tuning_seed"])
+    ):
+        raise ValueError("Mechanisms 4/5 replication, arrival and tuning seeds differ")
     order = [
         ("UCB1", "UCB-style", "conflict", "Conflict"),
         ("UCB1", "UCB-style", "net_benefit", "Net-benefit"),
