@@ -409,13 +409,13 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
     if set(data["n"]) != {2789}:
         raise ValueError("Unexpected Mechanisms 4/5 group size")
     order = [
-        ("UCB1", "conflict", "Conflict"),
-        ("UCB1", "net_benefit", "Net-benefit"),
-        ("Thompson", "conflict", "Conflict"),
-        ("Thompson", "net_benefit", "Net-benefit"),
+        ("UCB1", "UCB-style", "conflict", "Conflict"),
+        ("UCB1", "UCB-style", "net_benefit", "Net-benefit"),
+        ("Thompson", "Thompson", "conflict", "Conflict"),
+        ("Thompson", "Thompson", "net_benefit", "Net-benefit"),
     ]
     rows = []
-    for policy, regime, regime_label in order:
+    for policy, policy_label, regime, regime_label in order:
         subset = data.loc[(data["policy"] == policy) & (data["regime"] == regime)]
         if subset.empty:
             raise ValueError(f"Missing Mechanisms 4/5 combination: {policy}/{regime}")
@@ -432,7 +432,7 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_b="random",
             )
             rows.append(
-                f"{policy} & {regime_label} & {endpoint} & "
+                f"{policy_label} & {regime_label} & {endpoint} & "
                 f"{format_rate(result.mean_a_pct)} & {format_rate(result.mean_b_pct)} & "
                 f"{format_diff(result.diff_pp)} & {format_sem(result.sem_diff_pp)} & "
                 f"{format_p(result.p_value)} \\\\"

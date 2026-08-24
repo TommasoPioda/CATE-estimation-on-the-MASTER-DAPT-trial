@@ -47,12 +47,13 @@ The guided-enrollment experiments answer a related but distinct question. Severa
 selection rules produce cohorts with observed event rates that differ significantly
 from random enrollment. Under Mechanism~2, reversing the ischemic score reverses the
 change in observed ischemic rate ($+0.14$ percentage points, $p<0.001$, versus $-0.15$
-percentage points, $p=0.015$). This mirror response indicates that the estimated
-ischemic axis contains a
-selection signal. Conflict also lowers the ischemic rate under Mechanisms~1, 2, 4 and
-5, while some rules move bleeding as well. A CATE ranking can thus be too weak or
-unstable for held-out causal validation and still be associated with cohort composition
-when repeatedly used as a selection score.
+percentage points, $p=0.015$). This mirror response indicates that the estimated ischemic axis contains a selection
+signal. Conflict lowers the ischemic rate under Mechanisms~1 and 2, but the direction is
+not robust in the pairwise-duel designs: the difference is non-significant under
+Mechanism~3, significantly positive under the UCB-style heuristic, and non-significantly
+negative under Thompson sampling. A CATE ranking can thus be too weak or unstable for
+held-out causal validation and still be associated with cohort composition when
+repeatedly used as a selection score.
 
 \vspace{10pt}
 
@@ -73,7 +74,7 @@ clinically preferable cohort.
 
 For overall bleeding, the minimum reliably detectable heterogeneity is $0.10$ on the
 absolute-risk scale, more than twice the average effect; for BARC 2/3/5 bleeding it is
-$0.05$, also larger than the average effect. The data therefore argue against large,
+$0.10$, more than three times the average effect. The data therefore argue against large,
 readily exploitable bleeding-effect heterogeneity, while remaining compatible with
 smaller heterogeneity.
 

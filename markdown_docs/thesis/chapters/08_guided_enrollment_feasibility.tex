@@ -17,10 +17,10 @@ the dimension a bleeding model would need.
 
 \vspace{10pt}
 
-This removes the premise of the strategy Chapter 3 was built for. An enrollment
-mechanism aims to select the cohort with the best combined gain in bleeding and ischemic
-risk; if the conflict between the two axes is mostly compression and cancellation rather
-than a real signal, there is nothing left for the mechanism to select on. The question
+This weakens the premise of the strategy Chapter 3 was built for. An enrollment
+mechanism is designed to prioritize patients using an estimated joint bleeding--ischemic
+score; if the conflict between the two axes is mostly compression and cancellation rather
+than a reproducible signal, that score may contain little information for selection. The question
 this chapter asks is not whether guided enrollment would help MASTER DAPT, but whether
 the machinery of Chapter 3, applied with the same criteria, can still be distinguished
 from a machinery that selects at random. The estimated CATE is taken at face value,
@@ -28,8 +28,8 @@ cohorts are built from it, and what is measured is whether those cohorts differ 
 \textbf{observed} bleeding and ischemic events.
 
 \paragraph{Selection policies.}
-As previously anticipated, the trade-off plane is built from two indipendent components,
-The bleeding CATE and the weighted ischemic CATE.
+As previously anticipated, the trade-off plane is built from two independent components:
+the bleeding CATE and the weighted ischemic CATE.
 This multidimensionality allows for several ways to combine them into a single scalar score.
 The six non-random policy variants and the random control are explained below.
 
@@ -60,6 +60,13 @@ formulas are fixed as follows.
           no-guidance control.
 \end{itemize}
 
+These scores are exploratory modelling constructs, not clinically validated utilities.
+In particular, the relative weighting of death, MI and stroke is fixed for this analysis
+rather than elicited from patients, clinicians or a prespecified decision framework.
+A change in an observed cohort event rate therefore describes the association induced by
+the selection rule; it does not, by itself, demonstrate a causal treatment benefit or a
+clinically preferable enrollment policy.
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\textwidth]{images/policy_selection_demonstration.png}
@@ -88,17 +95,16 @@ as in Chapter 6 throughout.
 The Angle scores use median-centred, IQR-rescaled plane coordinates rather than a
 linear combination, so they are not scalar sums/differences in the same sense as the two
 composite policies.
-Mechanisms~1--3 use 100 seeded replications, paired across policies by run identifier.
-Mechanisms~4--5 use 100 replications of one shared tuned seed cohort and one fixed arrival
-order; the replication seed changes only the Thompson draw and the coin-flip baseline.
+All mechanisms use 100 seeded replications, paired across policies by run identifier.
+For Mechanisms~4--5, each replication draws a new seed cohort and arrival order and
+performs its own hyperparameter tuning on that seed cohort.
 
 \paragraph{The Starting point.}
-All the mechanisms in this chapter start from the same amount of 1.000 patients drawn 
-at random from the full cohort of 4,579-patients. Once the seed is sampled the 
-forest hyperparameters are optimized over 20 Optuna trials on the seed cohort, by the same
-cross-validated AUTOC lower-bound criterion
-on the bleeding endpoint used throughout this chapter; the tuned configuration is then
-kept fixed for the rest of the run.
+All the mechanisms in this chapter start from 1,000 patients drawn at random from the
+full cohort of 4,579 patients. In every replication, the forest hyperparameters are
+optimized on that replication's seed cohort over 20 Optuna trials, using the same
+cross-validated AUTOC lower-bound criterion on the bleeding endpoint used throughout
+this chapter. The resulting configuration is then held fixed for the rest of that run.
 
 \paragraph{The Mirror Test}
 The two single-axis controls exist to answer a question the diagonal rule and the two
@@ -191,7 +197,7 @@ instead select cohorts with bleeding rates $0.38$ pp ($p=0.003$) and $0.40$ pp
     \label{tab:ch8-selected-rates-vs-random}
 \end{table}
 
-To assess whether this separation corresponds to a meaningful improvement over random 
+To assess whether this separation corresponds to a difference in observed cohort composition relative to random
 enrollment, Table \ref{tab:ch8-selected-rates-vs-random} compares the event rate among 
 selected patients under each policy with that obtained under the random control. The 
 comparison is paired by run across 100 simulations. On the ischemic axis, the $-$isch 
@@ -429,24 +435,28 @@ pairing is used correctly.
 \section{Mechanisms 4 and 5 on the Trade-off Plane}
 
 \paragraph{The mechanism.}
-Mechanisms 4 and 5 replace Mechanism 3's decaying-probability override with two bandit
-selection rules, UCB1 and Thompson sampling, introduced in Chapter 3. Patients still
+Mechanisms 4 and 5 replace Mechanism 3's decaying-probability override with two
+uncertainty-aware selection rules, the UCB-style bonus heuristic and Thompson sampling,
+introduced in Chapter 3. Patients still
 arrive and duel two at a time, the winner enrolled with the treatment and outcome they
 actually received and the loser discarded, and the model is refit every 100 enrollments.
-UCB1 keeps the candidate with the higher score-plus-uncertainty-bonus, a rule with no
-random component. Thompson sampling instead draws one sample per candidate from a normal
+The UCB-style heuristic keeps the candidate with the higher score-plus-uncertainty-bonus,
+a rule with no random component. It is inspired by UCB's
+optimism-under-uncertainty principle, rather than an implementation of classical UCB1.
+Thompson sampling instead draws one sample per candidate from a normal
 distribution centred on the model's score, with the model's own uncertainty as the scale,
 and keeps the higher draw. A coin-flip random baseline, drawn from the same arriving
 pairs, grows alongside the guided cohort so both are compared at a common $n$; enrollment
 reaches the same final cohort size of 2,789 patients as Mechanism 3.
 
 \paragraph{Selection rules.}
-Both bandit rules are run under the two linear scores introduced earlier in this chapter,
-net-benefit and conflict, for four policy-regime combinations. One hundred replications share
-one seed cohort, tuned once, and one arrival order; only the coin-flip random baseline
-and, for Thompson, the sampling draw itself vary from one replication to the next. UCB1's
-rule has no random component, so its own enrolled cohort is identical across all one hundred
-replications; only its matched random baseline differs run to run.
+Both uncertainty-aware rules are run under the two linear scores introduced earlier in
+this chapter, net-benefit and conflict, for four policy--regime combinations. The 100
+replications use run-specific seed cohorts and arrival orders. Within each replication,
+the four combinations share the same seed cohort and stream, and each selected cohort is
+compared with a coin-flip baseline drawn from the same arriving pairs. The UCB-style
+heuristic is deterministic conditional on a given cohort and arrival order, whereas
+Thompson sampling adds its own run-specific sampling variation.
 
 \paragraph{Results.}
 
@@ -457,8 +467,11 @@ replications; only its matched random baseline differs run to run.
     \input{generated_tables/ch8_mechanisms45.tex}
     \caption{Bleeding and weighted ischemic event rates among patients selected by the
     guided bandit and among the matched coin-flip random baseline, by policy and score
-    regime, averaged over 100 replications of 2,789 selected against 2,789
-    random-baseline patients drawn from the same arriving pairs. Ischemic combines
+    regime, averaged over 100 seeded replications of 2,789 selected against 2,789
+    random-baseline patients drawn from the same arriving pairs within each run. Seed
+    cohorts and arrival orders vary across runs, and the hyperparameters are retuned on
+    each run's seed cohort.
+    Ischemic combines
     death, MI and stroke through the ISCH\_WEIGHTS composite defined in
     Section~\ref{sec:ch8-premise}. Diff.\ is the selected-minus-random difference; SEM
     is the standard error of the paired per-run differences; $p$ is from a
@@ -468,47 +481,49 @@ replications; only its matched random baseline differs run to run.
     \label{tab:ch8-bandit-rate-comparison}
 \end{table}
 
-On the bleeding axis, UCB1 under net-benefit raises the selected group's rate by $0.34$ pp
-relative to random ($p<0.001$). Under conflict it instead lowers bleeding by $0.13$ pp
-($p<0.001$). Thompson under conflict points in the same direction ($-0.08$ pp), but
-does not reach conventional significance ($p=0.088$); under net-benefit it shows no
-effect ($0.00$ pp, $p=0.957$).
+On the bleeding axis, none of the four selected-versus-random differences is
+distinguishable from zero. For the UCB-style heuristic, the differences are $+0.02$ pp
+under conflict ($p=0.705$) and $+0.06$ pp under net-benefit ($p=0.379$). For Thompson
+sampling, they are $-0.02$ pp under conflict ($p=0.764$) and $+0.02$ pp under
+net-benefit ($p=0.828$).
 
 \vspace{10pt}
 
-On the ischemic axis, conflict again lowers the rate for both policies: $-0.02$ pp
-for UCB1 ($p=0.005$) and $-0.07$ pp for Thompson ($p<0.001$). Under net-benefit,
-UCB1 and Thompson instead show small increases of $+0.03$ pp ($p=0.001$) and $+0.04$
-pp ($p<0.001$), opposite to the direction the win-win rule is built to select for.
+On the ischemic axis, the UCB-style heuristic produces small increases under both
+conflict ($+0.03$ pp, $p=0.021$) and net-benefit ($+0.04$ pp, $p=0.002$). Thompson
+sampling produces a small decrease under conflict ($-0.02$ pp, $p=0.175$) and a small
+increase under net-benefit ($+0.01$ pp, $p=0.374$), neither distinguishable from zero.
+Thus, only the two UCB-style ischemic comparisons reach conventional significance, and
+both changes are increases rather than decreases.
 
 \vspace{10pt}
 
-Because the 100 replications share one arrival order and UCB1's rule has no random
-component, its own selected-group event rate does not vary across replications; the SEM
-reported for UCB1 above comes entirely from its random baseline. Thompson's sampling step
-gives its own selected cohort run-to-run variation, so both arms vary across replications.
-Their variation is paired rather than independent because both arms are constructed from
-the same arriving patient pairs.
+Although the UCB-style heuristic has no internal random component, its selected cohort
+varies across replications because both the initial cohort and the arrival order are
+redrawn. Thompson sampling adds sampling variation on top of those two sources. For both
+mechanisms, the selected and random groups remain paired within a replication because
+they are constructed from the same arriving patient pairs; the reported SEM therefore
+summarizes the run-to-run variation of the paired difference.
 
 \vspace{10pt}
 
 \section{Chapter Summary}
 
-Across the five mechanisms, the conflict score lowers the ischemic event rate in every
-whole-cohort or sample-and-select setting where it is tested: $-0.51$ pp under Mechanism 1
-(Table~\ref{tab:ch8-ischaemic-rate-comparison}), $-0.12$ pp under Mechanism 2
-($p=0.010$, Table~\ref{tab:ch8-mechanism2-rate-comparison}), and $-0.02$ pp (UCB1,
-$p=0.005$) to $-0.07$ pp (Thompson, $p<0.001$) under Mechanisms 4 and 5
-(Table~\ref{tab:ch8-bandit-rate-comparison}). Run as
-a pairwise duel under Mechanism 3, the same score does not reach significance on the
-ischemic composite ($+0.04$ pp, $p=0.231$) or on bleeding ($p=0.225$); the composite
-null hides a significant MI effect ($+0.14$ pp, $p=0.020$) that cancels against a
-non-significant stroke trend running the opposite way
+The conflict score lowers the ischemic event rate under Mechanism 1 ($-0.51$ pp;
+Table~\ref{tab:ch8-ischaemic-rate-comparison}) and Mechanism 2 ($-0.12$ pp, $p=0.010$;
+Table~\ref{tab:ch8-mechanism2-rate-comparison}), but that direction does not carry
+consistently into the pairwise-duel mechanisms. Under Mechanism 3 the difference is
+$+0.04$ pp ($p=0.231$); under the UCB-style heuristic it is $+0.03$ pp ($p=0.021$),
+whereas under Thompson sampling it is $-0.02$ pp ($p=0.175$)
+(Table~\ref{tab:ch8-bandit-rate-comparison}). The Mechanism 3 composite null also hides
+a significant MI effect ($+0.14$ pp, $p=0.020$) that cancels against a non-significant
+stroke trend running in the opposite direction
 (Table~\ref{tab:ch8-duel-rate-comparison}, Table~\ref{tab:ch8-duel-composite-comparison}).
 
 \vspace{10pt}
 
-The mirror test gives the clearest evidence that the ischemic effect above is not noise.
+The mirror test provides the clearest evidence that the ischemic score is associated with
+the observed ischemic outcome in these simulations.
 Under Mechanism 2, reversing the ischemic axis reverses the effect on real ischemic
 events: $+0.14$ pp for $+$isch ($p<0.001$) against $-0.15$ pp for $-$isch ($p=0.015$)
 (Table~\ref{tab:ch8-mechanism2-rate-comparison}). The axis the Chapter 6 causal forests
@@ -517,27 +532,25 @@ finding that MI and stroke largely cancel inside the aggregate score.
 
 \vspace{10pt}
 
-The bleeding axis moves, but not in one direction. Angle net-benefit raises it under
-Mechanism 2 ($+0.34$ pp, $p=0.006$; Net-benefit points the same way but does not reach
-conventional significance, $+0.22$ pp, $p=0.053$), and UCB1 under net-benefit raises it
-further under Mechanism 4 ($+0.34$ pp, $p<0.001$). UCB1 under conflict lowers it by
-$0.13$ pp ($p<0.001$); Thompson points in the same direction without significance
-($-0.08$ pp, $p=0.088$). The scalar conflict score does not lower bleeding under
-Mechanisms 1 or 2 ($p=0.139$ and $p=0.282$).
+The bleeding axis also moves inconsistently. Angle net-benefit raises it under
+Mechanism 2 ($+0.34$ pp, $p=0.006$), while net-benefit points in the same direction but
+does not reach conventional significance ($+0.22$ pp, $p=0.053$). The scalar conflict
+score does not lower bleeding under Mechanisms 1 or 2 ($p=0.139$ and $p=0.282$). Under
+Mechanisms 4 and 5, none of the four bleeding differences is significant; their absolute
+magnitudes are at most $0.06$ pp and all $p$-values are at least $0.379$.
 
 \vspace{10pt}
 
-Six policy--mechanism combinations move both axes significantly in the same direction
+Four policy--mechanism combinations move both axes significantly in the same direction
 at once. Under Mechanism 1, Angle conflict lowers bleeding by $0.13$ pp and ischemic
 events by $0.20$ pp (both $p=0.003$ or smaller). Under Mechanism 2, $-$isch lowers
-bleeding by $0.28$ pp ($p=0.016$) and the
-ischemic rate by $0.15$ pp ($p=0.015$), whereas $+$isch raises them by $0.39$ pp
-($p=0.001$) and $0.14$ pp ($p<0.001$), respectively. Under Mechanism 3, $+$isch again
-raises both axes ($+0.31$ pp, $p=0.014$, and $+0.15$ pp, $p<0.001$). Under Mechanism 4,
-UCB1 with conflict lowers bleeding by $0.13$ pp ($p<0.001$) and the ischemic rate by
-$0.02$ pp ($p=0.005$), whereas net-benefit raises them by $0.34$ pp ($p<0.001$) and
-$0.03$ pp ($p=0.001$). The bleeding movement under $-$isch follows from correlation
-between the two CATEs, because that rule ranks patients on the ischemic component alone.
+bleeding by $0.28$ pp ($p=0.016$) and the ischemic rate by $0.15$ pp ($p=0.015$),
+whereas $+$isch raises them by $0.39$ pp ($p=0.001$) and $0.14$ pp ($p<0.001$),
+respectively. Under Mechanism 3, $+$isch again raises both axes ($+0.31$ pp, $p=0.014$,
+and $+0.15$ pp, $p<0.001$). Neither Mechanism 4 nor Mechanism 5 moves both axes
+significantly in the same comparison. The bleeding movement under $-$isch follows from
+correlation between the two CATEs, because that rule ranks patients on the ischemic
+component alone.
 
 \vspace{10pt}
 
@@ -552,4 +565,6 @@ percentage points for Angle conflict, or $-0.20$ percentage points against rando
 largest simultaneous movement of both axes in an included-versus-discarded comparison occurs for $+$isch under
 Mechanism~2, with changes of $+0.39$ percentage points for bleeding and $+0.14$
 percentage points for ischemic events. The compression described in Chapter~6 narrows
-what a selection rule can find without eliminating it.
+what a selection rule can find without eliminating it. These differences in selected
+cohort composition do not validate the CATE ranking as causal targeting, establish a
+clinical benefit, or show improved trial precision at a fixed sample size.

@@ -91,10 +91,15 @@ ranking metric such as AUROC but not out of a subtraction, so two
 uncalibrated, well-discriminating models can still produce an apparent effect
 where the true probabilities agree.
 
+\iffalse
 \paragraph{Causal forest.}
 The causal forest estimates the treatment effect $\tau(x)$ directly,
 rather than fitting two separate outcome models and taking their
-difference. It uses double machine learning \citep{kennedy2023} and the causal-forest procedure of \citet{wager2018} and \citet{athey2019grf}:
+difference. Its objective is to partition the
+covariate space into groups of patients for whom the treatment effect is expected to differ,
+and then estimate a local treatment effect within each region.
+It uses double machine learning \citep{kennedy2023} and the 
+causal-forest procedure of \citet{wager2018} and \citet{athey2019grf}:
 writing $\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]$ and
 $\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]$ for the fitted outcome and
 treatment models, the forest works on the residuals
@@ -116,6 +121,85 @@ effects within each leaf. Honest splitting addresses a different problem,
 overfitting from using the same observations to both choose a split and
 estimate the effect inside it, and it remains relevant whether or not
 treatment is randomized.
+\fi
+
+\paragraph{Causal forest.}
+
+The causal forest estimates treatment-effect heterogeneity directly, rather than fitting two
+separate outcome models and subtracting their predictions. Its objective is to partition the
+covariate space into groups of patients for whom the treatment effect is expected to differ,
+and then estimate a local treatment effect within each region.
+
+The implementation used here combines the causal-forest framework of
+\citet{wager2018} and \citet{athey2019grf} with double machine learning
+\citep{kennedy2023}. Before the forest searches for heterogeneity, it removes the parts
+of the outcome and treatment assignment that can already be explained by the observed
+covariates. Let
+
+\[
+\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]
+\]
+
+denote the expected outcome given the covariates, and
+
+\[
+\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]
+\]
+
+the probability of receiving treatment. For each patient, the corresponding residuals are
+
+\[
+\tilde Y_i = Y_i - \hat m(X_i), \qquad
+\tilde T_i = T_i - \hat e(X_i).
+\]
+
+The outcome residual $\tilde Y_i$ represents the part of the observed outcome that is not
+explained by the patient's baseline characteristics, while $\tilde T_i$ represents the part
+of treatment assignment not explained by those same characteristics. The forest therefore
+searches for treatment-effect heterogeneity using these residual quantities rather than the
+raw outcome and treatment variables.
+
+Each tree recursively partitions patients according to their covariates $X$, looking for
+splits that separate regions with different treatment effects. Within each resulting leaf,
+the local treatment effect is estimated from the relationship between the residualized
+outcome and residualized treatment,
+
+\[
+\tilde Y_i \approx \tau(x)\,\tilde T_i.
+\]
+
+The coefficient $\tau(x)$ therefore represents the local treatment effect for patients
+belonging to that region of the covariate space. Across the forest, a patient falls into
+different leaves in different trees, and the corresponding local treatment-effect estimates
+are aggregated to obtain the final CATE estimate
+
+\[
+\hat\tau(x).
+\]
+
+In an observational study, residualizing treatment assignment is important because the
+probability of receiving treatment may depend on $X$, potentially introducing confounding.
+In MASTER DAPT, however, treatment is randomized, so the propensity score is fixed by
+design and does not systematically depend on patient characteristics. The treatment residual
+therefore mainly represents the randomized deviation from the treatment-assignment
+probability.
+
+Residualizing the outcome remains useful even under randomization. By subtracting the
+component of $Y$ that can already be predicted from $X$, the model removes prognostic
+variation that is unrelated to treatment. This is analogous to covariate adjustment in a
+randomized trial: it does not change the validity of the treatment comparison, but can
+improve its precision by allowing the forest to focus more directly on variation in the
+treatment effect.
+
+A second and separate protection against overfitting is provided by \emph{honest splitting}.
+The observations used to determine where a tree should split are separated from those used
+to estimate the treatment effect within the resulting leaves. The forest therefore cannot
+use the same random outcome fluctuation both to define a subgroup and to estimate an
+apparently different treatment effect within that subgroup.
+
+This distinction remains important even in a randomized trial. Randomization protects the
+treatment comparison from confounding, whereas honest splitting protects the estimated
+heterogeneity from adaptive overfitting.
 
 \paragraph{Bayesian causal forest (BCF).}
 A Bayesian counterpart \citep{hahn2020bcf} writes the outcome as

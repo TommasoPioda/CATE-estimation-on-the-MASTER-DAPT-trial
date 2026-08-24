@@ -1,4 +1,4 @@
-"""Repeated-run harness for Mechanisms 4 and 5 (UCB1 / Thompson-sampling pairwise duel),
+"""Repeated-run harness for Mechanisms 4 and 5 (UCB-style / Thompson pairwise duel),
 trade-off (`conflict = bleed - isch`) and win-win
 (`net_benefit = bleed + isch`) score regimes.
 
@@ -6,21 +6,20 @@ trade-off (`conflict = bleed - isch`) and win-win
 (cells 24-26) already runs this design once, but only ever displays/saves a partial summary
 (two of its twenty-four columns were truncated by pandas' own display width when the notebook
 was executed, and the run was never written to disk) -- there is no complete, reproducible
-record of it. This script re-implements the same design as a standalone, saved run: one seed
-cohort is drawn and hyper-tuned ONCE (`seed=42`, `N_TRIALS=20` Optuna trials on the bleeding
-AUTOC lower bound), then reused for every replication together with the same arrival order.
-`enrol_seed` changes only the Thompson draw and the coin-flip baseline RNG; it does not
-reshuffle `prep['order']`. This is lighter than
-Mechanisms 1-3 (which retune per replication): re-tuning per replication here would multiply
-the cost of an already expensive online loop (a full causal-forest refit every 100 enrolments,
-~18 refits per run) by another factor of N_RUNS. Backs "Mechanisms 4 and 5 on the Trade-off
-Plane" in markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex.
+record of it. This script implements the design as a standalone, saved Monte Carlo run.
+Each replication draws its own 1,000-patient seed cohort and arrival order, then runs
+20 Optuna trials on that seed cohort using the bleeding AUTOC lower bound. The resulting
+hyperparameters, seed cohort and stream are shared across the four policy--regime
+combinations within that replication to preserve paired comparisons. Run-specific RNG
+streams also drive Thompson sampling and the matched coin-flip baseline. Backs
+"Mechanisms 4 and 5 on the Trade-off Plane" in
+markdown_docs/thesis/chapters/08_guided_enrollment_feasibility.tex.
 
 Run (from anywhere):
     M45_N_RUNS=100 python3 online-learning/scripts/mechanism4_5_repeated_runs.py
 
-Env overrides (all optional): M45_N_RUNS (default 100), M45_N_STOP (early-stop enrolled count,
-for a fast smoke test).
+Env overrides (all optional): M45_N_SEED (default 1000), M45_N_TRIALS (default 20),
+M45_N_RUNS (default 100), and M45_N_STOP (early-stop enrolled count for a fast smoke test).
 
 Saves long-format results (one row per policy/regime/run/group) to
 `results/results_mechanism4_5_bandit_duel.parquet`.
@@ -51,8 +50,6 @@ from online_learning_policies import (  # noqa: E402
     SCORE_CONVENTION, policy_thompson, policy_ucb,
 )
 from run_archiving import start_run_archive  # noqa: E402
-
-RUN_DIR = start_run_archive(OL_DIR, "mechanism4_5")
 
 SEED = 42
 np.random.seed(SEED)
@@ -105,7 +102,7 @@ REFIT_EVERY = 100
 
 def run_online(prep, n_steps, select, enrol_seed=0, *, score_fn=conflict_from_model,
                 score_col="conflict", n_jobs=32, lgbm_n_jobs=16, n_stop=None):
-    """Patients arrive two at a time; `select` (UCB1 or Thompson) keeps the more informative
+    """Patients arrive two at a time; `select` (UCB-style or Thompson) keeps the more informative
     one, enrolled with its real, trial-randomised (T, Y). A coin-flip baseline of the same
     pairs grows alongside it (no refit) so both are read at a common n."""
     rng = np.random.default_rng(enrol_seed)
@@ -159,12 +156,13 @@ def _rates(idx):
                 death_rate=death.mean(), mi_rate=mi.mean(), stroke_rate=stroke.mean())
 
 
-N_SEED, N_TRIALS = 1000, 20
+N_SEED = int(os.environ.get("M45_N_SEED", 1000))
+N_TRIALS = int(os.environ.get("M45_N_TRIALS", 20))
 N_STEPS = (N - N_SEED) // 2
 N_RUNS = int(os.environ.get("M45_N_RUNS", 100))
 N_STOP = os.environ.get("M45_N_STOP")
 N_STOP = int(N_STOP) if N_STOP else None
-TUNE_SEED = 42   # seed cohort and its hyper-tuning are drawn ONCE and reused for every replication
+RUN_SEED_BASE = SEED
 
 POLICIES = {"UCB1": policy_ucb, "Thompson": policy_thompson}
 REGIMES = {
@@ -178,29 +176,31 @@ FIT_N_JOBS = max(TOTAL_CORES // N_JOBS, 1)
 LGBM_N_JOBS = max(FIT_N_JOBS // 2, 1)
 print(f"N_RUNS={N_RUNS}  N_JOBS={N_JOBS}  FIT_N_JOBS={FIT_N_JOBS}", flush=True)
 
-print("Tuning seed once (shared across all replications, per the notebook's own design) ...", flush=True)
-PREP = seed_fit_tune(N_SEED, seed=TUNE_SEED, n_trials=N_TRIALS,
-                      n_jobs=TOTAL_CORES, lgbm_n_jobs=max(TOTAL_CORES // 2, 1))
-print("Seed tuning complete.", flush=True)
-
 
 def one_run(run_id):
+    replication_seed = RUN_SEED_BASE + run_id
+    enrol_seed = replication_seed
+    prep = seed_fit_tune(N_SEED, seed=replication_seed, n_trials=N_TRIALS,
+                         n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS)
     rows = []
     for pname, select in POLICIES.items():
         for rname, regime in REGIMES.items():
             sel = partial(select, score_col=regime["score_col"])
-            enrolled, rnd = run_online(PREP, N_STEPS, select=sel, enrol_seed=run_id,
+            enrolled, rnd = run_online(prep, N_STEPS, select=sel, enrol_seed=enrol_seed,
                                         score_fn=regime["score_fn"], score_col=regime["score_col"],
                                         n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS, n_stop=N_STOP)
             for group_name, idx in [("selected", enrolled), ("random", rnd)]:
                 r = _rates(idx)
                 rows.append(dict(policy=pname, regime=rname, run=run_id, group=group_name,
-                                  n=len(idx), **r))
+                                  n=len(idx), replication_seed=replication_seed,
+                                  enrol_seed=enrol_seed, tuning_seed=replication_seed, **r))
     return rows
 
 
 if __name__ == "__main__":
+    run_dir = start_run_archive(OL_DIR, "mechanism4_5")
     t0 = time.time()
+    print("Tuning hyperparameters separately on every replication seed cohort ...", flush=True)
     out = Parallel(n_jobs=N_JOBS, backend="loky", verbose=10)(
         delayed(one_run)(r) for r in range(N_RUNS))
     results_df = pd.DataFrame([row for run_rows in out for row in run_rows])
@@ -210,9 +210,9 @@ if __name__ == "__main__":
 
     out_path = os.path.join(OL_DIR, "results", "results_mechanism4_5_bandit_duel.parquet")
     results_df.to_parquet(out_path)
-    results_df.to_parquet(os.path.join(RUN_DIR, os.path.basename(out_path)))
+    results_df.to_parquet(os.path.join(run_dir, os.path.basename(out_path)))
     print("saved:", out_path, flush=True)
-    print("archived copy:", RUN_DIR, flush=True)
+    print("archived copy:", run_dir, flush=True)
 
     summary = (results_df.groupby(["policy", "regime", "group"])[["isch_rate", "bleed_rate"]]
                .agg(["mean", "std"]))

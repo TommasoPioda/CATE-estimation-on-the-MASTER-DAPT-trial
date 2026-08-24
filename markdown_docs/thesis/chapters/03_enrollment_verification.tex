@@ -88,7 +88,7 @@ realistic one rather than five competing proposals of which one is meant to win.
 \emph{The full-pool information reference} (Mechanism~1) sees the entire remaining pool at every decision
 and enrolls the best-scoring patients outright. \emph{Partially random enrollment}
 (Mechanism~2) narrows that view to a random sample redrawn at each round. \emph{The
-duel} (Mechanism~3), \emph{UCB enrollment} (Mechanism~4) and \emph{Thompson enrollment}
+duel} (Mechanism~3), \emph{UCB-style enrollment} (Mechanism~4) and \emph{Thompson enrollment}
 (Mechanism~5) narrow it further, down to a single pair; the latter two resolve that pair
 with the model's own uncertainty rather than the score alone. The first assumes
 everything an enrollment could possibly know; the last assumes only what a real one has.
@@ -187,17 +187,17 @@ two patients in that fixed arrival stream form a pair. The model is refit every
 $r$ enrollments. How the pair is resolved, together with the uncertainty rule this
 mechanism uses, is described below once all five mechanisms are on the table.
 
-\paragraph{Mechanism 4: UCB enrollment.}
+\paragraph{Mechanism 4: UCB-style uncertainty-bonus enrollment.}
 
-UCB1, \emph{Upper Confidence Bound}, variant 1 \citep{auer2002},
-keeps the duel of Mechanism~3 and changes only how the pair is resolved: an additive
-exploration bonus on top of the score, described below alongside the other mechanisms'
-uncertainty rules.
+This mechanism is inspired by the optimism-under-uncertainty principle of
+upper-confidence-bound methods \citep{auer2002}. It keeps the duel of Mechanism~3 and
+changes only how the pair is resolved: an additive exploration bonus on top of the score,
+described below alongside the other mechanisms' uncertainty rules.
 
 \vspace{10pt}
 
-One point must be stated plainly, because the name suggests more than the setting
-delivers. This is not a bandit in the textbook sense: an arm is never pulled twice, each
+The distinction matters in this setting. This is not UCB1 in the classical multi-armed
+bandit sense: an arm is never pulled twice, each
 patient arrives once, and the reward is never observed, since the reward would be the
 individual treatment effect, which is precisely the quantity that Chapter~2 has
 established is unobservable. What is being explored is a region of the covariate space
