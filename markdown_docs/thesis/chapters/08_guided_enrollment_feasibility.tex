@@ -84,11 +84,10 @@ the two Angle rules are evaluated separately at $+45^\circ$ and $-45^\circ$.
 
 Throughout this chapter, the selection scores use the aggregation of the three
 ischemic endpoints weighted by the same ISCH\_WEIGHTS used in Chapter 6. The observed
-ischemic outcome reported by Mechanism 1 is the proportion of patients with at least
-one of death, MI or stroke, matching its saved per-round counts and figures. Mechanisms
-2--5 instead report the weighted endpoint-rate composite
-$0.2\,\text{death}+0.4\,\text{MI}+0.4\,\text{stroke}$. The bleeding outcome is the same
-as in Chapter 6 throughout.
+ischemic outcome reported for every mechanism is the proportion of patients with at
+least one of death, MI or stroke, with each patient counted once. This matches the saved
+per-round counts and figures of Mechanism~1 and is used uniformly in the tables for
+Mechanisms~2--5. The bleeding outcome is the same as in Chapter 6 throughout.
 
 \vspace{10pt}
 
@@ -316,11 +315,11 @@ identifier; the model is tuned and refit separately in each replication.
 \small
 \setlength{\tabcolsep}{5pt}
 \input{generated_tables/ch8_mechanism2.tex}
-\caption{Bleeding and weighted ischemic event rates among patients included in and
+\caption{Bleeding and any-ischaemic-event rates among patients included in and
 discarded from the cohort under Mechanism 2, by selection policy, averaged over 100
 seeded replications of 1,789 included against 1,790 discarded.
-Ischemic combines death, MI and stroke through the ISCH\_WEIGHTS composite defined in
-Section~\ref{sec:ch8-premise}. Diff.\ is the included-minus-discarded difference; SEM
+An ischaemic event denotes the occurrence of at least one of death, MI or stroke, with
+each patient counted once. Diff.\ is the included-minus-discarded difference; SEM
 is the standard error of the paired per-run differences; $p$ is from a
 paired two-sided Wilcoxon signed-rank test on the per-replication included-minus-discarded
 difference, the non-parametric counterpart that does not assume the difference is
@@ -346,21 +345,22 @@ the paired per-run differences.}
 \label{tab:ch8-mechanism2-vs-random}
 \end{table}
 
-On the ischemic axis, $+$isch and $-$isch move the included group in opposite
-directions: $+0.14$ pp and $-0.15$ pp relative to the discarded group ($p<0.001$
-and $p=0.015$). This is the symmetric response the mirror-test logic introduced earlier
-in this chapter was built to detect, and it indicates that the ischemic axis, taken
-in isolation, is associated with which patients subsequently experience an ischemic
-event. Conflict also lowers the ischemic rate, by $0.12$ pp ($p=0.010$), with no matching change on
-bleeding ($-0.13$ pp, $p=0.282$); the same pairing, a significant ischemic effect
-and no bleeding effect, appears for conflict under Mechanism~1, where it lowers
-the ischemic rate of the selected cohort by $0.51$ pp relative to the left-out group
-($p<0.001$, Table~\ref{tab:ch8-ischaemic-rate-comparison}) without a significant
+On the any-ischaemic-event endpoint, $+$isch and $-$isch move the included group in
+opposite directions: $+0.38$ pp and $-0.40$ pp relative to the discarded group
+($p<0.001$ and $p=0.013$). This is the symmetric response the mirror-test logic
+introduced earlier in this chapter was built to detect, and it indicates that the
+ischemic axis, taken in isolation, is associated with which patients subsequently
+experience at least one ischemic event. Conflict also lowers this rate, by $0.32$ pp
+($p=0.007$), with no matching change on bleeding ($-0.13$ pp, $p=0.282$); the same
+pairing, a significant ischemic effect and no bleeding effect, appears for conflict
+under Mechanism~1, where it lowers the ischemic rate of the selected cohort by $0.51$
+pp relative to the left-out group ($p<0.001$,
+Table~\ref{tab:ch8-ischaemic-rate-comparison}) without a significant
 selected-versus-left-out bleeding effect ($p=0.176$,
-Table~\ref{tab:ch8-bleeding-rate-comparison}). Net-benefit
-and Angle net-benefit show no significant change on the ischemic axis
-($p=0.618$ and $p=0.101$), while Angle conflict lowers it by $0.10$ pp ($p=0.036$)
-and random enrollment leaves it at $+0.01$ pp ($p=0.695$).
+Table~\ref{tab:ch8-bleeding-rate-comparison}). Net-benefit and Angle net-benefit show
+no significant change on this endpoint ($p=0.834$ and $p=0.122$), while Angle conflict
+lowers it by $0.29$ pp ($p=0.020$) and random enrollment leaves it at $+0.01$ pp
+($p=0.823$).
 
 \vspace{10pt}
 
@@ -374,12 +374,13 @@ wide enough that the difference is not distinguishable from zero once the pairin
 seed cohort is respected. Conflict, Angle conflict and random show no significant change
 on bleeding ($p=0.282$, $p=0.147$ and $p=0.640$).
 
-The direct comparison with Random preserves the ischemic mirror response but, as expected,
-with smaller magnitudes: $+$isch is $+0.07$ pp above Random ($p=0.009$), whereas $-$isch is
-$-0.08$ pp below it ($p=0.011$). Conflict and Angle conflict also select lower ischemic rates
-than Random ($-0.06$ pp, $p=0.008$, and $-0.05$ pp, $p=0.030$). On bleeding, Angle
-net-benefit and $+$isch are respectively $+0.16$ pp ($p=0.039$) and $+0.18$ pp
-($p=0.047$) above Random; the remaining direct contrasts are not significant.
+The direct comparison with Random preserves the any-event mirror response but, as expected,
+with smaller magnitudes: $+$isch is $+0.18$ pp above Random ($p=0.005$), whereas $-$isch is
+$-0.21$ pp below it ($p=0.014$). Conflict and Angle conflict also select lower
+any-ischaemic-event rates than Random ($-0.17$ pp, $p=0.010$, and $-0.15$ pp,
+$p=0.030$). On bleeding, Angle net-benefit and $+$isch are respectively $+0.16$ pp
+($p=0.039$) and $+0.18$ pp ($p=0.047$) above Random; the remaining direct contrasts
+are not significant.
 
 \section{Mechanism 3 on the Trade-off Plane}
 
@@ -425,10 +426,10 @@ in each replication to average out the noise of a single arrival order.
 
     \textbf{Bleeding}\par\smallskip
     \input{generated_tables/ch8_mechanism3_bleeding.tex}
-    \caption{Bleeding and weighted ischemic event rates among duel winners (included)
-    and duel losers (excluded) under Mechanism 3, by duel rule. Ischemic combines
-    death, MI and stroke through the same ISCH\_WEIGHTS composite defined in
-    Section~\ref{sec:ch8-premise}. Results are averaged over 100
+    \caption{Bleeding and any-ischaemic-event rates among duel winners (included)
+    and duel losers (excluded) under Mechanism 3, by duel rule. An ischaemic event
+    denotes the occurrence of at least one of death, MI or stroke, with each patient
+    counted once. Results are averaged over 100
     seeded replications, each enrolling 1,789 winners against 1,789
     losers. Diff.\ is the included-minus-excluded difference; SEM is the standard
     error of the paired per-run differences; $p$ is from a paired two-sided
@@ -456,32 +457,27 @@ compares each rule's winners with the winners of the Random duel under the same 
 
 Table~\ref{tab:ch8-duel-rate-comparison} in Appendix~\ref{app:supplementary-tables}
 reports the same comparison broken down by individual endpoint (bleeding, death, MI,
-stroke) rather than collapsed into the ischemic composite.
+stroke), rather than using the any-ischaemic-event union.
 
 \vspace{10pt}
 
-Table~\ref{tab:ch8-duel-composite-comparison} restates the same duels on the two-axis
-format used elsewhere in this chapter. $+$isch and Angle net-benefit stay significant on the
-ischemic composite, in the same direction already seen component by component
-($+0.15$ pp, $p<0.001$ and $+0.13$ pp, $p<0.001$). Conflict, Angle conflict and $-$isch do not: the
-composite difference is $+0.04$ pp ($p=0.231$) for conflict and $+0.02$ pp
-($p=0.615$) for $-$isch. Conflict's strongest individual component, MI, does reach
-significance on its own ($p=0.020$); $-$isch's strongest component, stroke, does not
-($p=0.092$). Under both rules the MI and stroke components run in opposite directions
-(Table~\ref{tab:ch8-duel-rate-comparison}), so the composite cancels what the
-components show, the same cancellation Chapter 6 reports for the trial's own
-ischemic score, reproduced here inside a selection rule's own target variable.
-Net-benefit's composite stays significant ($+0.09$ pp, $p=0.003$), carried by the same MI
-effect that dominates its per-endpoint breakdown; averaging in the near-null death and
-stroke components shrinks the point estimate from MI's own $+0.18$ pp without erasing
-it. The Angle-net-benefit bleeding effect does not reach significance under this paired test
-($p=0.268$): the sign is the same as $+$isch's, but the per-replication variance is
-wide enough that the difference is not distinguishable from zero once the seed-cohort
-pairing is used correctly.
+Table~\ref{tab:ch8-duel-composite-comparison} restates the duels in the two-axis
+format used elsewhere in this chapter, using the observed any-ischaemic-event outcome.
+$+$isch and Angle net-benefit have higher included than excluded any-event rates
+($+0.37$ pp and $+0.28$ pp; both $p<0.001$), and Net-benefit also has a higher rate
+($+0.20$ pp, $p=0.023$). Conflict, Angle conflict and $-$isch do not show a detectable
+included-versus-excluded difference ($+0.06$ pp, $p=0.423$; $+0.04$ pp, $p=0.537$;
+and $+0.01$ pp, $p=0.769$, respectively). Unlike a weighted average of component rates,
+the any-event outcome counts a patient once when any of death, MI or stroke occurs; the
+per-endpoint breakdown remains available in
+Table~\ref{tab:ch8-duel-rate-comparison}. The Angle-net-benefit bleeding effect does not
+reach significance under this paired test ($p=0.268$): the sign is the same as
+$+$isch's, but the per-replication variance is wide enough that the difference is not
+distinguishable from zero once the seed-cohort pairing is used correctly.
 
-Against Random directly, Net-benefit and Angle net-benefit increase the weighted ischemic
-rate by $+0.05$ pp ($p=0.006$) and $+0.07$ pp ($p<0.001$), while $+$isch increases it by
-$+0.08$ pp ($p<0.001$). The $+$isch rule also raises bleeding by $+0.19$ pp ($p=0.014$).
+Against Random directly, Net-benefit and Angle net-benefit increase the any-ischaemic-event
+rate by $+0.10$ pp ($p=0.021$) and $+0.14$ pp ($p=0.002$), while $+$isch increases it by
+$+0.19$ pp ($p<0.001$). The $+$isch rule also raises bleeding by $+0.19$ pp ($p=0.014$).
 The direct Conflict, Angle conflict and $-$isch comparisons do not differ significantly
 from Random on either axis.
 
@@ -506,11 +502,12 @@ reaches the same final cohort size of 2,789 patients as Mechanism 3.
 Both uncertainty-aware rules are run under the two linear scores introduced earlier in
 this chapter, net-benefit and conflict, for four policy--regime combinations. The 100
 replications use run-specific seed cohorts and arrival orders. Within each replication,
-the four combinations share the same seed cohort and stream, and each post-seed selected
-cohort is compared with a post-seed coin-flip baseline drawn from the same arriving pairs.
-The common 1,000-patient seed is excluded from both reported groups. The UCB-style
-heuristic is deterministic conditional on a given cohort and arrival order, whereas
-the Thompson-style rule adds its own run-specific sampling variation.
+the four combinations share the same seed cohort and stream. Each post-seed selected
+cohort is compared both with the rejected loser from the same duels and with an
+independent coin-flip baseline drawn from the same arriving pairs. The common
+1,000-patient seed is excluded from all reported groups. The UCB-style heuristic is
+deterministic conditional on a given cohort and arrival order, whereas the Thompson-style
+rule adds its own run-specific sampling variation.
 
 \paragraph{Results.}
 
@@ -518,17 +515,46 @@ the Thompson-style rule adds its own run-specific sampling variation.
     \centering
     \small
     \setlength{\tabcolsep}{4pt}
+    \input{generated_tables/ch8_mechanisms45_internal.tex}
+    \caption{Bleeding and any-ischaemic-event rates among patients selected by the
+guided bandit and the rejected loser from the same duels, by policy and score regime,
+averaged over 100 seeded replications. Each post-seed group contains 1,789 patients; the
+common 1,000-patient seed is excluded. An ischaemic event denotes the occurrence of at
+least one of death, MI or stroke, with each patient counted once. Diff.\ is the
+selected-minus-rejected difference; SEM is the standard error of the paired per-run
+differences; $p$ is from a paired two-sided Wilcoxon signed-rank test.}
+    \label{tab:ch8-bandit-internal-rate-comparison}
+\end{table}
+
+The internal comparison in Table~\ref{tab:ch8-bandit-internal-rate-comparison} asks whether
+the rule sorts the patients it sees in the intended direction. It does not do so for the
+UCB-style heuristic: selected patients have higher any-ischaemic-event rates than their
+rejected duel partners under both conflict ($+0.20$ pp, $p=0.014$) and net-benefit
+($+0.36$ pp, $p<0.001$). Neither UCB bleeding contrast is significant. Under Thompson
+sampling, conflict yields a lower selected rate of $-0.12$ pp ($p=0.132$) and net-benefit
+a difference of $+0.02$ pp ($p=0.799$), neither distinguishable from zero; its bleeding
+contrasts are also non-significant. Thus none of the Mechanism~4--5 internal comparisons
+shows a significant reduction in any-ischaemic events among selected rather than rejected
+patients.
+
+\vspace{10pt}
+
+\paragraph{Direct comparison with Random.}
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
     \input{generated_tables/ch8_mechanisms45.tex}
-    \caption{Bleeding and weighted ischemic event rates among patients selected by the
+    \caption{Bleeding and any-ischaemic-event rates among patients selected by the
     guided bandit and among the matched coin-flip random baseline, by policy and score
     regime, averaged over 100 seeded replications of 1,789 post-seed selected patients
     against 1,789 post-seed random-baseline patients drawn from the same arriving pairs
     within each run. The common 1,000-patient seed is excluded from both groups. Seed
     cohorts and arrival orders vary across runs, and the hyperparameters are retuned on
     each run's seed cohort.
-    Ischemic combines
-    death, MI and stroke through the ISCH\_WEIGHTS composite defined in
-    Section~\ref{sec:ch8-premise}. Diff.\ is the selected-minus-random difference; SEM
+    An ischaemic event denotes the occurrence of at least one of death, MI or stroke,
+    with each patient counted once. Diff.\ is the selected-minus-random difference; SEM
     is the standard error of the paired per-run differences; $p$ is from a
     paired two-sided Wilcoxon signed-rank test on the per-replication
     selected-minus-random difference, the non-parametric counterpart that does not
@@ -544,21 +570,22 @@ net-benefit ($p=0.849$).
 
 \vspace{10pt}
 
-On the ischemic axis, the UCB-style heuristic produces small increases under both
-conflict ($+0.04$ pp, $p=0.031$) and net-benefit ($+0.07$ pp, $p<0.001$). Thompson
-sampling produces a small decrease under conflict ($-0.02$ pp, $p=0.360$) and a small
-increase under net-benefit ($+0.01$ pp, $p=0.575$), neither distinguishable from zero.
-Thus, only the two UCB-style ischemic comparisons reach conventional significance, and
-both changes are increases rather than decreases.
+On the any-ischaemic-event endpoint, the UCB-style heuristic produces a small increase
+under conflict ($+0.08$ pp, $p=0.056$) and a larger increase under net-benefit
+($+0.16$ pp, $p=0.004$). Thompson sampling produces a small decrease under conflict
+($-0.06$ pp, $p=0.139$) and a small increase under net-benefit ($+0.01$ pp, $p=0.997$),
+none distinguishable from zero. Thus, only the UCB-style net-benefit comparison reaches
+conventional significance, and the change is an increase rather than a decrease.
 
 \vspace{10pt}
 
 Although the UCB-style heuristic has no internal random component, its selected cohort
 varies across replications because both the initial cohort and the arrival order are
-redrawn. The Thompson-style rule adds sampling variation on top of those two sources. For both
-mechanisms, the selected and random groups remain paired within a replication because
-they are constructed from the same arriving patient pairs; the reported SEM therefore
-summarizes the run-to-run variation of the paired difference.
+redrawn. The Thompson-style rule adds sampling variation on top of those two sources. In
+each replication, selected and rejected are the complementary winner and loser of every
+duel; the Random baseline is an independent coin-flip choice from those same pairs. All
+reported contrasts are paired by replication, so the SEM summarizes run-to-run variation
+of the corresponding paired difference.
 
 \vspace{10pt}
 
@@ -567,23 +594,27 @@ summarizes the run-to-run variation of the paired difference.
 This chapter reports two distinct paired contrasts: selected versus rejected patients
 measures sorting within a rule, whereas selected versus Random tests whether guidance
 changes the post-seed cohort relative to unguided enrollment. Using the direct Random
-contrast, Conflict lowers the ischemic event rate under Mechanism~1 ($-0.16$ pp,
-$p<0.001$) and Mechanism~2 ($-0.06$ pp, $p=0.008$), but the direction does not carry
-consistently into the pairwise mechanisms. The difference is $+0.02$ pp ($p=0.200$) under
-Mechanism~3, $+0.04$ pp ($p=0.031$) under the UCB-style heuristic, and $-0.02$ pp
-($p=0.360$) under the Thompson-style rule. The larger internal separations for Mechanisms~1 and
-2 ($-0.51$ and $-0.12$ pp) answer the different question of how strongly each rule splits
-the patients it evaluates.
+contrast, Conflict lowers the any-ischaemic-event rate under Mechanism~1 ($-0.16$ pp,
+$p<0.001$) and Mechanism~2 ($-0.17$ pp, $p=0.010$), but the direction does not carry
+consistently into the pairwise mechanisms. The difference is $+0.03$ pp ($p=0.335$) under
+Mechanism~3, $+0.08$ pp ($p=0.056$) under the UCB-style heuristic, and $-0.06$ pp
+($p=0.139$) under the Thompson-style rule. The larger internal separations for
+Mechanisms~1 and 2 ($-0.51$ and $-0.32$ pp) answer the different question of how strongly
+each rule splits the patients it evaluates. The Mechanism~4--5 internal contrasts give no
+additional evidence in the desired direction: UCB selects more any-ischaemic events than
+its rejected duel partners ($+0.20$ pp under conflict and $+0.36$ pp under net-benefit),
+while neither Thompson contrast is significant.
 
 \vspace{10pt}
 
-The mirror test provides the clearest evidence that the ischemic score is associated with
-the observed ischemic outcome. Under Mechanism~2, the included-versus-discarded contrast
-reverses from $+0.14$ pp for $+$isch ($p<0.001$) to $-0.15$ pp for $-$isch ($p=0.015$).
-Against Random directly, the corresponding differences remain significant but shrink to
-$+0.07$ pp ($p=0.009$) and $-0.08$ pp ($p=0.011$). The axis estimated by the Chapter~6
-causal forests therefore carries a selection signal, even though MI and stroke partly
-cancel inside the aggregate score.
+The mirror test provides the clearest evidence that the weighted ischemic score is
+associated with the observed any-ischaemic-event outcome. Under Mechanism~2, the
+included-versus-discarded contrast reverses from $+0.38$ pp for $+$isch ($p<0.001$) to
+$-0.40$ pp for $-$isch ($p=0.013$). Against Random directly, the corresponding
+differences remain significant but shrink to $+0.18$ pp ($p=0.005$) and $-0.21$ pp
+($p=0.014$). The axis estimated by the Chapter~6 causal forests therefore carries a
+selection signal, even though the score remains a weighted CATE while the reported
+outcome is the observed union of death, MI and stroke.
 
 \vspace{10pt}
 
@@ -600,8 +631,8 @@ least $0.470$.
 Three policy--mechanism combinations move both axes significantly in the same direct
 comparison with Random. Under Mechanism~1, Angle conflict lowers bleeding by $0.13$ pp and
 ischemic events by $0.20$ pp (both $p=0.003$ or smaller). Under Mechanism~2, $+$isch
-raises them by $0.18$ pp ($p=0.047$) and $0.07$ pp ($p=0.009$); under Mechanism~3 it raises
-them by $0.19$ pp ($p=0.014$) and $0.08$ pp ($p<0.001$). Neither Mechanism~4 nor
+raises them by $0.18$ pp ($p=0.047$) and $0.18$ pp ($p=0.005$); under Mechanism~3 it raises
+them by $0.19$ pp ($p=0.014$) and $0.19$ pp ($p<0.001$). Neither Mechanism~4 nor
 Mechanism~5 moves both axes significantly. These directions describe cohort composition,
 not a clinical utility ordering.
 

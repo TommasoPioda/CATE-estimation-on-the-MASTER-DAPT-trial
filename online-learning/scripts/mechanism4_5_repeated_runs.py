@@ -22,8 +22,9 @@ Run (from anywhere):
 Env overrides (all optional): M45_N_SEED (default 1000), M45_N_TRIALS (default 20),
 M45_N_RUNS (default 100), and M45_N_STOP (early-stop enrolled count for a fast smoke test).
 
-The saved comparison groups exclude the common 1,000-patient seed, so selected and random
-each contain the 1,789 post-seed winners and remain comparable with Mechanisms 2 and 3.
+The saved comparison groups exclude the common 1,000-patient seed. The selected,
+rejected and matched-random groups each contain the 1,789 post-seed patients needed for
+paired cohort-composition comparisons.
 Saves long-format results (one row per policy/regime/run/group) to
 `results/results_mechanism4_5_bandit_duel.parquet`.
 """
@@ -106,12 +107,14 @@ REFIT_EVERY = 100
 def run_online(prep, n_steps, select, enrol_seed=0, *, score_fn=conflict_from_model,
                 score_col="conflict", n_jobs=32, lgbm_n_jobs=16, n_stop=None):
     """Patients arrive two at a time; `select` (UCB-style or Thompson) keeps the more informative
-    one, enrolled with its real, trial-randomised (T, Y). A coin-flip baseline of the same
-    pairs grows alongside it (no refit) so both are read at a common n."""
+    one, enrolled with its real, trial-randomised (T, Y); the other patient is retained as
+    the rejected duel loser. A coin-flip baseline of the same pairs grows alongside them
+    (no refit) so all groups are read at a common n."""
     rng = np.random.default_rng(enrol_seed)
     order = prep["order"]
     cf_params, nuisance_params = prep["cf_params"], prep["nuisance_params"]
     enrolled = list(prep["seed_idx"])
+    rejected = []
     rnd = list(prep["seed_idx"])
     stream_end = prep.get("stream_end", N)
     pos = len(enrolled)
@@ -130,7 +133,11 @@ def run_online(prep, n_steps, select, enrol_seed=0, *, score_fn=conflict_from_mo
         pos += 2
 
         w = select(i, j, rng, uncertainty, scores)
+        if w not in (i, j):
+            raise ValueError("Duel policy must select one of the two arriving patients")
+        loser = j if w == i else i
         enrolled.append(w)
+        rejected.append(loser)
         rnd.append(i if rng.random() < 0.5 else j)
 
         if len(enrolled) % REFIT_EVERY == 0:
@@ -139,7 +146,7 @@ def run_online(prep, n_steps, select, enrol_seed=0, *, score_fn=conflict_from_mo
             scores = score_fn(model, Xn, ENDPOINTS, ISCH_WEIGHTS, ONLINE_TARGETS)
             uncertainty = uncertainty_from_model(model)
 
-    return enrolled, rnd
+    return enrolled, rejected, rnd
 
 
 def _rates(idx):
@@ -190,11 +197,16 @@ def one_run(run_id):
     for pname, select in POLICIES.items():
         for rname, regime in REGIMES.items():
             sel = partial(select, score_col=regime["score_col"])
-            enrolled, rnd = run_online(prep, N_STEPS, select=sel, enrol_seed=enrol_seed,
-                                        score_fn=regime["score_fn"], score_col=regime["score_col"],
-                                        n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS, n_stop=N_STOP)
-            for group_name, idx in [("selected", enrolled[seed_n:]),
-                                    ("random", rnd[seed_n:])]:
+            enrolled, rejected, rnd = run_online(
+                prep, N_STEPS, select=sel, enrol_seed=enrol_seed,
+                score_fn=regime["score_fn"], score_col=regime["score_col"],
+                n_jobs=FIT_N_JOBS, lgbm_n_jobs=LGBM_N_JOBS, n_stop=N_STOP,
+            )
+            for group_name, idx in [
+                ("selected", enrolled[seed_n:]),
+                ("rejected", rejected),
+                ("random", rnd[seed_n:]),
+            ]:
                 r = _rates(idx)
                 rows.append(dict(policy=pname, regime=rname, run=run_id, group=group_name,
                                   n=len(idx), replication_seed=replication_seed,

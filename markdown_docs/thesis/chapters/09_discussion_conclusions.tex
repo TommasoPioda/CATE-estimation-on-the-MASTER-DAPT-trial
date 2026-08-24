@@ -45,15 +45,21 @@ demonstrated clinical value over the simpler policy supported by the trial avera
 
 The guided-enrollment experiments answer a related but distinct question. Several
 selection rules produce post-seed cohorts with observed event rates that differ
-significantly from mechanism-matched Random enrollment. Under Mechanism~2, reversing the
-ischemic score changes the internal included-versus-discarded contrast from $+0.14$
-percentage points ($p<0.001$) to $-0.15$ percentage points ($p=0.015$); in the direct
-comparison with Random, the corresponding differences are $+0.07$ and $-0.08$ percentage
-points ($p=0.009$ and $p=0.011$). This mirror response indicates that the estimated
-ischemic axis contains a selection signal. Conflict lowers the direct ischemic rate under
-Mechanisms~1 and 2, but the direction is not robust in the pairwise-duel designs: the
-difference is non-significant under Mechanism~3, significantly positive under the
-UCB-style heuristic, and non-significantly negative under the Thompson-style rule. A CATE
+significantly from mechanism-matched Random enrollment. For all mechanisms, the
+ischemic outcome is the observed any-ischaemic-event rate: at least one of death, MI or
+stroke, counted once per patient. Under Mechanism~2, reversing the weighted ischemic
+score changes the internal included-versus-discarded contrast from $+0.38$ percentage
+points ($p<0.001$) to $-0.40$ percentage points ($p=0.013$); in the direct comparison
+with Random, the corresponding differences are $+0.18$ and $-0.21$ percentage points
+($p=0.005$ and $p=0.014$). This mirror response indicates that the estimated ischemic
+axis contains a selection signal. Conflict lowers the direct any-ischaemic-event rate
+under Mechanisms~1 and 2, but the direction is not robust in the pairwise-duel designs:
+the corresponding difference is non-significant under Mechanism~3 ($p=0.335$),
+non-significantly positive under the UCB-style heuristic ($p=0.056$), and
+non-significantly negative under the Thompson-style rule ($p=0.139$). The internal
+Mechanism~4--5 comparison is no more favourable: UCB selects more any-ischaemic events
+than its rejected duel partners under conflict ($+0.20$ pp, $p=0.014$) and net-benefit
+($+0.36$ pp, $p<0.001$), while neither Thompson comparison is significant. A CATE
 ranking can thus be too weak or unstable for held-out causal validation and still be
 associated with cohort composition when repeatedly used as a selection score.
 
@@ -61,17 +67,17 @@ associated with cohort composition when repeatedly used as a selection score.
 
 That association should not be overinterpreted. The largest internal single-axis
 separation is observed under Mechanism~1 with Angle conflict: the enrolled cohort's
-ischemic event rate is $0.67$ percentage points lower than that of the left-out group
-($p<0.001$). Against Random enrollment, the difference for the same rule is $-0.20$
-percentage points. Three policy--mechanism combinations move both axes significantly in a direct comparison
-with Random: Angle conflict under Mechanism~1, and $+$isch under Mechanisms~2 and 3. The
-largest absolute changes in those comparisons are $0.20$ percentage points for ischemia
-under Mechanism~1 and $0.19$ percentage points for bleeding under Mechanism~3. Directions
-vary across policies and mechanisms, and some significant movements oppose the intended
-clinical objective. Guided enrollment is distinguishable from Random selection in these
-simulations, but the thesis does not show that it identifies patients with larger causal
-benefit, improves trial precision at equal sample size, or produces a clinically
-preferable cohort.
+any-ischaemic-event rate is $0.67$ percentage points lower than that of the left-out
+group ($p<0.001$). Against Random enrollment, the difference for the same rule is
+$-0.20$ percentage points. Three policy--mechanism combinations move both axes
+significantly in a direct comparison with Random: Angle conflict under Mechanism~1, and
+$+$isch under Mechanisms~2 and 3. The largest absolute changes in those comparisons are
+$0.20$ percentage points for any-ischaemic events under Mechanism~1 and $0.19$ percentage
+points for bleeding under Mechanism~3. Directions vary across policies and mechanisms,
+and some significant movements oppose the intended clinical objective. Guided enrollment
+is distinguishable from Random selection in these simulations, but the thesis does not
+show that it identifies patients with larger causal benefit, improves trial precision at
+equal sample size, or produces a clinically preferable cohort.
 
 \section{Interpretation of the Heterogeneity Results}
 
@@ -173,10 +179,11 @@ to evaluate ischemic components separately rather than only through a weighted a
 External validation should pre-specify estimators, endpoints and multiplicity adjustment.
 
 \vspace{10pt}
-The ischemic composite used throughout this thesis fixes the weights on death, MI and stroke
-before enrollment begins. An adaptive variant that updates these weights during enrollment,
-based on the ischemic event rates observed so far in the trial, could track which endpoint is
-driving risk in the enrolling cohort and adjust patient selection accordingly.
+The weighted ischemic CATE used in the selection score fixes the weights on death, MI and
+stroke before enrollment begins. An adaptive variant that updates these weights during
+enrollment, based on the endpoint-specific event rates observed so far in the trial, could
+track which component is driving risk in the enrolling cohort and adjust patient selection
+accordingly.
 \vspace{10pt}
 
 Within the present data, the sensitivity analysis should be extended to all five
@@ -198,10 +205,11 @@ and heterogeneity in the rare ischemic endpoints is not measurable with adequate
 \vspace{10pt}
 
 Guided enrollment is not equivalent to random enrollment: several mechanisms produce
-small but reproducible changes in observed cohort event rates, and the ischemic mirror
-test shows that at least one estimated axis carries selection signal. However, these
-changes do not establish causal targeting, clinical benefit, or improved trial
-efficiency. The central result is therefore neither that personalization is impossible
-nor that guided enrollment succeeds, but that reliable personalization requires a
-population with sufficient risk variation, enough endpoint events, and validation
-criteria aligned with the decision the model is intended to support.
+small but reproducible changes in observed bleeding and any-ischaemic-event rates, and
+the ischemic mirror test shows that the weighted ischemic score carries selection signal
+for the observed union of death, MI and stroke. However, these changes do not establish
+causal targeting, clinical benefit, or improved trial efficiency. The central result is
+therefore neither that personalization is impossible nor that guided enrollment succeeds,
+but that reliable personalization requires a population with sufficient risk variation,
+enough endpoint events, and validation criteria aligned with the decision the model is
+intended to support.

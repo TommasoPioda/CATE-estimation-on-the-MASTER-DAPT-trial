@@ -13,9 +13,10 @@ the ranking theory just defined.
 
 A credible ranking is not automatically a safe one to enroll by: the same selection that
 makes the ranking useful can also damage the trial it is meant to serve. Choosing the
-right metric and the right policy is what keeps the ranking credible once it starts
-shaping who is enrolled, and the aim of this chapter is to identify a combination that
-gives the best possible outcome across the trial's simulations.
+right metric and the right policy is what makes it possible to assess how a ranking
+changes the cohort once it starts shaping who is enrolled. The aim of this chapter is
+therefore to define mechanisms and an outcome-based evaluation of the cohorts they
+produce, not to infer clinical benefit from the selection process itself.
 
 \section{The Trade-off Plane, Applied to MASTER DAPT}
 
@@ -333,32 +334,40 @@ selection rule:
 
 \paragraph{Methodology of comparison.}
 To evaluate the five enrollment mechanisms, we must use an independent reference point.
-The model that guides selection updates as new data arrive, so it cannot
-also be the reference point by which one judges whether the cohort has moved.
-Even comparing the mechanisms against each other is not enough, because they all share the same
-bias.
-The reference point that avoids this circularity is not a model at all: the mechanisms are
-evaluated on the patients' actual, observed trial outcomes.
+The model that guides selection updates as new data arrive, so it cannot also be the
+reference point by which one judges whether the cohort has moved. Even comparing the
+mechanisms against each other is not enough, because they share the same data-generating
+setting. The reference point that avoids this circularity is not a model at all: the
+mechanisms are evaluated on the patients' actual, observed trial outcomes.
 
-Two complementary contrasts are used. Where a mechanism records a rejected group, the first compares the post-seed enrolled cohort
-with the patients the same rule leaves out or discards, on each axis that defines the
-trade-off quadrant (\S~\ref{sec:multi-outcome}); it measures whether the rule sorts the
-patients it sees. The second compares that post-seed enrolled cohort directly with the
-post-seed cohort produced by the mechanism-matched Random rule, paired by replication; it
-answers whether guidance changes cohort composition relative to unguided enrollment. The
-common random seed is excluded from these displayed groups because no policy selected its
-members. Due to the seed- and luck-based nature of the enrollment process, a single run
-would not be enough to evaluate performance, so the enrollment process is repeated $N$
-times for each mechanism and the results are averaged; Chapter~\ref{ch:guided-enrollment-applied} reports the exact
-value of $N$ used for MASTER DAPT, together with the resulting comparison of enrolled
-versus discarded event rates.
+The evaluation endpoints are observed bleeding and observed \emph{any ischaemic event}.
+The latter is the proportion of patients with at least one of cardiovascular death,
+myocardial infarction or stroke, counted once per patient. These event rates are reported
+separately: the weighted combination of the three ischaemic CATEs is used to construct the
+selection score, but it is not used as the observed outcome metric. The evaluation thus
+asks whether the final selected cohort contains fewer observed events, not whether the
+CATE ranking has been validated causally or whether a clinical utility benefit has been
+shown.
+
+Two complementary contrasts are used. The first is the internal sorting contrast: it
+compares the post-seed enrolled cohort with the patients the same rule leaves out or
+discards, asking whether the final selected cohort contains fewer observed events. The
+second compares that post-seed enrolled cohort directly with the post-seed cohort produced
+by the mechanism-matched Random rule, paired by replication; it answers whether guidance
+changes cohort composition relative to unguided enrollment.
+Due to the seed- and
+luck-based nature of the enrollment process, a single run would not be enough to evaluate
+performance, so the enrollment process is repeated $N$ times for each mechanism and the
+results are averaged; Chapter~\ref{ch:guided-enrollment-applied} reports the exact value
+of $N$ used for MASTER DAPT, together with the resulting paired comparisons of event
+rates.
 
 \section{Chapter Summary}
-This chapter contains the description of the five enrollment mechanisms 
-used in this project, and the reasons why they were chosen. The chapter 
-also describes the trade-off plane used to evaluate the performance of
-the mechanisms, and the reasons why this plane is the object of evaluation. Finally, the chapter
-explains how the mechanisms are evaluated: by comparing the outcome-event rates of the
-enrolled and discarded cohorts on both axes of the trade-off quadrant, averaged over repeated
-enrollment runs.
+This chapter describes the five enrollment mechanisms used in this project and the
+reasons why they were chosen. It also defines the weighted-CATE trade-off plane used to
+construct the selection scores. The mechanisms are evaluated separately on the observed
+bleeding rate and the observed any-ischaemic-event rate (death, MI or stroke, once per
+patient), averaged over repeated enrollment runs. The selected cohort is compared with
+the rejected group and with a matched Random baseline. These comparisons assess observed
+cohort composition, not causal targeting or clinical utility.
 

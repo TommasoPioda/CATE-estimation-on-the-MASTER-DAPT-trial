@@ -253,10 +253,19 @@ def run_online(prep, n_steps, policy_key, *, c=C_EXPLORE, n_jobs=32, lgbm_n_jobs
 
 
 def _rates(idx):
+    """Observed endpoint rates plus the all-ischaemic-events union used in Chapter 7."""
     if len(idx) == 0:
-        return {k: np.nan for k in ENDPOINTS}
+        return {**{k: np.nan for k in ENDPOINTS}, "isch_any": np.nan}
     idx = np.asarray(idx)
-    return {k: float((y[col].to_numpy()[idx] == 1).mean()) for k, col in ENDPOINTS.items()}
+    endpoint_events = {
+        k: y[col].to_numpy()[idx] == 1 for k, col in ENDPOINTS.items()
+    }
+    return {
+        **{k: float(events.mean()) for k, events in endpoint_events.items()},
+        "isch_any": float(np.logical_or.reduce([
+            endpoint_events["death"], endpoint_events["mi"], endpoint_events["stroke"]
+        ]).mean()),
+    }
 
 
 N_SEED = int(os.environ.get("M3_N_SEED", 1000))

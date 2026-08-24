@@ -273,7 +273,7 @@ def build_mechanism1(audit: list[dict[str, object]]) -> dict[str, str]:
 
 def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
     required = {
-        "variant", "run", "group", "n", "bleed_rate", "isch_weighted_rate"
+        "variant", "run", "group", "n", "bleed_rate", "isch_rate"
     }
     data = _read(M2_SOURCE, required)
     table_order = _table_order(M2_ORDER, data)
@@ -289,7 +289,7 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
         subset = data.loc[data["variant"] == key]
         for endpoint, value_col in (
             ("Bleeding", "bleed_rate"),
-            ("Ischaemic", "isch_weighted_rate"),
+            ("Ischaemic", "isch_rate"),
         ):
             result = paired_groups_summary(
                 subset,
@@ -315,7 +315,7 @@ def build_mechanism2(audit: list[dict[str, object]]) -> dict[str, str]:
     for key, label in [item for item in table_order if item[0] != "random"]:
         for endpoint, value_col in (
             ("Bleeding", "bleed_rate"),
-            ("Ischaemic", "isch_weighted_rate"),
+            ("Ischaemic", "isch_rate"),
         ):
             wide = included.pivot(
                 index="run", columns="variant", values=value_col
@@ -358,13 +358,11 @@ def _mechanism3_wide() -> pd.DataFrame:
     data = _read(M3_SOURCE, required)
     index = ["policy", "run", "group", "n"]
     wide = data.pivot(index=index, columns="endpoint", values="rate").reset_index()
-    for endpoint in ("bleed", *ISCH_WEIGHTS):
+    for endpoint in ("bleed", "isch_any"):
         if endpoint not in wide:
             raise ValueError(f"Mechanism 3 is missing endpoint {endpoint!r}")
     wide["Bleeding"] = wide["bleed"]
-    wide["Ischaemic"] = sum(
-        weight * wide[endpoint] for endpoint, weight in ISCH_WEIGHTS.items()
-    )
+    wide["Ischaemic"] = wide["isch_any"]
     wide.attrs["legacy_score_convention"] = data.attrs.get(
         "legacy_score_convention", False
     )
@@ -463,11 +461,17 @@ def build_mechanism3(audit: list[dict[str, object]]) -> dict[str, str]:
 
 def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
     required = {
-        "policy", "regime", "run", "group", "n", "bleed_rate", "isch_weighted_rate",
+        "policy", "regime", "run", "group", "n", "bleed_rate", "isch_rate",
         "replication_seed", "enrol_seed", "tuning_seed", "n_seed", "n_trials",
         "seed_included",
     }
     data = _read(M45_SOURCE, required)
+    expected_groups = {"selected", "rejected", "random"}
+    if set(data["group"]) != expected_groups:
+        raise ValueError(
+            "Mechanisms 4/5 results must contain selected, rejected and random groups; "
+            "rerun mechanism4_5_repeated_runs.py to produce the updated artifact"
+        )
     _require_run_count(data, ["policy", "regime", "group"], 100, "Mechanisms 4/5")
     if set(data["n"]) != {1789}:
         raise ValueError("Unexpected Mechanisms 4/5 group size")
@@ -486,16 +490,41 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
         ("Thompson", "Thompson", "conflict", "Conflict"),
         ("Thompson", "Thompson", "net_benefit", "Net-benefit"),
     ]
-    rows = []
+    internal_rows = []
+    random_rows = []
     for policy, policy_label, regime, regime_label in order:
         subset = data.loc[(data["policy"] == policy) & (data["regime"] == regime)]
         if subset.empty:
             raise ValueError(f"Missing Mechanisms 4/5 combination: {policy}/{regime}")
         for endpoint, value_col in (
             ("Bleeding", "bleed_rate"),
-            ("Ischaemic", "isch_weighted_rate"),
+            ("Ischaemic", "isch_rate"),
         ):
-            result = paired_groups_summary(
+            internal = paired_groups_summary(
+                subset,
+                run_col="run",
+                group_col="group",
+                value_col=value_col,
+                group_a="selected",
+                group_b="rejected",
+            )
+            internal_rows.append(
+                f"{policy_label} & {regime_label} & {endpoint} & "
+                f"{format_rate(internal.mean_a_pct)} & {format_rate(internal.mean_b_pct)} & "
+                f"{format_diff(internal.diff_pp)} & {format_sem(internal.sem_diff_pp)} & "
+                f"{format_p(internal.p_value)} \\\\"
+            )
+            _record(
+                audit,
+                source=M45_SOURCE,
+                table="ch8_mechanisms45_internal",
+                policy=f"{policy}/{regime}",
+                endpoint=endpoint,
+                group_a="selected",
+                group_b="rejected",
+                summary=internal,
+            )
+            vs_random = paired_groups_summary(
                 subset,
                 run_col="run",
                 group_col="group",
@@ -503,11 +532,11 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
                 group_a="selected",
                 group_b="random",
             )
-            rows.append(
+            random_rows.append(
                 f"{policy_label} & {regime_label} & {endpoint} & "
-                f"{format_rate(result.mean_a_pct)} & {format_rate(result.mean_b_pct)} & "
-                f"{format_diff(result.diff_pp)} & {format_sem(result.sem_diff_pp)} & "
-                f"{format_p(result.p_value)} \\\\"
+                f"{format_rate(vs_random.mean_a_pct)} & {format_rate(vs_random.mean_b_pct)} & "
+                f"{format_diff(vs_random.diff_pp)} & {format_sem(vs_random.sem_diff_pp)} & "
+                f"{format_p(vs_random.p_value)} \\\\"
             )
             _record(
                 audit,
@@ -517,18 +546,24 @@ def build_mechanisms45(audit: list[dict[str, object]]) -> dict[str, str]:
                 endpoint=endpoint,
                 group_a="selected",
                 group_b="matched random",
-                summary=result,
+                summary=vs_random,
             )
     return {
+        "ch8_mechanisms45_internal.tex": render_tabular(
+            alignment="lllrrrrr",
+            header_lines=[
+                "Policy & Score & Endpoint & Selected (\\%) & Rejected (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
+            ],
+            rows=internal_rows,
+        ),
         "ch8_mechanisms45.tex": render_tabular(
             alignment="lllrrrrr",
             header_lines=[
                 "Policy & Score & Endpoint & Selected (\\%) & Random (\\%) & Diff. (pp) & SEM (pp) & $p$ \\\\"
             ],
-            rows=rows,
-        )
+            rows=random_rows,
+        ),
     }
-
 
 def build_outputs() -> tuple[dict[str, str], pd.DataFrame]:
     audit: list[dict[str, object]] = []
