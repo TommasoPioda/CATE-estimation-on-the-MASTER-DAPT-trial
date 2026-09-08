@@ -1,0 +1,26 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage[margin=2cm]{geometry}
+
+\begin{document}
+
+\begin{table}[h]
+\centering
+Mean out-of-fold AUROC across the five endpoints for each risk
+model family, full cohort.
+
+\vspace{0.5em}
+
+\begin{tabular}{lcccccc}
+\toprule
+Model & Bleeding & BARC 2/3/5 & MI & CV death & Stroke & Mean \\
+\midrule
+Soft voting ensemble & $0.62 \pm 0.03$ & $0.63 \pm 0.02$ & $0.73 \pm 0.04$ & $0.76 \pm 0.04$ & $0.60 \pm 0.03$ & 0.668 \\
+Logistic regression   & $0.62 \pm 0.03$ & $0.62 \pm 0.03$ & $0.72 \pm 0.05$ & $0.76 \pm 0.05$ & $0.60 \pm 0.08$ & 0.664 \\
+Gradient boosting     & $0.61 \pm 0.04$ & $0.59 \pm 0.02$ & $0.70 \pm 0.04$ & $0.73 \pm 0.05$ & $0.67 \pm 0.13$ & 0.660 \\
+Random forest         & $0.58 \pm 0.02$ & $0.57 \pm 0.04$ & $0.71 \pm 0.04$ & $0.69 \pm 0.05$ & $0.62 \pm 0.11$ & 0.634 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

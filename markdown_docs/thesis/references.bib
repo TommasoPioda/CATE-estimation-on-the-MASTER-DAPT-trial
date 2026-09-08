@@ -1,0 +1,309 @@
+% Bibliography for "CATE estimation and use in MASTER DAPT study".
+% Grouped by role; see appendix chapters/A_references.tex for which chapter
+% uses each entry and why. Entries marked (preprint) are cited from the
+% version consulted in markdown_docs/papers/; where a later peer-reviewed
+% version exists, it should replace the preprint before submission.
+
+% --- Causal inference and CATE estimation --------------------------------
+
+@article{kennedy2020,
+  author  = {Kennedy, Edward H.},
+  title   = {Towards Optimal Doubly Robust Estimation of Heterogeneous Causal Effects},
+  journal = {arXiv preprint arXiv:2004.14497},
+  year    = {2020},
+  note    = {v5, preprint}
+}
+
+@article{kennedy2023,
+  author  = {Kennedy, Edward H.},
+  title   = {Semiparametric Doubly Robust Targeted Double Machine Learning: A Review},
+  journal = {arXiv preprint arXiv:2203.06469},
+  year    = {2023},
+  note    = {v2, stat.ME, preprint}
+}
+
+@article{salditt2024,
+  author  = {Salditt, Marie and Eckes, Theresa and Nestler, Steffen},
+  title   = {A Tutorial Introduction to Heterogeneous Treatment Effect Estimation with Meta-learners},
+  journal = {Administration and Policy in Mental Health and Mental Health Services Research},
+  volume  = {51},
+  pages   = {650--673},
+  year    = {2024},
+  doi     = {10.1007/s10488-023-01303-9}
+}
+
+% --- Validation of treatment prioritization rules -------------------------
+
+@article{chernozhukov2022,
+  author  = {Chernozhukov, Victor and Demirer, Mert and Duflo, Esther and Fern{\'a}ndez-Val, Iv{\'a}n},
+  title   = {Generic Machine Learning Inference on Heterogeneous Treatment Effects in Randomized Experiments},
+  journal = {arXiv preprint arXiv:1712.04802},
+  year    = {2022},
+  note    = {preprint}
+}
+
+@article{dwivedi2020,
+  author  = {Dwivedi, Raaz and others},
+  title   = {Stable Discovery of Interpretable Subgroups via Calibration in Causal Studies},
+  journal = {arXiv preprint arXiv:2008.10109},
+  year    = {2020},
+  note    = {preprint}
+}
+
+@article{radcliffe2007,
+  author  = {Radcliffe, Nicholas},
+  title   = {Using Control Groups to Target on Predicted Lift: Building and Assessing Uplift Models},
+  journal = {Direct Marketing Analytics Journal},
+  pages   = {14--21},
+  year    = {2007}
+}
+
+% --- Adaptive enrolment, active and online learning -----------------------
+
+@article{kato2024,
+  author  = {Kato, Masahiro and Oga, Akihiro and Komatsubara, Wataru and Inokuchi, Ryo},
+  title   = {Active Adaptive Experimental Design for Treatment Effect Estimation with Covariate Choice},
+  journal = {arXiv preprint arXiv:2403.03589},
+  year    = {2024},
+  note    = {v2, preprint}
+}
+
+@article{cacciarelli2023survey,
+  author  = {Cacciarelli, Davide and Kulahci, Murat},
+  title   = {Active Learning for Data Streams: A Survey},
+  journal = {Machine Learning},
+  publisher = {Springer},
+  year    = {2023},
+  doi     = {10.1007/s10994-023-06454-2}
+}
+
+@article{cacciarelli2022stream,
+  author  = {Cacciarelli, Davide and Kulahci, Murat and Tyssedal, John S{\o}lve},
+  title   = {Stream-based Active Learning with Linear Models},
+  journal = {arXiv preprint},
+  year    = {2022},
+  note    = {preprint}
+}
+
+@inproceedings{cacciarelli2022soft,
+  author    = {Cacciarelli, Davide and Kulahci, Murat and Tyssedal, John},
+  title     = {Online Active Learning for Soft Sensor Development using Semi-Supervised Autoencoders},
+  booktitle = {ICML 2022 Workshop on Adaptive Experimental Design and Active Learning in the Real World},
+  year      = {2022},
+  note      = {arXiv:2212.13067}
+}
+
+@article{fontaine2020,
+  author  = {Fontaine, Xavier and Perrault, Pierre and Valko, Michal and Perchet, Vianney},
+  title   = {Online A-Optimal Design and Active Linear Regression},
+  journal = {arXiv preprint arXiv:1906.08509},
+  year    = {2020},
+  note    = {v2, stat.ML, preprint}
+}
+
+@article{riquelme2016,
+  author  = {Riquelme, Carlos and Johari, Ramesh and Zhang, Baosen},
+  title   = {Online Active Linear Regression via Thresholding},
+  journal = {arXiv preprint arXiv:1602.02845},
+  year    = {2017},
+  note    = {v4, stat.ML, preprint}
+}
+
+@article{auer2002,
+  author  = {Auer, Peter and Cesa-Bianchi, Nicol{\`o} and Fischer, Paul},
+  title   = {Finite-time Analysis of the Multiarmed Bandit Problem},
+  journal = {Machine Learning},
+  volume  = {47},
+  pages   = {235--256},
+  year    = {2002},
+  doi     = {10.1023/A:1013689704352}
+}
+
+% --- Trial and dataset documentation --------------------------------------
+
+@article{valgimigli2021masterdapt,
+  author  = {Valgimigli, Marco and Frigoli, Enrico and Heg, Dik and Tijssen, Jan and J{\"u}ni, Peter
+             and Vranckx, Pascal and Ozaki, Yukio and Morice, Marie-Claude and Chevalier, Bernard
+             and Onuma, Yoshinobu and Windecker, Stephan and Tonino, Pim A. L. and Roffi, Marco
+             and Lesiak, Maciej and Mahfoud, Felix and Bartunek, Jozef and Hildick-Smith, David
+             and Colombo, Antonio and Stankovi{\'c}, Goran and I{\~n}iguez, Andres and Schultz, Carl
+             and Kornowski, Ran and Ong, Paul J. L. and Alasnag, Mirvat and Rodriguez, Alfredo E.
+             and Moschovitis, Aris and Laanmets, Peep and Donahue, Mark and Leonardi, Sergio
+             and Smits, Pieter C.},
+  title   = {Dual Antiplatelet Therapy after {PCI} in Patients at High Bleeding Risk},
+  journal = {New England Journal of Medicine},
+  volume  = {385},
+  number  = {18},
+  pages   = {1643--1655},
+  year    = {2021},
+  doi     = {10.1056/NEJMoa2108749},
+  note    = {for the MASTER DAPT Investigators}
+}
+
+@misc{valgimigli2021appendix,
+  author = {{MASTER DAPT Investigators}},
+  title  = {Supplementary Appendix to: Dual Antiplatelet Therapy after {PCI} in Patients at High Bleeding Risk},
+  year   = {2021},
+  note   = {Supplement to Valgimigli et al. (2021)}
+}
+
+@unpublished{maroni2026,
+  author = {Maroni, Gabriele and Azzimonti, Laura},
+  title  = {Machine Learning Prediction of Clinical Outcomes in {MASTER DAPT}. Draft Report: Predictive Performance, {SHAP} Interpretation, and Variable Dictionary},
+  note   = {Internal report, 6 May 2026, unpublished},
+  year   = {2026}
+}
+
+% --- Additional methodological and clinical sources ------------------------
+@article{wager2018,
+  author  = {Wager, Stefan and Athey, Susan},
+  title   = {Estimation and Inference of Heterogeneous Treatment Effects Using Random Forests},
+  journal = {Journal of the American Statistical Association},
+  volume  = {113},
+  number  = {523},
+  pages   = {1228--1242},
+  year    = {2018},
+  doi     = {10.1080/01621459.2017.1319839}
+}
+
+@article{athey2019grf,
+  author  = {Athey, Susan and Tibshirani, Julie and Wager, Stefan},
+  title   = {Generalized Random Forests},
+  journal = {The Annals of Statistics},
+  volume  = {47},
+  number  = {2},
+  pages   = {1148--1178},
+  year    = {2019},
+  doi     = {10.1214/18-AOS1709}
+}
+
+@article{hahn2020bcf,
+  author  = {Hahn, P. Richard and Murray, Jared S. and Carvalho, Carlos M.},
+  title   = {Bayesian Regression Tree Models for Causal Inference: Regularization, Confounding, and Heterogeneous Effects},
+  journal = {Bayesian Analysis},
+  volume  = {15},
+  number  = {3},
+  pages   = {965--1056},
+  year    = {2020},
+  doi     = {10.1214/19-BA1195}
+}
+
+@article{balazadeh2025causalpfn,
+  author  = {Balazadeh, Vahid and Kamkari, Hamidreza and Thomas, Valentin and Li, Benson and Ma, Junwei and Cresswell, Jesse C. and Krishnan, Rahul G.},
+  title   = {{CausalPFN}: Amortized Causal Effect Estimation via In-Context Learning},
+  journal = {arXiv preprint arXiv:2506.07918},
+  year    = {2025},
+  note    = {preprint}
+}
+
+@article{thompson1933,
+  author  = {Thompson, William R.},
+  title   = {On the Likelihood that One Unknown Probability Exceeds Another in View of the Evidence of Two Samples},
+  journal = {Biometrika},
+  volume  = {25},
+  number  = {3--4},
+  pages   = {285--294},
+  year    = {1933},
+  doi     = {10.1093/biomet/25.3-4.285}
+}
+
+@incollection{shapley1953,
+  author    = {Shapley, Lloyd S.},
+  title     = {A Value for n-Person Games},
+  booktitle = {Contributions to the Theory of Games, Volume {II}},
+  series    = {Annals of Mathematics Studies},
+  number    = {28},
+  pages     = {307--317},
+  publisher = {Princeton University Press},
+  year      = {1953}
+}
+
+@article{vandermaaten2008tsne,
+  author  = {van der Maaten, Laurens and Hinton, Geoffrey},
+  title   = {Visualizing Data using {t-SNE}},
+  journal = {Journal of Machine Learning Research},
+  volume  = {9},
+  number  = {86},
+  pages   = {2579--2605},
+  year    = {2008}
+}
+
+@article{mcinnes2018umap,
+  author  = {McInnes, Leland and Healy, John and Melville, James},
+  title   = {{UMAP}: Uniform Manifold Approximation and Projection for Dimension Reduction},
+  journal = {arXiv preprint arXiv:1802.03426},
+  year    = {2018},
+  note    = {preprint}
+}
+
+@inproceedings{bergstra2011tpe,
+  author    = {Bergstra, James and Bardenet, R{\'e}mi and Bengio, Yoshua and K{\'e}gl, Bal{\'a}zs},
+  title     = {Algorithms for Hyper-Parameter Optimization},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {24},
+  pages     = {2546--2554},
+  year      = {2011}
+}
+
+@inproceedings{akiba2019optuna,
+  author    = {Akiba, Takuya and Sano, Shotaro and Yanase, Toshihiko and Ohta, Takeru and Koyama, Masanori},
+  title     = {{Optuna}: A Next-generation Hyperparameter Optimization Framework},
+  booktitle = {Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining},
+  pages     = {2623--2631},
+  year      = {2019},
+  doi       = {10.1145/3292500.3330701}
+}
+
+@article{athey2021policylearning,
+  author  = {Athey, Susan and Wager, Stefan},
+  title   = {Policy Learning with Observational Data},
+  journal = {Econometrica},
+  volume  = {89},
+  number  = {1},
+  pages   = {133--161},
+  year    = {2021},
+  doi     = {10.3982/ECTA15732}
+}
+
+% --- Predictive modelling and interpretation ------------------------------
+
+@incollection{platt1999,
+  author    = {Platt, John C.},
+  title     = {Probabilistic Outputs for Support Vector Machines and Comparisons to Regularized Likelihood Methods},
+  booktitle = {Advances in Large Margin Classifiers},
+  editor    = {Smola, Alexander J. and Bartlett, Peter L. and Sch{\"o}lkopf, Bernhard and Schuurmans, Dale},
+  pages     = {61--74},
+  publisher = {MIT Press},
+  year      = {1999}
+}
+
+@inproceedings{lundberg2017shap,
+  author    = {Lundberg, Scott M. and Lee, Su-In},
+  title     = {A Unified Approach to Interpreting Model Predictions},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {30},
+  pages     = {4765--4774},
+  year      = {2017}
+}
+
+@article{costa2017precisedapt,
+  author  = {Costa, Francesco and van Klaveren, David and James, Stefan and Heg, Dik and Raber, Lorenz and Feres, Fernando and Pilgrim, Thomas and Hong, Seung-Jung and Kim, Han-Mo and Colombo, Antonio and Steyerberg, Ewout W. and Windecker, Stephan and Valgimigli, Marco},
+  title   = {Derivation and Validation of the {PRECISE-DAPT} Score: A Pooled Analysis of Individual-Patient Datasets from Clinical Trials},
+  journal = {The Lancet},
+  volume  = {389},
+  number  = {10073},
+  pages   = {1025--1034},
+  year    = {2017},
+  doi     = {10.1016/S0140-6736(17)30397-5}
+}
+
+@article{esc2023acs,
+  author  = {{European Society of Cardiology}},
+  title   = {2023 {ESC} Guidelines for the Management of Acute Coronary Syndromes},
+  journal = {European Heart Journal},
+  volume  = {44},
+  number  = {38},
+  pages   = {3720--3826},
+  year    = {2023},
+  doi     = {10.1093/eurheartj/ehad191}
+}

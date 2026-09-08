@@ -1,0 +1,513 @@
+% !TEX root = ../Thesis.tex
+\section{Problem Description: Estimating, Validating and exploiting Heterogeneous Treatment Effects}
+
+A randomized clinical trial is a study in which patients are randomly assigned to one treatment, trying to estimate one number:
+the average treatment effect across all patients. This is the standard approach to clinical trials, and serves the
+purpose of estimating whether a treatment is effective. This measure of effectiveness does not say anything specific
+about individual patients. The fact that a treatment is effective on average does not guarantee its effectiveness
+on every patient. Some patients may benefit from the treatment while others may be harmed by it.
+
+The object of this thesis is to estimate the heterogeneity of treatment effects in a randomized clinical trial,
+and to use it to reduce the number of patients included in the trial while maintaining the same statistical power,
+maximizing the benefit of the treatment for the patients who are included.
+This thesis aims to be different from a standard clinical trial, building the foundations for the next generation
+of clinical trials, which are more efficient and ethical by including only the patients most likely to benefit
+from the experimental treatment.
+
+\section{What Is Estimated, and Why It Is Not Validated Like a Prediction}
+
+
+To decide which patients should be included in the trial, we would ideally need a measure 
+of the treatment effect for each individual patient. This quantity is usually referred to
+as the individual treatment effect (ITE): the difference between the outcome that a patient 
+would experience under treatment $T=1$ and the outcome that the same 
+patient would experience under treatment $T=0$.
+
+However, the ITE cannot be observed directly. For each patient, only one of the two 
+potential outcomes is observed, because each patient receives exactly one treatment. 
+The outcome that would have occurred under the treatment not received is therefore unobserved. 
+This is the fundamental problem of causal inference, and it cannot be solved simply by increasing the sample size.
+
+We therefore consider the conditional average treatment effect (CATE),
+
+\[
+\boxed{
+\tau(x) = \mathbb{E}[Y(1)-Y(0)\mid X=x]
+}
+\]
+
+which represents the average treatment effect among patients with characteristics $X=x$. 
+The CATE provides an estimable population-level counterpart to the unobservable ITE: 
+rather than estimating the exact treatment effect for a single patient, it estimates the
+expected treatment effect for patients with similar observed characteristics.
+
+A direct consequence of this is that CATE estimates cannot be validated by 
+comparing them with an observed ground truth at the individual level. There is no 
+outcome that can be used as the ``correct'' treatment effect for a given patient, because
+one of the two potential outcomes is always missing. Validation must therefore be 
+performed at the aggregate level, by evaluating whether groups of patients with different 
+estimated treatment effects actually exhibit different treatment effects in the randomized 
+data. Within such groups, the treatment effect can be estimated by comparing the outcomes 
+of patients assigned to the different treatment arms.
+
+This constraint is fundamental to the analysis: every validation strategy used in this 
+thesis follows from the fact that treatment effects are not directly observable at the 
+individual level. The objective is therefore not to verify whether the estimated CATE 
+is exactly correct for each patient, but whether the heterogeneity identified by the 
+model is supported by the randomized data and can be reliably exploited for patient selection.
+
+\section{Five Families of Estimators, Chosen to act Differently}
+\label{sec:five-estimators}
+
+No single method is used, because a result that depends on the internal
+assumptions of one algorithm is not distinguishable from an artefact of that
+algorithm. Five estimator families are used instead, deliberately spanning
+different ways of failing, so that a conclusion which survives all five stops
+being attributable to any one of them.
+
+\paragraph{Two-model meta-learner (T-learner).}
+The simplest model of the five \citep{salditt2024}: it fits one outcome model per treatment arm,
+$\hat\mu_1(x)$ and $\hat\mu_0(x)$, and take their difference as
+
+\[
+\hat\tau(x) = \hat\mu_1(x) - \hat\mu_0(x),
+\]
+
+Its strength is that any
+regression or classification method can be reused as a component; its weakness
+is the same fact seen from the other side — it inherits every bias of the two
+component models, and small independent errors in each one do not cancel in
+the subtraction, they add. Two consequences follow for how $\hat\mu_1$ and $\hat\mu_0$ are built. Both
+arms need the same model family, tuned separately on each arm's data:
+differencing two algorithms with different inductive biases, a random forest
+against a logistic regression for instance, produces a surface whose variation
+reflects those biases as much as any treatment effect, and at the level of the
+output that spurious variation is indistinguishable from heterogeneity. Both
+arms' outcome probabilities also need to be calibrated. Calibration is a
+monotone transformation, so it leaves each model's discrimination and its
+ranking of patients unchanged, leaving classification performance unaffected.
+A difference is affected: a distortion common to both arms cancels out of a
+ranking metric such as AUROC but not out of a subtraction, so two
+uncalibrated, well-discriminating models can still produce an apparent effect
+where the true probabilities agree.
+
+\iffalse
+\paragraph{Causal forest.}
+The causal forest estimates the treatment effect $\tau(x)$ directly,
+rather than fitting two separate outcome models and taking their
+difference. Its objective is to partition the
+covariate space into groups of patients for whom the treatment effect is expected to differ,
+and then estimate a local treatment effect within each region.
+It uses double machine learning \citep{kennedy2023} and the 
+causal-forest procedure of \citet{wager2018} and \citet{athey2019grf}:
+writing $\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]$ and
+$\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]$ for the fitted outcome and
+treatment models, the forest works on the residuals
+\[
+\tilde Y_i = Y_i - \hat m(X_i), \qquad \tilde T_i = T_i - \hat e(X_i),
+\]
+and within each leaf estimates $\tau(x)$ as the coefficient of the local
+regression of $\tilde Y_i$ on $\tilde T_i$.
+
+This step corrects for confounding when treatment assignment depends on
+$X$. Under randomization the propensity $\hat e(x)$ is constant across
+patients by design, so there is no confounding bias to remove; the
+residualization of $Y$ still lowers the variance of $\hat\tau(x)$, in the
+same way covariate adjustment improves precision in a randomized trial, by
+removing prognostic variation unrelated to treatment. The forest also uses
+\emph{honest} splitting: one subset of the data is used to determine the
+tree structure, while a separate subset is used to estimate the treatment
+effects within each leaf. Honest splitting addresses a different problem,
+overfitting from using the same observations to both choose a split and
+estimate the effect inside it, and it remains relevant whether or not
+treatment is randomized.
+\fi
+
+\paragraph{Causal forest.}
+
+The causal forest estimates treatment-effect heterogeneity directly, rather than fitting two
+separate outcome models and subtracting their predictions. Its objective is to partition the
+covariate space into groups of patients for whom the treatment effect is expected to differ,
+and then estimate a local treatment effect within each region.
+
+The implementation used here combines the causal-forest framework of
+\citet{wager2018} and \citet{athey2019grf} with double machine learning
+\citep{kennedy2023}. Before the forest searches for heterogeneity, it removes the parts
+of the outcome and treatment assignment that can already be explained by the observed
+covariates. Let
+
+\[
+\hat m(x) = \widehat{\mathbb{E}}[Y \mid X=x]
+\]
+
+denote the expected outcome given the covariates, and
+
+\[
+\hat e(x) = \widehat{\mathbb{E}}[T \mid X=x]
+\]
+
+the probability of receiving treatment. For each patient, the corresponding residuals are
+
+\[
+\tilde Y_i = Y_i - \hat m(X_i), \qquad
+\tilde T_i = T_i - \hat e(X_i).
+\]
+
+The outcome residual $\tilde Y_i$ represents the part of the observed outcome that is not
+explained by the patient's baseline characteristics, while $\tilde T_i$ represents the part
+of treatment assignment not explained by those same characteristics. The forest therefore
+searches for treatment-effect heterogeneity using these residual quantities rather than the
+raw outcome and treatment variables.
+
+Each tree recursively partitions patients according to their covariates $X$, looking for
+splits that separate regions with different treatment effects. Within each resulting leaf,
+the local treatment effect is estimated from the relationship between the residualized
+outcome and residualized treatment,
+
+\[
+\tilde Y_i \approx \tau(x)\,\tilde T_i.
+\]
+
+The coefficient $\tau(x)$ therefore represents the local treatment effect for patients
+belonging to that region of the covariate space. Across the forest, a patient falls into
+different leaves in different trees, and the corresponding local treatment-effect estimates
+are aggregated to obtain the final CATE estimate
+
+\[
+\hat\tau(x).
+\]
+
+In an observational study, residualizing treatment assignment is important because the
+probability of receiving treatment may depend on $X$, potentially introducing confounding.
+In MASTER DAPT, however, treatment is randomized, so the propensity score is fixed by
+design and does not systematically depend on patient characteristics. The treatment residual
+therefore mainly represents the randomized deviation from the treatment-assignment
+probability.
+
+Residualizing the outcome remains useful even under randomization. By subtracting the
+component of $Y$ that can already be predicted from $X$, the model removes prognostic
+variation that is unrelated to treatment. This is analogous to covariate adjustment in a
+randomized trial: it does not change the validity of the treatment comparison, but can
+improve its precision by allowing the forest to focus more directly on variation in the
+treatment effect.
+
+A second and separate protection against overfitting is provided by \emph{honest splitting}.
+The observations used to determine where a tree should split are separated from those used
+to estimate the treatment effect within the resulting leaves. The forest therefore cannot
+use the same random outcome fluctuation both to define a subgroup and to estimate an
+apparently different treatment effect within that subgroup.
+
+This distinction remains important even in a randomized trial. Randomization protects the
+treatment comparison from confounding, whereas honest splitting protects the estimated
+heterogeneity from adaptive overfitting.
+
+\paragraph{Bayesian causal forest (BCF).}
+A Bayesian counterpart \citep{hahn2020bcf} writes the outcome as
+\[
+Y_i(t) = \mu(X_i) + \tau(X_i)\, t + \varepsilon_i,
+\]
+separating the prognostic surface $\mu(x)$, a patient's baseline risk
+independent of treatment, from the effect surface $\tau(x)$ itself, and
+placing a separate prior and a separate tree ensemble on each term. A
+stronger, more differentiated prior on the prognostic side reduces the
+extent to which a residual confounder with a large main effect can be
+mistaken for treatment-effect heterogeneity; the trade-off is that the
+effect surface can, in turn, be dominated by its own regularization if
+that prior is too tight. BCF returns a full posterior over $\tau(x)$
+rather than a point estimate, which later sections use to assess not
+only the magnitude of the estimated effect but the uncertainty attached
+to it.
+
+\paragraph{In-context model (CausalPFN).}
+Rather than being fitted to one dataset, this estimator is pre-trained once on
+a large distribution of synthetic causal problems \citep{balazadeh2025causalpfn} and, at inference time,
+maps the whole cohort and a query point directly to a prediction,
+\[
+(\{X_i,T_i,Y_i\}_{i=1}^n,\, x) \;\longmapsto\; \hat\tau(x),
+\]
+without any further fitting: the training cohort plays the role of the
+prompt a language model conditions on. Its errors
+therefore have a different origin from the other four: not sampling variance
+from a specific, finite cohort, but a domain bias inherited from the
+distribution of synthetic problems it was pre-trained on. That difference in
+kind is what makes it a genuinely independent check rather than one more
+variant of the same idea.
+
+\vspace{10pt}
+
+\paragraph{Interaction forest (S-learner).}
+The S-learner of the same taxonomy \citep{salditt2024}: fits a single classification forest $\hat f(x,t,x\cdot t)$ on the augmented
+design $[X, T, X\cdot T]$, covariates, treatment, and their interactions, and
+recovers the implied CATE as
+\[
+\hat\tau(x) = \hat f(x,1,x\cdot 1) - \hat f(x,0,x\cdot 0),
+\]
+toggling the treatment column and differencing the two predictions. Because both treatment arms are fitted jointly,
+information is pooled across them, which can help stabilize estimation in
+the arm with fewer events. This pooling, however, can limit the detection of
+treatment-effect heterogeneity: interaction effects must compete for splits
+with the treatment's main effect and the prognostic signal in $X$, so weak
+interactions may be attenuated toward zero rather than clearly identified.
+
+\vspace{10pt}
+
+None of the five is included because it is the best estimator in the
+abstract — under different data each could plausibly outperform the others.
+They are included because their failure modes do not overlap: two-model
+error compounding, a forest's limited splitting language, a Bayesian model's
+own regularization, a pre-trained model's domain bias, and an interaction
+model's shrinkage toward zero are five different ways of being wrong, and an
+agreement that survives all five is no longer explainable by any single one
+of them.
+
+\section{The Ranking as the Object of Validation}
+\label{sec:validation}
+
+Aggregation gives back what the missing counterfactual takes away, but only
+once there are groups to aggregate over, and nothing in the data defines
+them. The estimator itself supplies the grouping: ordering patients by their
+predicted $\tau(x)$ turns a quantity attached to individuals into a family of
+nested subgroups — the top 5\%, the top 10\%, and so on — each of which has a
+group average treatment effect that is estimable. What is tested is then not
+the value assigned to any patient but a property of the ordering: the
+patients the model places at the top must, as a group, actually show a larger
+effect than those it places below. How large that effect is, is a separate
+question, asked and answered separately.
+
+\vspace{10pt}
+
+The group averages are built from a \emph{doubly robust} pseudo-outcome \citep{kennedy2020}, one
+number per patient, formed by taking the prediction of an outcome model and
+correcting it with the inverse-propensity-weighted residual of the arm the
+patient was actually assigned to. Individually this number is far too noisy
+to be read as that patient's treatment effect — it is not an estimate of
+$\tau(x)$ and is never used as one — but its average over any subgroup is a
+consistent estimate of that subgroup's average effect, and it stays
+consistent if either the outcome model or the treatment-assignment model is
+correctly specified. Here the second is correct by construction: treatment
+was allocated at random, so the assignment probability is known rather than
+estimated, and the validity of every group average that follows does not rest
+on the outcome model being right.
+
+\begin{equation}
+\hat{\varphi}_i \;=\; \hat{\mu}(1, X_i) - \hat{\mu}(0, X_i)
+\;+\; \frac{T_i - \hat{e}(X_i)}{\hat{e}(X_i)\big(1 - \hat{e}(X_i)\big)}
+\Big(Y_i - \hat{\mu}(T_i, X_i)\Big)
+\label{eq:aipw-pseudo-outcome}
+\end{equation}
+
+\noindent where
+\begin{description}
+    \item[$X_i$] covariate vector for patient $i$;
+    \item[$T_i \in \{0,1\}$] treatment actually received by patient $i$ (e.g. $1$ = prolonged DAPT, $0$ = abbreviated DAPT);
+    \item[$Y_i$] observed outcome for patient $i$;
+    \item[$\hat{\mu}(t, x)$] outcome model prediction for treatment arm $t$ given covariates $x$;
+    \item[$\hat{e}(x)$] propensity score, $P(T=1 \mid X=x)$; known by design under randomization rather than estimated;
+\end{description}
+
+\vspace{10pt}
+
+The \textbf{TOC curve} (targeting operator characteristic) reads the ordering
+off at every depth. For each fraction $q$ it takes the patients ranked
+highest by predicted $\tau(x)$ and reports the difference between the average effect within that
+group and the average effect over the whole cohort — equivalently, the gain
+over selecting a group of the same size at random. A ranking that carries no
+information gives a curve flat at zero, and every curve is pinned to zero at
+$q=1$, where the selected group is the cohort itself; a ranking that works
+gives a curve that is positive and decreasing, since concentrating on fewer
+patients should concentrate the effect. The thresholds that cut the ranking
+are fixed on the data used to fit the estimator and then applied to held-out
+patients, whose pseudo-outcomes supply the effects, so no part of the curve
+is read off the sample that produced the ranking being tested.
+
+\vspace{10pt}
+
+Two scalar summaries integrate the TOC curve, differing only in how they
+weight its depths. \textbf{AUTOC} weights every fraction equally, so a narrow
+high-benefit group at the top contributes as much as a broad one; it is the
+more powerful summary when the benefit is concentrated in a small subgroup.
+\textbf{QINI} \citep{radcliffe2007} weights each point by the size of the group it refers to, which
+suppresses the top of the ranking and rewards an effect spread broadly across
+the population. Which of the two is the appropriate lens depends on whether
+the responsive subgroup is a narrow tail or a large fraction of the cohort —
+precisely what is not known before the analysis — so both are reported, and
+only a conclusion that holds under both weightings is a property of the
+ranking rather than of the choice of weight.
+
+\vspace{10pt}
+
+A second test asks the question the ordering deliberately sets aside.
+Grouping patients into quantiles of predicted CATE, \emph{group calibration}
+\citep{dwivedi2020} compares the effect actually estimated within each group, $\text{GATE}_g^{DR}$,
+against the effect the model predicts for that same group, $\bar\tau_g$, and
+scales the discrepancy by how far the group effects lie from the overall
+average effect $\hat\theta_{\text{ATE}}$,
+\[
+R^2_{\text{cal}} \;=\; 1 \;-\; \frac{\displaystyle\sum_{g=1}^{G} p_g \left|\text{GATE}_g^{DR} - \bar\tau_g\right|}{\displaystyle\sum_{g=1}^{G} p_g \left|\text{GATE}_g^{DR} - \hat\theta_{\text{ATE}}\right|},
+\]
+where $g$ indexes the $G$ quantile groups, $p_g$ is the fraction of patients
+in group $g$, $\text{GATE}_g^{DR}$ is the average doubly robust pseudo-outcome
+within the group, $\bar\tau_g$ is the average predicted effect within the
+group, and $\hat\theta_{\text{ATE}}$ is the doubly robust estimate of the
+average treatment effect over the whole cohort --- the effect a model that
+assigns every patient the cohort average would predict. The resulting
+calibration $R^2$ falls to zero or below exactly when the model does no
+better than that constant baseline. The two tests therefore fail in different
+ways: a model can be well calibrated and still order nobody usefully, if the
+effect it correctly predicts is the same for everyone, and it can order
+patients correctly while overstating by a constant factor how much they
+differ.
+
+\vspace{10pt}
+
+A complementary check is the \textbf{best linear predictor (BLP) slope}
+\citep{chernozhukov2022}. Regressing the doubly robust pseudo-outcome
+$\hat\varphi_i$ on the model's predicted effect $\hat\tau(x_i)$,
+\[
+\hat\varphi_i = \beta_0 + \beta_1\,\hat\tau(x_i) + \epsilon_i,
+\]
+a slope $\beta_1$ significantly different from zero indicates that the
+predicted ranking tracks real variation in the observed effect; a slope
+near zero or negative indicates that it does not. Unlike the TOC-based
+summaries, which test only whether the ranking concentrates effect at the
+top, the BLP slope asks whether the predicted CATE is linearly informative
+about the true effect across its whole range. TOC, AUTOC, QINI and the BLP
+slope are computed together, on the same held-out pseudo-outcomes, by the
+doubly robust tester used throughout this thesis
+(\texttt{econml.validate.DRTester}).
+
+\section{The Noise Floor}
+
+A positive AUTOC, or any nonzero dispersion of the estimated $\tau(x)$ across
+patients, is not by itself evidence of heterogeneity: an estimator applied to
+a constant true effect still produces a spread of estimates, because
+estimation error alone has variance, and that spread grows with how flexible
+the model is allowed to be, independently of whether the underlying effect
+varies at all. Comparing against zero therefore answers the wrong question.
+
+\vspace{10pt}
+
+The comparison used throughout this thesis is against a \textbf{noise floor}
+obtained by permuting the treatment labels and repeating the identical
+estimation and evaluation pipeline. Permutation destroys any real treatment
+effect while leaving the covariates, the outcome rates, and every modelling
+choice untouched, so the resulting distribution of AUTOC — or of CATE
+dispersion — is exactly what the pipeline manufactures from nothing. A result
+is treated as a signal only if it clears this floor not zero.
+
+\section{When One Outcome Is Not Enough}
+\label{sec:multi-outcome}
+
+Everything so far ranks patients by the CATE of a single outcome. When only
+one outcome matters, that ranking is sufficient on its own: selecting the
+patients with the highest estimated $\tau(x)$ is enough to guide any
+downstream decision, whether it is enrollment or treatment assignment.
+
+\vspace{10pt}
+
+Clinical decisions rarely reduce to one outcome. A treatment that reduces
+one type of event can simultaneously increase another, and ranking patients
+separately by each outcome's CATE can recommend opposite actions for the
+same patient. Optimizing one target in isolation can therefore be
+detrimental to another, so a joint criterion is needed whenever more than
+one outcome is at stake.
+
+\vspace{10pt}
+
+A convenient way to represent this trade-off is a two-dimensional plane,
+with the CATE of one outcome on one axis and the CATE of a second outcome,
+or a weighted combination of several, on the other, both oriented so that a
+positive value favours the same treatment arm. Once both axes share that
+convention, the plane splits into four zones with fixed clinical meanings: a
+win--win quadrant, where that arm improves both outcomes and there is
+nothing to trade; a lose--lose quadrant, where the opposite arm is
+preferable on both; and two off-diagonal quadrants, where the two outcomes
+disagree and a genuine trade-off exists. Only in a trade-off quadrant does
+the answer depend on the individual patient, which is exactly what a
+personalized rule would have to find. The relative weight given to each
+outcome inside such a combination is a clinical judgement, not a
+statistical one, and must be supplied by domain experts together with the
+reasoning behind it; the ranking machinery of this chapter is agnostic to
+how that weight is chosen.
+
+\section{From Estimation to Decision: The Value of a Rule}
+
+A ranking can be statistically correct and still not be worth acting on if the
+gain it identifies is too small to justify changing the treatment strategy.
+The next step therefore asks a different question: not whether the model ranks
+patients correctly, but whether \emph{following} that ranking leads to a
+meaningful improvement in outcomes.
+
+\vspace{10pt}
+
+This requires a treatment policy that determines which treatment should be
+given to each patient based on the expected balance of gains and losses.
+Ranking patients using only one selected outcome may not be sufficient, since
+improving one outcome can come at the cost of worsening another. The policy
+must therefore consider the relevant outcomes jointly and evaluate whether
+the resulting treatment decisions provide an overall benefit.
+
+\vspace{10pt}
+
+For each candidate policy, its expected value is estimated using a
+cross-fitted AIPW (augmented inverse-propensity-weighted) estimator. The
+estimated value is then compared with simple fixed strategies that do not use
+the model, such as treating everyone with the same treatment. Confidence
+intervals are used to assess whether the difference is meaningful. This
+changes the question from \emph{`Does the model rank patients correctly?''}
+to \emph{`Does following its recommendations actually improve outcomes?''}
+
+
+\section{The Consequence for Model Selection}
+
+If the quantity that matters is the quality of the ranking, the
+hyperparameters of every estimator must be selected against that same
+target, not against a prediction-error criterion that has no direct
+bearing on it. Model selection therefore searches over hyperparameter
+configurations, tree depth, regularization strength, and similar settings,
+and scores each one by the cross-validated \emph{lower bound} of the AUTOC,
+\[
+\text{AUTOC} - z \cdot \text{SE},
+\]
+where $z$ is the standard-normal quantile fixing the confidence level and
+$\text{SE}$ is the standard error of the AUTOC across the cross-validation
+folds, rather than by the AUTOC point estimate itself. The choice is a
+deliberate defence against the winner's curse: across many configurations
+tried, the one that looks best often looks so partly by chance, and scoring
+by the point estimate alone would systematically select the configuration
+that got the luckiest draw rather than the one that generalizes best;
+subtracting $z \cdot \text{SE}$ discounts a configuration whose apparently
+high AUTOC rests on a single noisy fold.
+
+\vspace{10pt}
+
+A second rule handles one specific failure mode directly: a configuration
+whose fitted $\tau(x)$ collapses to a constant, the same value for every
+patient, produces no ranking at all, so its AUTOC has no meaningful
+variability across folds and its standard error can be small purely by
+accident. Such a configuration is not scored by the lower-bound formula but
+overridden to zero, so that an accidentally small standard error cannot
+substitute for an informative ranking. The search over hyperparameters
+covers the nuisance models, $\hat m(x)$ and $\hat e(x)$, jointly with the
+effect model, because a less noisy doubly robust pseudo-outcome raises the
+achievable lower bound exactly as much as a more expressive forest does;
+tuning one while holding the other fixed would credit the wrong component
+for any gain.
+
+\vspace{10pt}
+
+The measure used to validate an estimator, the criterion used to select
+among tuning configurations, and the criterion used to accept or reject a
+claim of heterogeneity are, by construction, the same quantity: no separate
+notion of predictive accuracy is allowed to override what the ranking-based
+evaluation of \S~\ref{sec:validation} says.
+
+\section{Chapter Summary}
+This chapter contains the description of the problem clarifying why the estimation of the
+benefit of the treatment can't be estimated or validated as a prediction problem.
+The chapter also describes the five families of estimators used in this project, and the reasons
+why they were chosen. The chapter also describes the validation strategy used to validate the ranking of the
+patients by the estimated treatment effect, and the reasons why this ranking is the object of validation.
+The chapter also describes the concepts of the multi-outcome ranking and the concept of a treatment policy.
+Finally explains how the noise floor is used to avod false positives and how the model hyperparameters are
+selected to maximize the ranking quality rather than the prediction quality.

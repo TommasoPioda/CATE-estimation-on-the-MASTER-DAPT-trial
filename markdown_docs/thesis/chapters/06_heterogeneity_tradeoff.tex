@@ -1,0 +1,810 @@
+% !TEX root = ../Thesis.tex
+\section{Five Estimators on the Cohort}
+
+This chapter applies the machinery introduced in Chapter~2 to estimate
+treatment-effect heterogeneity in the MASTER DAPT cohort. The main point is
+answering four questions:
+
+\begin{itemize}
+  \item Is there evidence of treatment-effect heterogeneity across patients?
+  \item If so, does the treatment benefit some patients more than others?
+  \item Can we derive decisions ranking the patients by their predicted benefit,
+  exploiting the estimated heterogeneity with an online learning approach?
+  \item How large would have the hetorogeneity needed to be in order to be detected by the five eistimators of Chapter~2 (\S~\ref{sec:five-estimators})
+        (\S~\ref{sec:delta})?
+\end{itemize}
+
+\paragraph{Implementation on this cohort.}
+The five estimator families of Chapter~2 (\S~\ref{sec:five-estimators}) are
+fitted on the same 4,579 patients, the same covariate set and the same five
+endpoints of Chapter 4: the two-model meta-learner, using the calibrated
+per-arm random forests of Section~\ref{sec:per-arm}; a causal forest
+(\texttt{CausalForestDML}) with gradient-boosted first stages for both
+nuisance functions $\mathbb{E}[Y \mid x]$ and $\mathbb{E}[T \mid x]$; a
+Bayesian causal forest (BCF) with the propensity fixed at the known $0.5$;
+an in-context model (CausalPFN); and an interaction forest (S-learner). As
+established in Chapter~2, their failure modes do not overlap, so a result
+common to all five is hard to attribute to any single one of them.
+
+\paragraph{The common protocol.}
+All five estimators share the same preprocessing: k-NN imputation and robust
+scaling of the 63 numeric covariates, fitted only on the training data.
+Heterogeneity is evaluated by fitting the model on 70\% of the data, ranking
+the held-out 30\% by
+predicted CATE, and applying the doubly robust tester of Chapter~2
+(\S~\ref{sec:validation}) with the known randomization propensity, reporting
+the BLP slope, AUTOC, and QINI defined there.
+
+\section{The Positive Control: The Average Effect Is Recovered}
+\label{sec:positive-control}
+
+Before asking whether the effect varies, one has to establish that the
+estimators see the effect at all. Table~\ref{tab:ate-recovery} compares the
+trial's unadjusted arm difference with the mean CATE produced by each of the
+five estimators, endpoint by endpoint. Under the convention of Chapter 4 a
+positive value is the benefit of abbreviating.
+
+\begin{table}[H]
+\centering
+\caption{Average effect recovery. Raw ATE is the unadjusted difference in event
+rate between arms; the remaining columns are the cohort mean of each
+estimator's per-patient CATE. Positive $=$ abbreviating lowers the event.}
+\label{tab:ate-recovery}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Endpoint & Raw ATE & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. \\
+\midrule
+Bleeding             & $+0.045$ & $+0.054$ & $+0.044$ & $+0.047$ & $+0.043$ & $+0.075$ \\
+Bleeding BARC 2/3/5  & $+0.028$ & $+0.037$ & $+0.026$ & $+0.029$ & $+0.021$ & $+0.053$ \\
+MI                   & $-0.005$ & $-0.002$ & $-0.004$ & $-0.003$ & $-0.003$ & $-0.033$ \\
+Cardiovascular death & $+0.003$ & $+0.002$ & $+0.002$ & $+0.003$ & $-0.005$ & $-0.002$ \\
+Stroke               & $+0.005$ & $+0.004$ & $+0.004$ & $+0.005$ & $+0.001$ & $+0.016$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The two bleeding related endpoints agree on the direction and order of
+magnitude of the effect: prolonging the therapy costs roughly four to five
+percentage points of risk under the broad bleeding definition and two to
+four points under BARC 2/3/5, matching the trial's own published conclusion,
+reached here by five estimators that share no code path beyond the
+preprocessing.
+
+On the ischemic side, all estimators except the interaction forest return
+effects within $[-0.005,\,+0.005]$, with MI consistently favouring
+prolonged therapy.
+
+The interaction forest is the main outlier: it overstates the bleeding-side
+effects by roughly 70--90\% and MI by a factor of six; on cardiovascular
+death, the endpoint closest to zero, it returns the opposite sign instead of
+a larger magnitude. This is expected because its in-sample CATE estimates
+come from an outcome-prediction model and can absorb prognostic differences.
+Consequently, the S-learner's dispersion can be viewed as an \emph{upper
+bound} on genuine heterogeneity: if even this bound is uninformative, the
+evidence for meaningful heterogeneity is even weaker.
+
+\section{The Negative Result: The Dispersion Is Noise}
+
+Every estimator produces a distribution of per-patient effects, and every such
+distribution has non-zero width. That width, on its own, means nothing: a
+constant true effect estimated with error also produces a spread of estimates,
+and the width of that spread grows with the flexibility of the model, not with
+the amount of heterogeneity in the data. The question is therefore never
+whether the dispersion is positive, but whether it exceeds the noise floor, and whether the resulting \emph{ranking} of patients tracks
+anything real.
+
+\paragraph{Dispersion, and a noise floor to compare it against.}
+Table~\ref{tab:cate-dispersion} reports the standard deviation of the
+per-patient CATE for each estimator. The five columns disagree by more than an
+order of magnitude for several endpoints, for example, from $0.005$ to $0.088$
+on BARC 2/3/5, which is itself the first indication that what is being measured is a
+property of the estimators rather than of the cohort. If the spread reflected
+real variation in treatment response, it would not depend so strongly on who
+is measuring it.
+
+\begin{table}[H]
+\centering
+\caption{Standard deviation of the per-patient CATE by estimator. The BCF
+column reports the posterior mean of $\mathrm{sd}(\tau(x))$, and the placebo
+column the same quantity obtained after permuting the treatment labels, i.e.\
+the dispersion produced by estimation noise when the true effect is exactly
+constant. The floor is computed only for the two endpoints with enough events
+to support it.}
+\label{tab:cate-dispersion}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc|c}
+\toprule
+Endpoint & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. & Placebo floor \\
+\midrule
+Bleeding             & 0.035 & 0.006 & 0.039 & 0.092 & 0.093 & 0.031 \\
+Bleeding BARC 2/3/5  & 0.032 & 0.005 & 0.028 & 0.059 & 0.088 & 0.026 \\
+MI                   & 0.032 & 0.003 & 0.016 & 0.009 & 0.059 & --- \\
+Cardiovascular death & 0.022 & 0.002 & 0.020 & 0.006 & 0.050 & --- \\
+Stroke               & 0.011 & 0.006 & 0.013 & 0.006 & 0.051 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The last column is what turns the comparison into a test. Permuting the
+treatment labels destroys the effect while leaving the covariates, the outcome
+rates and the estimation procedure untouched, so refitting on permuted data
+measures exactly how much apparent heterogeneity the method manufactures from
+nothing. On bleeding, the BCF's observed spread is $0.0390$ against a placebo
+floor of $0.0309$, an excess of $0.0081$. On BARC 2/3/5, the observed spread is
+$0.0276$ against a floor of $0.0264$, an excess of $0.0012$. These values come
+from the latest run of 100 treatment-label permutations, with 500 retained
+posterior draws per fit, and correspond to the rounded values reported in
+Table~\ref{tab:cate-dispersion}.
+
+As a descriptive diagnostic, the fraction of posterior draws from the observed
+fit that exceed the pooled placebo mean is calculated as
+\[
+D
+=
+\frac{1}{M}\sum_{m=1}^{M}
+\mathbb{I}\!\left(s_m^{\mathrm{obs}}>
+\overline{s}^{\mathrm{placebo}}\right),
+\qquad
+s_m = \mathrm{sd}_i\!\left(\tau_m(X_i)\right),
+\]
+where $M=500$ is the number of retained posterior draws from the observed fit.
+The resulting values are $0.824$ for bleeding and $0.548$ for BARC 2/3/5. This
+quantity compares the observed posterior with the mean of the pooled placebo
+distribution; it does not propagate uncertainty in that placebo distribution
+and should therefore not be interpreted as a formal posterior probability or
+a hypothesis-test $p$-value. The result suggests a modest separation from the
+noise floor for bleeding and essentially no separation for BARC 2/3/5, rather
+than strong evidence of treatment-effect heterogeneity. Figure~\ref{fig:placebo-floor}
+shows the corresponding distributions.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_placebo_floor.png}
+\caption{Posterior of the cross-patient spread $\mathrm{sd}(\tau(x))$ under the
+Bayesian causal forest (red) against the placebo distribution obtained by
+permuting the treatment labels (grey), for the two best-powered endpoints.
+Dashed lines mark the two means. A real heterogeneity signal would place the
+red distribution clear of the grey one.}
+\label{fig:placebo-floor}
+\end{figure}
+
+\paragraph{The ranking does not beat random targeting.}
+The noise floor is a model-internal diagnostic: it compares a fitted spread
+against a spread obtained under the null, without consulting the outcomes on a
+held-out set. The decisive test is the other one. Table~\ref{tab:drtester}
+reports the doubly-robust validation of the ranking on the held-out 30\% for
+the three estimators that share exact same protocol.
+
+\begin{table}[H]
+\centering
+\caption{Doubly-robust validation of the CATE ranking on a held-out 30\% split.
+AUTOC is the targeting gain over random with $1/q$ weighting; QINI is the
+analogous rank-weighted gain. A positive value with a small $p$ would
+indicate a usable ranking. The BCF run does not produce a QINI curve.}
+\label{tab:drtester}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+& \multicolumn{4}{c}{Causal forest} & \multicolumn{4}{c}{T-learner} & \multicolumn{2}{c}{BCF} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-11}
+Endpoint & AUTOC & $p$ & QINI & $p$ & AUTOC & $p$ & QINI & $p$ & AUTOC & $p$ \\
+\midrule
+Bleeding             & $-0.010$ & 0.23 & $-0.006$ & 0.09 & $-0.004$ & 0.39 & $-0.003$ & 0.24 & $+0.025$ & 0.04 \\
+Bleeding BARC 2/3/5  & $+0.004$ & 0.37 & $+0.002$ & 0.32 & $+0.005$ & 0.35 & $+0.000$ & 0.47 & $+0.013$ & 0.15 \\
+MI                   & $-0.010$ & 0.08 & $-0.003$ & 0.11 & $-0.006$ & 0.26 & $-0.000$ & 0.43 & $-0.004$ & 0.30 \\
+Cardiovascular death & $-0.001$ & 0.42 & $-0.001$ & 0.27 & $+0.000$ & 0.49 & $-0.000$ & 0.43 & $+0.006$ & 0.20 \\
+Stroke               & $+0.004$ & 0.19 & $+0.001$ & 0.25 & $+0.002$ & 0.30 & $+0.001$ & 0.23 & $+0.003$ & 0.22 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Only the BCF result for bleeding falls below the unadjusted 5\% threshold
+($p = 0.04$), and its sign is opposite to that of the causal forest on the same
+endpoint. It is a nominal result among fifteen comparisons, not a robust
+ranking signal: the signs are not even consistent across estimators on the
+same endpoint. The QINI weighting agrees:
+under the causal forest the largest QINI is $-0.006$ on bleeding
+($p = 0.09$) and every other value is within $0.003$ of zero, so the negative
+result is not an artefact of a weighting that over-emphasises the head of the
+ranking.
+
+The BLP slope (\S~\ref{sec:validation}) provides a similarly weak indication
+of treatment-effect heterogeneity.
+\vspace{10pt}
+
+Under the causal forest, the slope is negative for bleeding ($-3.02$,
+$p=0.35$), MI ($-3.06$, $p=0.19$) and cardiovascular death ($-1.72$,
+$p=0.61$), and positive for BARC 2/3/5 ($+0.36$, $p=0.91$) and stroke
+($+0.83$, $p=0.37$); none of the five is statistically distinguishable from
+zero. The estimated treatment-effect ranking therefore shows no consistent
+association, positive or negative, with the observed effect scores.
+Calibration is likewise poor: the calibration $R^2$ is negative for four
+of the five endpoints and only mildly positive for stroke ($+0.36$). This
+indicates that, for these endpoints, the model-based group-level
+treatment-effect predictions do not explain more variation in the observed
+group effects than the corresponding overall mean.
+
+\vspace{10pt}
+
+The two remaining estimators are evaluated with weaker but independent
+protocols and reach the same place. The in-context model's bootstrapped TOC
+bands cover zero on every endpoint, and its strongest Spearman correlation
+between any covariate and the predicted CATE is $0.21$ — no patient
+characteristic meaningfully moves its estimate.
+The interaction forest points
+the same way from inside its own design matrix: the treatment column carries
+between $0.0023$ and $0.0047$ of the forest's total splitting importance
+depending on the endpoint, so the ensemble that is free to split on treatment,
+on covariates and on their product barely uses the treatment at all.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_sorted_forest.png}
+\caption{Per-patient CATE of the tuned causal forest, patients sorted by
+predicted effect, one panel per endpoint. On both bleeding endpoints the whole
+cohort sits on the same side of zero: the ordering exists, but the range it
+spans is a fraction of the average effect.}
+\label{fig:sorted-cate}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_rate_toc.png}
+\caption{TOC curves for the tuned causal forest on the held-out split: gain
+over random targeting as the treated fraction grows, with 95\% confidence
+bands. A usable ranking would lift the curve clear of the dashed line at small
+treated fractions, where the clinical decision is made. The bands cover zero
+throughout on every endpoint.}
+\label{fig:rate-toc}
+\end{figure}
+
+\vspace{10pt}
+
+Figures~\ref{fig:sorted-cate} and \ref{fig:rate-toc} show the same result from
+the two sides that matter. The sorted CATE curves are monotone by construction
+and therefore always look like heterogeneity; what they actually show, on the
+bleeding endpoints, is a cohort in which every single patient is estimated to
+benefit from abbreviating, spanning $+0.025$ to $+0.062$ around a mean of
+$+0.044$ — a total range smaller than the average effect itself. The TOC curves then ask whether that ordering buys anything,
+and answer no: at every treated fraction, the doubly-robust gain over random
+targeting is indistinguishable from zero.
+
+\paragraph{What the two results say together.}
+Read separately, either half could be dismissed. A positive control on its own
+shows that the estimators can find an average effect, which is a much easier
+task than finding heterogeneity. A null result on its own is compatible with
+having searched badly. Together they are informative: the same estimators, the
+same data, the same validation protocol recover an average effect that matches
+the published trial and fail to find any variation around it above the level
+that noise alone produces. The distinction this chapter is entitled to claim is
+between \emph{nothing was found} and \emph{a search with tools that demonstrably
+work found nothing} --- and Section~\ref{sec:delta} makes even that claim
+quantitative by measuring how large a heterogeneity those tools would have
+needed in order to find it.
+
+\section{An Episode: The Model That Collapsed}
+\label{sec:tuned-forest}
+
+Following Chapter 2, the causal forest's hyperparameters are tuned on the same
+criterion used to evaluate it: the cross-validated lower confidence bound of
+the AUTOC on the bleeding endpoint,
+\[
+\mathrm{AUTOC} - z \cdot \mathrm{SE}
+\]
+averaged over folds. The search is deliberately wide and it is run as a parallel
+Optuna study reporting the results in a shared journal;
+the configuration reported here was selected over 23,361 completed trials.
+Two methods are used to avoid the winner's curse. First the performance of the model
+is evaluated against the lower bound of the AUTOC calculated with the formula cited above.
+This penalizes configurations whose apparently strong ranking performance is accompanied
+by high uncertainty, reducing the chance of selecting a model simply because of a
+favourable but unstable cross-validation estimate. Secondly if the model returns a
+constant cate across the patients, the AUTOC is set to zero, so that
+the model cannot win by returning a degenerate ranking.
+
+That second safeguard is motivated by an earlier diagnostic result. Under one
+tuned configuration, $\mathrm{std}(\mathrm{CATE})$ was exactly zero, meaning
+that the estimated treatment effect was identical for all patients. The cause
+was traced to the forest's \texttt{min\_impurity\_decrease} hyperparameter:
+when set too high, no covariate provides sufficient improvement to justify a
+split, and the forest therefore returns the same effect estimate for every
+patient, corresponding to the overall ATE. This is not a pipeline error, but
+a valid limiting case in which the data provide insufficient evidence of
+treatment-effect heterogeneity under the chosen splitting criterion.
+
+\paragraph{The flexibility ladder.}
+Rather than settle the question with a single tuned model, three explicit
+configurations of increasing capacity are fitted, scaling the forest and its
+first-stage nuisance models together: \texttt{regularized} (depth 2, leaves of
+at least 40), \texttt{medium} (depth 4, leaves of 15) and \texttt{flexible}
+(depth 8, leaves of 5). Table~\ref{tab:flex-ladder} reports the results.
+
+\begin{table}[H]
+\centering
+\caption{Mean and standard deviation of the per-patient CATE across three
+explicit flexibility levels and the tuned model. The mean is stable; only the
+dispersion moves.}
+\label{tab:flex-ladder}
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{4}{c}{mean CATE / std CATE} \\
+\cmidrule(lr){2-5}
+Endpoint & Regularized & Medium & Flexible & Tuned (Optuna) \\
+\midrule
+Bleeding             & $0.047$ / $0.003$ & $0.049$ / $0.006$ & $0.055$ / $0.011$ & $0.044$ / $0.006$ \\
+Bleeding BARC 2/3/5  & $0.027$ / $0.001$ & $0.028$ / $0.003$ & $0.037$ / $0.009$ & $0.026$ / $0.005$ \\
+MI                   & $-0.004$ / $0.000$ & $-0.004$ / $0.004$ & $-0.015$ / $0.010$ & $-0.004$ / $0.003$ \\
+Cardiovascular death & $0.003$ / $0.000$ & $0.001$ / $0.002$ & $0.000$ / $0.005$ & $0.002$ / $0.002$ \\
+Stroke               & $0.004$ / $0.000$ & $0.016$ / $0.002$ & $0.016$ / $0.006$ & $0.004$ / $0.006$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Varying the model configuration from the most to the least regularized moves
+the dispersion far more than the mean, but the mean is not fully invariant
+either. On bleeding the dispersion grows from $0.003$ to $0.011$, a factor of
+roughly four, while the mean ranges from $0.044$ (tuned) to $0.055$ (flexible).
+On stroke the mean itself jumps: $0.004$ under the regularized preset, $0.016$
+under both the medium and the flexible presets, back down to $0.004$ under the
+tuned model, whose hyperparameters are selected by the AUTOC-based criterion
+rather than by capacity alone. Under the regularized preset the three ischemic
+endpoints collapse to a single value each across all 4,579 patients: death, MI
+and stroke all reach exactly zero dispersion. Under the flexible preset
+cardiovascular death and MI show dispersions of $0.005$ and $0.010$,
+comfortably larger than their own raw average effects of $0.003$ and $0.005$.
+
+A quantity that is invariant to model capacity is more plausibly a property of
+the data; a quantity that scales with model capacity is more plausibly a
+property of the model. The dispersion is the clearer case: it moves from
+exactly zero to several times its regularized value as capacity grows, on
+every endpoint. The mean moves too, though less sharply, and the two
+movements are not independent: a model with enough capacity to manufacture
+dispersion out of noise can also shift its own central estimate in the
+process. Read together, the ladder does not show a stable, capacity-independent
+treatment effect that gains a spurious spread as capacity grows; it shows an
+estimate that becomes less trustworthy on both counts as the model is given
+more room to fit noise.
+
+\paragraph{A note on the tuning score itself.}
+The causal forest configuration used throughout this chapter (Tables
+\ref{tab:ate-recovery}, \ref{tab:drtester} and \ref{tab:flex-ladder}) was
+selected by its cross-validated AUTOC lower bound on the bleeding endpoint,
+positive at selection time. Evaluated once on the held-out split by the
+doubly-robust tester, the same configuration returns $-0.010$ ($p = 0.23$),
+the causal-forest/bleeding row already reported in Table~\ref{tab:drtester}.
+The gap between a criterion maximised over tens of thousands of
+configurations and that same configuration's own held-out re-evaluation is
+itself an illustration of the winner's curse the lower-bound objective is
+meant to attenuate, not eliminate. For this reason no heterogeneity claim in
+this thesis rests on a tuning score: the held-out doubly-robust evaluation is
+the only figure of merit used to support the conclusions.
+
+The Optuna study continued running after this configuration was selected, and
+has since reached 161,336 trials and a new best cross-validated AUTOC lower
+bound of $+0.017$. That later configuration has never been evaluated on a
+held-out split, so it is not used anywhere in this chapter: a higher tuning
+score with no held-out check is exactly the optimistic statistic the paragraph
+above warns against, not a stronger result.
+
+\section{The Trade-off Plane}
+The results above are endpoint specific, whereas the clinical decision
+requires balancing bleeding and ischemic outcomes jointly. The endpoint-
+specific CATEs can therefore be represented in a two-dimensional trade-off
+plane, with the bleeding benefit of abbreviated therapy on one axis and the
+ischemic effect on the other. The top-right quadrant favours abbreviated
+therapy, while the bottom-left favours prolonged therapy. The bottom-right
+quadrant is the most relevant for personalization, as abbreviated therapy
+reduces bleeding but increases ischemic risk. The ischemic axis combines MI,
+stroke, and cardiovascular death using the prespecified weights $0.4$, $0.4$,
+and $0.2$, respectively. Both axes are read from the single tuned causal
+forest of Section~\ref{sec:tuned-forest}, the same model used for the
+sorted-CATE and TOC figures earlier in this chapter, rather than from all
+five estimators of Section~\ref{sec:positive-control}: the plane is a
+two-dimensional view of one model's ranking, not a cross-estimator
+comparison.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_tradeoff_plane.png}
+\caption{The trade-off plane, from the tuned causal forest: bleeding benefit
+of abbreviating against the weighted ischemic benefit ($0.4$ MI $+\,0.4$
+stroke $+\,0.2$ cardiovascular death), one point per patient. Left, patient
+density; right, the same points tinted by the conflict score
+$z(\text{bleed}) - z(\text{ischemic})$. The entire cohort sits in the right
+half-plane, and the cloud straddles the horizontal axis without any
+concentration in the bottom-right quadrant that a personalized rule would
+require.}
+\label{fig:tradeoff-plane}
+\end{figure}
+
+Figure~\ref{fig:tradeoff-plane} collapses the three ischemic endpoints into
+one weighted axis. Appendix~\ref{app:supplementary-tables} unpacks that
+choice from both sides: Figure~\ref{fig:tradeoff-individual-endpoints} plots
+bleeding against each ischemic endpoint separately instead of the weighted
+combination, and Figure~\ref{fig:ischaemic-pairwise} plots the three
+ischemic endpoints against one another, checking whether they move together
+or pull apart across patients.
+
+\iffalse
+\paragraph{What the plane shows.}
+Figure~\ref{fig:tradeoff-plane} shows a single, compact cloud of patients.
+The bleeding CATE is uniformly positive, ranging from $+0.032$ to $+0.068$,
+while the ischemic CATE remains close to zero, spanning approximately
+$-0.004$ to $+0.010$. No distinct bottom-right subgroup or clear separation
+is visible. Clustering the standardized plane leads to the same conclusion:
+the best silhouette score selects three clusters that correspond to adjacent
+slices of the same continuous cloud, with mean bleeding CATEs of $0.043$,
+$0.047$, and $0.053$. Thus, the plane provides no clear evidence of distinct
+patient subgroups with meaningfully different treatment-effect profiles.
+\fi
+
+\paragraph{The plane with uncertainty.}
+A single fitted plane does not quantify uncertainty in individual treatment
+effects. We therefore use a nonparametric bootstrap, resampling patients with
+replacement, refitting the tuned forest, and predicting on the original
+covariates. Fifty replicates provide a 95\% interval for each patient's
+position on both axes. As shown in Figure~\ref{fig:tradeoff-bootstrap}, none of the $4{,}579$ patients
+has its entire confidence region within the bottom-right quadrant, despite
+$1{,}270$ point estimates falling there. The within-patient bootstrap
+variation is also large relative to the variation across patients, with
+signal-to-noise ratios of $0.57$ for bleeding and $0.52$ for ischemic risk,
+indicating that individual differences in the estimated treatment effects are
+largely dominated by estimation uncertainty. In contrast, $4{,}541$ patients
+($99.2\%$) have a significantly positive bleeding benefit from abbreviated
+therapy. Thus, the analysis supports a strong average bleeding benefit, but
+provides little evidence of reliably distinguishable patient-level
+heterogeneity.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_tradeoff_bootstrap.png}
+\caption{The trade-off plane with bootstrap uncertainty, from 50 refits of the
+tuned forest on resampled cohorts. Left, per-patient 95\% intervals for a
+random subsample of 1,000 patients; right, the whole cohort, with patients
+whose interval lies entirely in the trade-off quadrant marked in red. There
+are no patients that lie entirely in the bottom-right quadrant.}
+\label{fig:tradeoff-bootstrap}
+\end{figure}
+
+What \emph{does} survive the bootstrap is the average: 4,541 of 4,579 patients
+(99.2\%) have a significantly positive bleeding benefit of abbreviating. The
+plane is thus a precise picture of the whole chapter — the effect is real,
+strong and essentially the same for everyone.
+
+\paragraph{A caution about the conflict subgroup.}
+When we sort by CAE the training test and we use the top 15\% by conflict
+score produces a subgroup of 687 patients
+whose \emph{observed} event rates are very high: 24.6\% bleeding under
+prolonged therapy against 3.7\% under abbreviated, a raw difference of 20.8
+percentage points, against 1.6 points in the rest of the cohort. The number is
+real and it means nothing, because the score that selected those patients was
+computed from a model fitted on the same patients and the same outcomes. The
+subgroup is selected \emph{to} exhibit that contrast; quoting its observed
+event rates as an effect estimate would be circular. It is reported here as a
+descriptive, in-sample profile only, and the honest counterpart is the previous
+paragraph: with error bars, none of these patients is distinguishable from the
+cohort average.
+
+\section{From Ranking to Decision}
+\label{sec:decision}
+
+The analyses above assess whether the model's patient ranking captures
+meaningful differences in treatment effect. A distinct and clinically more
+relevant question is whether acting on this ranking yields a measurable
+benefit. A decision rule may provide value even when the underlying ranking
+is imperfect, while a well-calibrated ranking may have limited practical
+utility if the benefit it identifies is too small to justify departing from
+a simple treatment strategy. These questions therefore require different
+analytical approaches, and the negative findings above do not, by
+themselves, determine the value of the resulting treatment policy.
+
+\paragraph{The net-benefit endpoint.}
+A decision needs an outcome that already encodes the trade-off, since no single
+endpoint can. This section therefore adds two endpoints already adjudicated by
+the trial's Clinical Event Committee rather than built for this thesis: NACE
+(Net Adverse Clinical Events, 7.7\% in this cohort), the trial's pre-specified
+primary net-benefit endpoint, combining death, MI, stroke and BARC 3--5
+bleeding, and the ischemic composite MACCE (death, MI and stroke, 6.0\%)
+\citep{valgimigli2021masterdapt}. Both
+are read directly from the merged MASTER DAPT dataset, as the columns
+\texttt{cec\_nace\_335d} and \texttt{cec\_macce\_335d}, and neither passes
+through the five-endpoint modelling pipeline of Chapter 4 or the CATE
+estimators earlier in this chapter: they enter the analysis only here, with
+their own outcome and propensity models fitted fresh under cross-fitted AIPW,
+independently of every result so far. All estimates below use the known
+randomization propensity.
+
+The analysis is first anchored to the trial-level effects. Table~6.5 reports
+the doubly robust ATE for NACE and MACCE, together with the corresponding
+component effects, using this common AIPW pipeline. The NACE confidence
+interval includes zero, indicating no detectable overall treatment effect and
+reproducing the trial's primary finding. At the component level, abbreviated
+therapy shows a bleeding benefit, while the ischemic effect is not
+statistically distinguishable from zero. The two effects therefore largely
+offset each other at the composite level.
+
+\begin{table}[H]
+\centering
+\caption{Cross-fitted AIPW average treatment effect (prolonged minus
+abbreviated) on NACE and on its bleeding and ischemic components, with the
+known randomization propensity. Positive values favour abbreviated therapy;
+an interval spanning zero is net-neutral.}
+\label{tab:nace-ate}
+\begin{tabular}{lccc}
+\toprule
+Endpoint & Event rate & ATE & 95\% CI \\
+\midrule
+NACE                 & 7.7\% & $+0.005$ & $[-0.011,\,+0.020]$ \\
+BARC 2/3/5 bleeding   & 7.8\% & $+0.026$ & $[+0.010,\,+0.042]$ \\
+MACCE                 & 6.0\% & $-0.000$ & $[-0.014,\,+0.014]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Policy value.}
+A treatment policy $\pi$ maps a patient's covariates to a recommended arm, 
+abbreviated or prolonged DAPT. This section compares five such policies on NACE, 
+under the same cross-fitted AIPW framework as above.
+
+Two are the fixed arms. A third, \emph{ATE sign}, is a data-driven constant rule:
+on each training fold it recommends whichever arm that fold's estimated ATE favors,
+so across the five folds its overall percentage of patients recommended prolonged 
+therapy need not be 0 or 100. The remaining two learn a covariate-dependent recommendation 
+directly, by minimizing the expected event rate: an interpretable depth-2 doubly-robust 
+policy tree and a doubly-robust policy forest (200 trees, depth 3), both fitted with \texttt{econml}'s
+\texttt{DRPolicyTree} and \texttt{DRPolicyForest}, which implement the doubly robust policy-learning
+framework of \citet{athey2021policylearning}, under the known randomization propensity.
+
+Evaluation follows the same five-fold discipline as the ATE estimates: each learned policy is fitted 
+on the training folds and scored only on the held-out fold, so no policy is evaluated on patients it 
+was trained on. A policy's \emph{value} is its out-of-fold expected NACE rate (lower is better); 
+its \emph{improvement} is the paired, per-patient difference against whichever fixed arm scores lower, 
+with a confidence interval on that paired difference (Table~\ref{tab:policy-value}).
+
+\begin{table}[H]
+\centering
+\caption{Cross-fitted AIPW policy value on NACE (lower is better) and paired
+improvement over the better fixed arm. A usable personalized rule would show a
+positive improvement with an interval excluding zero.}
+\label{tab:policy-value}
+\small
+\begin{tabular}{lccc}
+\toprule
+Policy & Value (NACE) & \% prolonged & Improvement vs.\ best fixed [95\% CI] \\
+\midrule
+All abbreviated   & 0.076 & 0.0   & --- \\
+All prolonged     & 0.080 & 100.0 & $-0.005$ $[-0.020,\,+0.011]$ \\
+ATE sign          & 0.082 & 20.0  & $-0.007$ $[-0.014, -0.0001]$ \\
+Policy tree       & 0.084 & 34.0  & $-0.008$ $[-0.017, +0.001]$ \\
+Policy forest     & 0.087 & 33.7  & $-0.011$ $[-0.020, -0.002]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No policy achieves a lower NACE rate than \emph{all abbreviated}, the better
+of the two fixed arms. Two of the three learned policies, ATE sign and the
+policy forest, are significantly \emph{worse}: their improvement intervals
+lie entirely below zero. This is the expected outcome of personalizing on
+heterogeneity that is not present in the data: every patient a rule diverts to
+prolonged therapy is, on average, a patient who gains nothing and bleeds
+more.
+
+\section{How Small a Heterogeneity Would Have Been Seen}
+\label{sec:delta}
+
+The positive control in Section~6.2 establishes that the estimators recover an
+average treatment effect, but this does not demonstrate that they are capable
+of detecting treatment-effect heterogeneity of a given magnitude. These are
+distinct properties, and the latter is essential when interpreting a negative
+heterogeneity result. Without such an assessment, the conclusion that no
+heterogeneity was detected remains a statement about the analysis rather than
+about the underlying data. This section therefore quantifies the sensitivity
+of the analysis by estimating, for each endpoint, the smallest heterogeneity
+$\delta$ that the protocol used in this chapter could reliably detect.
+
+\paragraph{Protocol.}
+The cohort's real covariates and real treatment assignment are left untouched;
+only the outcome is resampled. A baseline risk $\mu(x)$ is fitted on the
+abbreviated arm, a direction of heterogeneity $g(x)$ is fixed as the
+standardized patient age — chosen because it is the second most important
+covariate in the already-fitted bleeding model, and because age is a recognised
+component of standard bleeding-risk scores, so the injected modifier is
+clinically plausible rather than arbitrary — and synthetic outcomes are drawn
+from the following equation.
+
+\begin{equation}
+Y \sim \mathrm{Bernoulli}\!\left(
+\mathrm{clip}\!\left(\mu(x) + T \cdot \delta \cdot g(x)\right)
+\right).
+\end{equation}
+
+For the two bleeding endpoints $\delta$ is an absolute risk
+difference; for the three rare endpoints an additive $\delta$ of comparable
+size would distort the prevalence, so it is applied as a log odds ratio on the
+logit scale. The tuned causal forest is then refitted with unchanged
+hyperparameters and scored with the same cross-validated AUTOC lower bound used
+everywhere else.
+
+The comparison at each $\delta$ is not against zero but against a noise floor
+recomputed \emph{at that same} $\delta$ by permuting the treatment: the same
+synthetic outcomes, the same estimator, no effect. This matters because the
+floor is not constant — a rarer or more skewed outcome shifts it — and
+comparing against a fixed zero would credit the protocol with detections it did
+not make. With 20 seeds per $(\text{endpoint}, \delta)$ pair and 500 fits in
+total, $\delta^*$ is defined as the smallest $\delta$ on the grid at which the
+observed score beats its paired floor in at least 90\% of seeds.
+
+\begin{table}[H]
+\centering
+\caption{Minimum detectable heterogeneity $\delta^*$ per endpoint, against the
+endpoint's own average effect. Detection requires beating the permuted-treatment
+floor in $\geq 90\%$ of 20 seeds.}
+\label{tab:delta-star}
+\begin{tabular}{lrrl}
+\toprule
+Endpoint & Real ATE & $\delta^*$ & Reading \\
+\midrule
+Bleeding             & $+0.045$ & $0.10$ risk diff. & more than twice the average effect \\
+Bleeding BARC 2/3/5  & $+0.028$ & $0.10$ risk diff. & more than twice the average effect \\
+MI                   & $-0.005$ & not interpretable & null calibration fails \\
+Cardiovascular death & $+0.003$ & not interpretable & null calibration fails \\
+Stroke               & $+0.005$ & not reached & null calibration fails \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{delta_sensitivity.png}
+\caption{Observed AUTOC lower bound (blue) against the permuted-treatment floor
+(grey) as the injected heterogeneity grows, one panel per endpoint; bands are
+the 10th--90th percentile across 20 seeds and the dashed line marks
+$\delta^*$. The two curves separate cleanly once the injected signal is large
+enough, which is what makes the protocol a measurement rather than a
+formality.}
+\label{fig:delta-sensitivity}
+\end{figure}
+
+\paragraph{Reading the number honestly.}
+The current sensitivity results are interpretable only for the two bleeding endpoints.
+For bleeding, the minimum detectable risk difference is 0.100, more than twice
+the observed average effect of 0.045. For BARC 2/3/5 bleeding it is also
+0.100, more than three times the observed average effect of 0.028. These
+results exclude only large heterogeneity; they do not establish that smaller
+patient-level effects are absent.
+
+The ischemic rows fail the null-calibration check. At zero injected
+heterogeneity, MI and cardiovascular death already meet the nominal detection
+criterion, while stroke plateaus at 73 percent of seeds without reaching the
+required 90 percent. These artifacts do not demonstrate sensitivity to small
+heterogeneity and the associated thresholds must not be interpreted as valid
+power estimates.
+
+\section{Robustness to Covariate Discretization}
+
+Every result so far treats the 63 covariates in their original, continuous form. Clinical
+risk scores built from continuous predictors are routinely categorised into ordinal bins for
+interpretability. All five estimator families were refit after applying the same
+categorisation to the covariates: the 15 of 63 covariates that take more than two distinct
+values were coarsened into four ordinal bins with scikit-learn's \texttt{KBinsDiscretizer},
+fit on the training rows of each split only. The refit uses the same 70/30 stratified split
+and the same DRTester protocol as the rest of the chapter; the tuned causal forest reuses the
+hyperparameters already selected by the Optuna search on the continuous covariates
+(\S~\ref{sec:tuned-forest}) rather than being re-tuned, so a change in the result can be
+attributed to the preprocessing step and not to a different search outcome.
+
+\begin{table}[H]
+\centering
+\caption{Mean and standard deviation (in parentheses) of the per-patient CATE under
+discretized covariates, for the same five estimators and five endpoints as
+Table~\ref{tab:ate-recovery}. Raw ATE is unaffected by covariate discretization and repeated
+for reference.}
+\label{tab:discretized-estimator}
+\small
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Endpoint & Raw ATE & T-learner & Causal for. & BCF & CausalPFN & Interact.\ for. \\
+\midrule
+Bleeding             & $+0.045$ & $+0.063\,(0.038)$ & $+0.049\,(0.005)$ & $+0.047\,(0.039)$ & $+0.044\,(0.086)$ & $+0.084\,(0.088)$ \\
+Bleeding BARC 2/3/5  & $+0.028$ & $+0.045\,(0.040)$ & $+0.031\,(0.002)$ & $+0.029\,(0.028)$ & $+0.017\,(0.064)$ & $+0.062\,(0.085)$ \\
+MI                   & $-0.005$ & $-0.002\,(0.016)$ & $-0.005\,(0.001)$ & $-0.003\,(0.015)$ & $-0.002\,(0.024)$ & $-0.043\,(0.065)$ \\
+Cardiovascular death & $+0.003$ & $+0.003\,(0.014)$ & $+0.002\,(0.001)$ & $+0.003\,(0.021)$ & $-0.002\,(0.012)$ & $-0.001\,(0.063)$ \\
+Stroke               & $+0.005$ & $+0.004\,(0.004)$ & $+0.018\,(0.001)$ & $+0.005\,(0.013)$ & $+0.001\,(0.007)$ & $+0.023\,(0.065)$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The pattern of Table~\ref{tab:ate-recovery} reproduces closely: the bleeding endpoints keep
+the same sign and order of magnitude across all five estimators, the ischemic endpoints stay
+small, and the interaction forest remains the outlier by a wide margin. One estimator-endpoint
+pair changes qualitatively. The tuned causal forest's stroke effect rises from $+0.004$ under
+continuous covariates to $+0.018$ under discretized covariates, four times the raw ATE
+($+0.005$) and, in this rerun, the largest ischemic-side effect in the table, despite using
+the identical forest hyperparameters in both cases.
+
+\begin{table}[H]
+\centering
+\caption{Doubly-robust validation of the CATE ranking under discretized covariates, held-out
+30\% split, same protocol as Table~\ref{tab:drtester}. QINI was not computed for this rerun.}
+\label{tab:discretized-drtester}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{Causal forest} & \multicolumn{2}{c}{T-learner} & \multicolumn{2}{c}{BCF} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Endpoint & AUTOC & $p$ & AUTOC & $p$ & AUTOC & $p$ \\
+\midrule
+Bleeding             & $+0.014$ & 0.14 & $-0.009$ & 0.25 & $+0.025$ & 0.04 \\
+Bleeding BARC 2/3/5  & $+0.015$ & 0.08 & $-0.016$ & 0.06 & $+0.012$ & 0.15 \\
+MI                   & $-0.001$ & 0.42 & $-0.004$ & 0.34 & $-0.002$ & 0.38 \\
+Cardiovascular death & $+0.003$ & 0.34 & $+0.002$ & 0.41 & $+0.005$ & 0.26 \\
+Stroke               & $+0.006$ & 0.10 & $+0.002$ & 0.28 & $+0.009$ & 0.04 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The BCF bleeding result reproduces almost exactly ($p=0.043$ against $p=0.04$ under
+continuous covariates). Under discretized covariates the BCF stroke result crosses the same
+unadjusted threshold ($p=0.035$), which it did not under continuous covariates ($p=0.22$),
+and the T-learner's barc\_235 result changes sign ($+0.005\to-0.016$) while remaining
+non-significant either way. Across the two preprocessing choices, fifteen comparisons in
+Table~\ref{tab:drtester} and fifteen more here produce at most one or two nominal hits each,
+at a different endpoint each time and with signs that do not agree across estimators. That
+instability is what estimation noise around a true null produces; a real ranking signal would
+not depend on whether the covariates entering the forest are continuous or binned into
+quartiles.
+
+The BCF placebo floor moves in the same direction as the main analysis: the bleeding excess
+over the floor is $0.0064$ under discretized covariates against $0.0081$ under continuous
+ones, and the BARC 2/3/5 excess is $0.0004$ against $0.0012$. The causal-forest flexibility
+ladder (Table~\ref{tab:flex-ladder}) keeps the same qualitative shape: the regularized preset
+collapses the ischemic dispersion to essentially zero and the flexible preset remains the most
+dispersed configuration on every endpoint; the tuned configuration's dispersion falls below
+the medium preset's on every endpoint, a lower position in the ladder than under continuous
+covariates.
+
+\section{Chapter Summary}
+
+Four conclusions emerge from the analyses, in the order in which they were
+established. First, the average treatment effect in MASTER DAPT is recovered
+consistently across five independent estimator families and agrees with the
+published trial results, supporting the validity of the estimation framework.
+Second, estimated patient-level variation changes markedly with the estimator
+and model capacity. The BCF bleeding spread modestly exceeds its permuted-treatment
+floor, but this separation does not persist in doubly robust held-out evaluation
+under either weighting scheme and therefore does not support a stable property of
+the data. Third, the trade-off plane that would underpin a
+personalized treatment rule forms a single compact distribution, with no
+patient whose position in the clinically relevant quadrant remains supported
+by the bootstrap. Finally, direct evaluation of treatment policies through
+cross-fitted policy values leads to the same conclusion: no personalized
+policy improves upon abbreviated therapy across the considered weighting of
+the bleeding--ischemic trade-off.
+
+The sensitivity analysis places these findings in context. For the bleeding
+endpoints, the protocol detects only heterogeneity larger than the corresponding
+average treatment effect; no such large heterogeneity is observed. For
+the ischemic endpoints, reliable detection would require substantially larger
+effect modification, making the question difficult to resolve with this
+cohort alone.
+
+MASTER DAPT enrolls only patients already flagged as high bleeding risk
+(ARC-HBR criterion, \citealp{valgimigli2021appendix}), so predicted bleeding risk varies little across the cohort,
+leaving the causal forest little covariate-space variation to exploit
+regardless of the 506 observed events.
+
+On the ischemic side, MACCE (death, MI, stroke) shows a null ATE in Table 6.5
+($-0.000$, CI $[-0.014,+0.014]$) while the bleeding component is significant
+($+0.026$): a null composite is consistent with a genuine absence of effect on
+each component, but equally consistent with opposite-direction effects (e.g. MI and stroke)
+cancelling in the sum. Together, these features are compatible with a strong
+average effect alongside near-zero estimated heterogeneity: trial selection may
+compress the risk variation on the bleeding side, while aggregation may mask
+component-specific patterns on the ischemic side.

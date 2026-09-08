@@ -1,0 +1,30 @@
+Let $s_i$ denote the policy score assigned to patient $i$. 
+At each enrollment round, patients are ranked according to 
+\[
+s_i,
+\]
+and the probability of selecting a patient is controlled by a temperature parameter 
+For $\tau>0$. 
+For $\tau>0$, the selection mechanism can be expressed as
+\[
+P(i \mid \mathcal{P}) =
+\frac{\exp(s_i/\tau)}
+{\sum_{j\in\mathcal{P}}\exp(s_j/\tau)}.
+\]
+
+where $\mathcal{P}$ denotes the set of patients currently available for enrollment. 
+A higher temperature produces a flatter distribution, increasing exploration by 
+allowing patients with lower scores to be selected, whereas a lower temperature 
+concentrates the probability mass on patients with the highest scores. The temperature 
+is progressively reduced during enrollment according to
+\[
+\tau(n) = \tau_0
+\exp\!\left(-\lambda\frac{n}{N}\right).
+\]
+where $\tau_0$ is the initial temperature, $\lambda$ controls the rate of
+decay, $n$ is the number of patients enrolled, and $N$ is the total cohort size. 
+Consequently, early enrollment gives greater weight to exploration, 
+while later rounds increasingly exploit the learned ranking. 
+In the limiting case $\tau\rightarrow0$, the procedure converges to 
+deterministic top-$k$ selection, so that the patients with the highest 
+policy scores are preferentially enrolled.

@@ -1,0 +1,176 @@
+% !TEX root = ../Thesis.tex
+
+This appendix collects supplementary tables and figures referenced from the
+main text.
+
+\section{The trade-off plane: individual and pairwise ischemic endpoints}
+\label{sec:appendix-tradeoff-plane}
+
+Figure~\ref{fig:tradeoff-plane} in Chapter~\ref{chap:06}
+combines MI, stroke and cardiovascular death into a single weighted ischemic
+axis ($0.4$, $0.4$ and $0.2$ respectively). The two figures below unpack that
+combination from both sides: bleeding against each ischemic endpoint kept
+separate, and the three ischemic endpoints plotted directly against one
+another. Both use the same tuned causal forest as the main-text figure.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_tradeoff_individual_endpoints.png}
+\caption{Bleeding benefit of abbreviating against each of the three ischemic
+endpoints kept separate (MI, stroke, cardiovascular death), one column per
+endpoint. Top row, patient density; bottom row, the same points tinted by
+the net benefit of abbreviating on that pair of axes. The tension is
+endpoint-specific: MI carries most of the ischemic cost of abbreviating,
+while stroke and cardiovascular death are closer to symmetric around zero.}
+\label{fig:tradeoff-individual-endpoints}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{CATE_ischaemic_pairwise.png}
+\caption{The three ischemic endpoints' CATE plotted against one another,
+one point per patient, coloured by patient density. None of the three pairs
+shows a tight positive relationship, i.e.\ a patient predicted to benefit
+from abbreviating on one ischemic endpoint is not reliably predicted to
+benefit on another.}
+\label{fig:ischaemic-pairwise}
+\end{figure}
+
+\section{Mechanism 1: single-endpoint ischemic-weight robustness check}
+
+Table~\ref{tab:ch8-ischaemic-rate-comparison} in Chapter~\ref{ch:guided-enrollment-applied}
+reports the enrolled-vs-left-out ischemic separation under the standard composite
+weighting, $\text{ISCH\_WEIGHTS} = \{\text{death}: 0.2, \text{mi}: 0.4, \text{stroke}: 0.4\}$.
+Table~\ref{tab:appendix-mech1-mi-only} reports a separate Mechanism~1 run that stopped at
+$n=4200$, rather than the current main configuration's $n=3500$, with the composite
+collapsed onto myocardial infarction alone
+($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 1, \text{stroke}: 0\}$), to check
+whether the composite's separation holds when the weighting is restricted to a single
+endpoint. Conflict denotes $\text{bleeding}-\text{ischemic}$ and Net-benefit/win-win
+denotes $\text{bleeding}+\text{ischemic}$.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Policy & Selected (\%) & Left-out (\%) & Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Conflict           & 4.57 & 3.65 & $+0.92$ & 0.14 & $<0.001$ \\
+        Net-benefit        & 4.24 & 6.38 & $-2.14$ & 0.19 & $<0.001$ \\
+        Angle net-benefit  & 4.23 & 6.51 & $-2.29$ & 0.19 & $<0.001$ \\
+        Angle conflict     & 4.58 & 3.57 & $+1.01$ & 0.15 & $<0.001$ \\
+        Random             & 4.48 & 4.39 & $+0.09$ & 0.12 & 0.458 \\
+        $-$isch            & 4.65 & 2.99 & $+1.66$ & 0.14 & $<0.001$ \\
+        $+$isch            & 4.19 & 6.82 & $-2.63$ & 0.21 & $<0.001$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison of MI event rates between enrolled and left-out patients at
+    $n=4200$, rather than the $n=3500$ checkpoint used in
+    Table~\ref{tab:ch8-ischaemic-rate-comparison}, with the ischemic composite restricted
+    to myocardial infarction
+    ($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 1, \text{stroke}: 0\}$).
+    Results are averaged over 100 runs, with 379 patients remaining outside the enrolled
+    cohort. A negative difference indicates a lower MI event rate among enrolled
+    patients.}
+    \label{tab:appendix-mech1-mi-only}
+\end{table}
+
+Table~\ref{tab:appendix-mech1-stroke-only} repeats the same check with the composite
+collapsed onto stroke alone, read at the same $n=4200$ checkpoint as the MI-only run.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Policy & Selected (\%) & Left-out (\%) & Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Conflict           & 4.34 & 5.56 & $-1.22$ & 0.15 & $<0.001$ \\
+        Net-benefit        & 4.60 & 3.35 & $+1.25$ & 0.12 & $<0.001$ \\
+        Angle net-benefit  & 4.60 & 3.33 & $+1.27$ & 0.12 & $<0.001$ \\
+        Angle conflict     & 4.33 & 5.67 & $-1.34$ & 0.13 & $<0.001$ \\
+        Random             & 4.48 & 4.39 & $+0.09$ & 0.12 & 0.458 \\
+        $-$isch            & 4.42 & 4.91 & $-0.49$ & 0.14 & $<0.001$ \\
+        $+$isch            & 4.69 & 2.58 & $+2.12$ & 0.13 & $<0.001$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison of stroke event rates between enrolled and left-out patients at
+    $n=4200$, with the ischemic composite restricted to stroke
+    ($\text{ISCH\_WEIGHTS} = \{\text{death}: 0, \text{mi}: 0, \text{stroke}: 1\}$).
+    Results are averaged over 100 runs, with 379 patients remaining outside the enrolled
+    cohort. A negative difference indicates a lower stroke event rate among enrolled
+    patients. The sign of every non-random policy flips relative to
+    Table~\ref{tab:appendix-mech1-mi-only}: Conflict and Angle conflict, which enrolled
+    more MI events than the left-out group, here enrol fewer stroke events, while
+    Net-benefit and Angle net-benefit, which enrolled fewer MI events, here enrol more
+    stroke events. The two ischemic endpoints pull the same scalar policies in opposite
+    directions.}
+    \label{tab:appendix-mech1-stroke-only}
+\end{table}
+
+\section{Mechanism 3: per-endpoint duel results}
+
+Table~\ref{tab:ch8-duel-rate-comparison} reports the endpoint-by-endpoint breakdown
+behind the ischemic-composite comparison in Chapter~\ref{ch:guided-enrollment-applied}
+(Table~\ref{tab:ch8-duel-composite-comparison}): bleeding, cardiovascular death,
+myocardial infarction and stroke, each shown separately rather than combined into the
+weighted ischemic composite used elsewhere in that chapter.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{llrrrrr}
+        \toprule
+        Duel rule & Endpoint & Included (\%) & Excluded (\%) & Diff. (pp) & SEM (pp) & $p$ \\
+        \midrule
+        Net-benefit    & Bleeding & 11.09 & 11.03 & $+0.06$ & 0.12 & 0.780 \\
+        Net-benefit    & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.445 \\
+        Net-benefit    & MI       & 2.48  & 2.31  & $+0.18$ & 0.05 & 0.001 \\
+        Net-benefit    & Stroke   & 0.76  & 0.75  & $+0.02$ & 0.03 & 0.557 \\
+        \midrule
+        Conflict & Bleeding & 11.00 & 11.12 & $-0.13$ & 0.11 & 0.225 \\
+        Conflict & Death    & 1.77  & 1.75  & $+0.01$ & 0.05 & 0.627 \\
+        Conflict & MI       & 2.46  & 2.32  & $+0.14$ & 0.06 & 0.020 \\
+        Conflict & Stroke   & 0.73  & 0.78  & $-0.05$ & 0.03 & 0.165 \\
+        \midrule
+        Angle NB (legacy) & Bleeding & 11.15 & 10.97 & $+0.18$ & 0.12 & 0.268 \\
+        Angle NB (legacy) & Death    & 1.78  & 1.73  & $+0.05$ & 0.05 & 0.266 \\
+        Angle NB (legacy) & MI       & 2.48  & 2.31  & $+0.16$ & 0.06 & 0.004 \\
+        Angle NB (legacy) & Stroke   & 0.82  & 0.69  & $+0.13$ & 0.03 & $<0.001$ \\
+        \midrule
+        $-$isch     & Bleeding & 10.95 & 11.17 & $-0.23$ & 0.10 & 0.038 \\
+        $-$isch     & Death    & 1.79  & 1.73  & $+0.07$ & 0.04 & 0.124 \\
+        $-$isch     & MI       & 2.43  & 2.36  & $+0.07$ & 0.05 & 0.296 \\
+        $-$isch     & Stroke   & 0.72  & 0.78  & $-0.06$ & 0.03 & 0.092 \\
+        \midrule
+        $+$isch     & Bleeding & 11.22 & 10.90 & $+0.31$ & 0.10 & 0.014 \\
+        $+$isch     & Death    & 1.82  & 1.70  & $+0.12$ & 0.05 & 0.013 \\
+        $+$isch     & MI       & 2.49  & 2.30  & $+0.18$ & 0.06 & 0.003 \\
+        $+$isch     & Stroke   & 0.82  & 0.69  & $+0.14$ & 0.03 & $<0.001$ \\
+        \midrule
+        Random      & Bleeding & 11.02 & 11.10 & $-0.08$ & 0.10 & 0.492 \\
+        Random      & Death    & 1.79  & 1.72  & $+0.07$ & 0.05 & 0.155 \\
+        Random      & MI       & 2.37  & 2.42  & $-0.05$ & 0.05 & 0.383 \\
+        Random      & Stroke   & 0.76  & 0.75  & $+0.01$ & 0.03 & 0.847 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Observed event rate among duel winners (included) and duel losers
+    (excluded) at the end of Mechanism 3's run, by endpoint and duel rule. Results are
+    averaged over 100 seeded replications, each enrolling 1,789
+    winners against 1,789 losers. A negative difference indicates a lower event rate
+    among duel winners than duel losers; SEM is the standard error of the paired
+    per-replication differences; $p$ is from a paired two-sided Wilcoxon signed-rank test
+    on the per-replication included-minus-excluded difference, the non-parametric
+    counterpart that does not assume the difference is normally distributed. The
+    reported Angle estimates predate the split and correspond to the legacy
+    $+45^\circ$ rule, now Angle net-benefit. Angle conflict reflects the ischemic
+    coordinate and targets $-45^\circ$; Mechanism~3 has since been rerun with the
+    true post-split scores (Table~\ref{tab:ch8-duel-composite-comparison} reports
+    Angle conflict's composite results), but the per-endpoint breakdown shown here
+    was not recomputed for that rule and is therefore not reported.}
+    \label{tab:ch8-duel-rate-comparison}
+\end{table}

@@ -1,0 +1,148 @@
+Clinical trials are the cornerstone of evidence-based medicine. By randomly assigning
+patients to competing treatment strategies and comparing their outcomes, randomized
+controlled trials (RCTs) provide the most rigorous framework for establishing causal
+claims about treatment efficacy. However, this statistical rigor comes at a significant
+cost: large, expensive, and time-consuming experiments that often enroll thousands of
+patients over several years. The ethical and logistical implications are substantial —
+patients allocated to an inferior treatment bear avoidable harm, and delays in reaching
+conclusions slow down the translation of effective therapies into clinical practice.
+These limitations have motivated the development of adaptive trial designs, which
+allow pre-planned modifications to the trial protocol as data accumulate. Adaptive
+designs can include early stopping rules, sample size re-estimation, allocation ratio
+changes, and patient enrichment strategies, all of which aim to extract the same
+statistical information with fewer resources. Regulatory agencies, including the FDA
+and EMA, have issued guidance documents supporting the use of adaptive designs when
+they are scientifically rigorous and transparently pre-specified.
+
+\section{Why Heterogeneous Treatment Effects Matter}
+
+A fundamental limitation of the classical RCT paradigm is its focus on the Average
+Treatment Effect (ATE) — the mean difference in outcomes between the treated and
+control groups across the entire population. ATE is useful to understand the difference
+between the treated and control groups, but it conceals a clinically critical dimension: not
+every patient benefits equally from the same intervention. Two patients with opposite
+bleeding and ischemic risk profiles, enrolled in the same trial and assigned to the same
+treatment arm, may experience vastly different outcomes. A therapy that is beneficial
+on average may be harmful for a specific subgroup, and vice versa.
+The shift towards precision medicine demands methods that move beyond population-
+average estimates and instead characterize how effects vary across individual patient
+characteristics. This is precisely what the Conditional Average Treatment Effect (CATE)
+\[
+\tau(x) = \mathbb{E}\left[Y(1) - Y(0) \mid X = x\right]
+\]
+formalizes: the expected causal effect of treatment
+relative to control, given that a patient has covariate profile $x$, where
+$Y(1)$ and $Y(0)$ denote the outcome a patient would experience under
+treatment and under control, respectively. Throughout this thesis, $T=1$
+denotes prolonged DAPT and $T=0$ abbreviated DAPT. Identifying patients
+with large versus small (or even negative) CATE values is the goal of treatment effect
+heterogeneity (HTE) analysis, which is increasingly recognized as essential for both
+clinical practice and efficient trial design.
+
+\section{The MASTER DAPT Trial as the Clinical Reference}
+
+The \textit{MASTER DAPT} trial (\textit{Management of High Bleeding Risk
+Patients Post Bioresorbable Polymer Coated Stent Implantation with an
+Abbreviated versus Standard DAPT Regimen}; \citet{valgimigli2021masterdapt})
+provides the primary clinical reference for this thesis. MASTER DAPT was a
+multicenter, open-label, randomized noninferiority trial coordinated by the
+European Cardiovascular Research Institute (ECRI) and funded by Terumo. Screening
+was conducted across 140 sites in 30 countries between February 2017 and
+December 2019. Of those screened, 4,579 patients at high bleeding risk (HBR)
+were randomized. Patients
+who had received a biodegradable-polymer sirolimus-eluting stent during
+percutaneous coronary intervention (PCI) were randomized, one month after
+the index procedure, to either an abbreviated Dual Antiplatelet Therapy
+(DAPT) strategy (immediate discontinuation) or a standard DAPT strategy
+(continuation for at least 5 additional months).
+
+Three hierarchically ranked primary outcomes were assessed at 335 days: (1)
+Net Adverse Clinical Events (NACE), a composite of death, myocardial
+infarction, stroke, or major bleeding; (2) Major Adverse Cardiac or Cerebral
+Events (MACCE), a composite of death, myocardial infarction, or stroke; and
+(3) major or clinically relevant non-major (CRNM) bleeding. The trial
+demonstrated noninferiority of the abbreviated strategy for NACE and MACCE,
+and superiority with respect to bleeding reduction.
+
+While MASTER DAPT established average-level conclusions, it enrolled a
+clinically heterogeneous population in which the optimal DAPT duration
+is likely to vary substantially across patients. Patients with primarily
+ischemic risk profiles may benefit from longer protection, while those with
+dominant bleeding risk may suffer more harm from prolonged (i.e., standard)
+therapy. This
+clinical heterogeneity motivates reanalyzing and redesigning the trial through
+a CATE-lens.
+
+\section{Why Not Every Patient Benefits Equally}
+
+The average-level conclusion of MASTER DAPT, that abbreviated therapy is
+noninferior for ischemic events and superior for bleeding, masks a clinically
+plausible and important hypothesis: that the optimal strategy differs across
+patients. Consider two contrasting patient archetypes:
+\begin{itemize}
+  \item A patient aged 85 with severe chronic kidney disease, active oral
+    anticoagulation, and a recent gastrointestinal bleed: the dominant risk
+    is bleeding, and abbreviated DAPT may be strongly beneficial.
+  \item A 68-year-old diabetic patient who recently had a myocardial
+    infarction, with a complex bifurcation stenting procedure: the dominant
+    risk is ischemia, and prolonged DAPT may be preferable.
+\end{itemize}
+
+These archetypes illustrate treatment effect heterogeneity that cannot be
+captured by ATE analysis but is the target of CATE estimation. Moreover, the
+HBR population of MASTER DAPT is particularly heterogeneous: the mean number
+of HBR criteria was $2.1 \pm 1.1$ per patient, spanning elderly frail patients,
+patients on anticoagulation, and patients with multiple comorbidities.
+
+\section{Aim and Scope of This Thesis}
+
+This thesis reanalyses MASTER DAPT from a conditional treatment-effect
+perspective. Its central question is whether the benefit--risk balance of
+abbreviated versus standard DAPT varies systematically with patients' baseline
+clinical characteristics and, if it does, whether that variation can support
+individualized treatment decisions. The analysis estimates and validates CATEs
+for the competing bleeding and ischemic outcomes, rather than seeking to
+replace the trial's average-level conclusions.
+
+The thesis then examines the practical implication of these estimates for trial
+design. In particular, it asks whether enrolling patients with more informative
+covariate profiles could make the detection and estimation of treatment-effect
+heterogeneity more efficient. The following chapters introduce the CATE
+estimation and validation framework, formulate and evaluate the guided
+enrolment strategy, describe the MASTER DAPT data and clinical endpoints, and
+discuss the resulting implications and limitations.
+
+\paragraph{Thesis structure.}
+The remainder of this thesis is organized as follows.
+\begin{itemize}
+  \item Chapter~\ref{chap:01} introduces the clinical and statistical
+    background, motivating the need for conditional treatment-effect
+    estimation and guided enrollment.
+  \item Chapter~\ref{chap:02} presents the methods used to estimate and
+    validate CATEs, including the statistical framework, machine learning
+    models, and evaluation metrics.
+  \item Chapter~\ref{chap:03} examines how these estimates can be translated
+    into patient-ranking and enrollment strategies, together with the criteria
+    used to evaluate them.
+  \item Chapter~\ref{chap:04} describes the MASTER DAPT dataset, the treatment
+    comparison, and the clinical endpoints considered in the analysis.
+  \item Chapter~\ref{chap:05} investigates the predictive structure of these
+    endpoints, providing the basis for the subsequent heterogeneity analysis.
+  \item Chapter~\ref{chap:06} presents the estimated treatment-effect
+    heterogeneity and introduces the trade-off framework used to combine
+    bleeding and ischemic outcomes.
+  \item Chapter~\ref{chap:07} applies the resulting ranking strategies to
+    simulated guided enrollment in MASTER DAPT, assessing whether the estimated
+    heterogeneity can be exploited in practice.
+  \item Finally, Chapter~\ref{chap:08} discusses the main findings,
+    limitations, and implications for future research.
+\end{itemize}
+
+\section{Chapter Summary}
+This chapter contains the introduction to the thesis, motivating the need 
+for conditional treatment-effect estimation and guided enrollment. It presents the
+MASTER DAPT trial as the starting point for the analysis and explains the 
+metric of interest, the Conditional Average Treatment Effect (CATE), which captures
+the heterogeneity of treatment effects across patients. The chapter also outlines the
+aim and scope of the thesis, emphasizing the importance of understanding how treatment
+effects vary with patient characteristics and how this knowledge can inform more efficient trial designs.

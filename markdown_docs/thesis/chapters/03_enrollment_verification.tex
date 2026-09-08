@@ -1,0 +1,373 @@
+% !TEX root = ../Thesis.tex
+
+The previous chapter developed the theory behind ranking patients by their estimated
+CATE. This chapter turns that ranking into a scoring process for enrollment itself,
+selecting from the cohort the patients who gain most from the treatment, on the basis of
+the ranking theory just defined.
+
+\vspace{5pt}
+
+\textit{If that ranking is credible, could it be used during the enrollment process to select the patients that are more likely to benefit from the treatment?}
+
+\vspace{5pt}
+
+A credible ranking is not automatically a safe one to enroll by: the same selection that
+makes the ranking useful can also damage the trial it is meant to serve. Choosing the
+right metric and the right policy is what makes it possible to assess how a ranking
+changes the cohort once it starts shaping who is enrolled. The aim of this chapter is
+therefore to define mechanisms and an outcome-based evaluation of the cohorts they
+produce, not to infer clinical benefit from the selection process itself.
+
+\section{The Trade-off Plane, Applied to MASTER DAPT}
+
+Bleeding and ischemic risk are the two outcomes that must be traded off in
+MASTER DAPT (\S~\ref{sec:multi-outcome}). The bleeding axis is the CATE of
+major bleeding under abbreviated therapy, a single scalar quantity by
+construction. The ischemic axis combines myocardial infarction, stroke and
+cardiovascular death into a single weighted score, with weights $0.4$ for
+MI, $0.4$ for stroke and $0.2$ for cardiovascular death,
+weights were chosen arbitrarily to reflect the relative severity of the three events.
+Before the two axes are combined into any of the scores below, each raw CATE column ---
+bleeding and the three ischemic endpoints --- is rescaled by its own interquartile range (a
+\texttt{RobustScaler} with centering turned off), so that the frequent bleeding endpoint
+does not dominate the rarer ischemic ones purely because of its larger raw magnitude; the
+median is not subtracted, so a raw CATE of zero keeps its meaning as the "no effect"
+reference on the rescaled axis as well.
+Both axes carry the effect of \emph{abbreviating} the therapy, so a positive
+value on either axis always favours abbreviation
+(Figure~\ref{fig:tradeoff-zones}). In the bottom-right quadrant, abbreviating
+reduces bleeding but increases ischemic risk: this is the only quadrant where
+the answer depends on the individual patient, and it is the one a
+personalized enrollment rule would have to identify.
+In this quadrant and in the second one the decision is not obvious because the two outcomes
+favour opposite treatments, and the patient is left with a trade-off between
+the two outcomes. In the first and fourth quadrants, the decision is obvious because both outcomes
+favour the same treatment, and the patient is left with a clear choice.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{CATE_tradeoff_zones.png}
+\caption{The trade-off plane for MASTER DAPT: bleeding CATE of abbreviating
+on the X-axis, weighted ischemic CATE of abbreviating on the Y-axis. The four
+zones follow the general definition of Section~\ref{sec:multi-outcome}.}
+\label{fig:tradeoff-zones}
+\end{figure}
+
+\section{Five Mechanisms, from the Ideal Ceiling to the Realistic Case}
+
+A score defines a preference order over patients, but it does not say how that
+order is consulted. Two questions remain open once the score is fixed, and
+neither has an answer that follows from the score itself. The first is how many
+candidates are visible at the moment a decision must be taken: the whole
+population, a handful, or a single pair. The second is whether the model that
+produces the score already exists, or has to be learned from the very cohort it
+is being used to build.
+
+\vspace{10pt}
+An \emph{enrollment mechanism} is a procedure that translates the score output by the
+treatment-effect model into an actual enrollment decision. It must specify which
+patients are available to be compared at each step, and how the model is updated as new
+patients get enrolled.
+\vspace{10pt}
+
+The five mechanisms below sit within the broader literature on sequentially
+choosing which unit to observe next: active adaptive experimental design for
+treatment-effect estimation \citep{kato2024}, whose joint view of covariate
+density and propensity score motivates treating enrolment itself as a
+decision rather than a fixed protocol, and stream-based active learning more
+generally, where each candidate is seen once and must be accepted or passed
+over on the spot rather than compared against a stored pool
+\citep{cacciarelli2023survey,cacciarelli2022stream,cacciarelli2022soft}.
+Mechanisms~4 and~5's budget-limited, uncertainty-aware selection is the same
+problem optimal-design and thresholding approaches to online active linear
+regression address \citep{fontaine2020,riquelme2016}, adapted here to a
+forest-based effect model rather than a linear one.
+\vspace{10pt}
+
+Five mechanisms are used in this work, forming a ladder from the full-pool reference to the
+realistic one rather than five competing proposals of which one is meant to win.
+\emph{The full-pool information reference} (Mechanism~1) sees the entire remaining pool at every decision
+and, in its greedy form, enrolls the best-scoring patients outright. \emph{Partially random enrollment}
+(Mechanism~2) narrows that view to a random sample redrawn at each round. \emph{The
+duel} (Mechanism~3), \emph{UCB-style enrollment} (Mechanism~4) and \emph{Thompson-style enrollment}
+(Mechanism~5) narrow it further, down to a single pair; Mechanism~3 sometimes resolves the
+pair by uncertainty, whereas the latter two incorporate it on every decision. The first assumes
+everything an enrollment could possibly know; the last assumes only what a real one has.
+
+\paragraph{What all five share.}
+Every mechanism runs the same skeleton. A \emph{seed} cohort is drawn uniformly
+at random and the effect model is fitted on it, because before any patient is
+enrolled there is no model with which to choose one. Candidates are then
+presented according to the mechanism's own rule and scored by the model as it
+currently stands. The winning candidate enters the cohort with the treatment
+they actually received and the outcome they actually had --- no counterfactual
+is ever invented. For Mechanisms 2 through 5, the candidate not chosen is not
+returned to the pool for a later comparison: each patient is proposed at most
+once over the course of a run, so being passed over is a permanent exclusion
+from the enrolled cohort, not a deferral. Mechanism 1 is the exception:
+because it re-scores the entire remaining pool every round rather than a
+fixed sample or pair, a patient left out of one round's batch is simply
+re-scored in the next round and remains eligible until the run ends, so being
+passed over there is not permanent. The model is refitted every $r$ enrollments. Each refit incorporates every enrollment
+observed up to that point; decisions made between refits use that fixed model and can
+therefore lag behind the accumulated cohort by at most $r-1$ enrollments.
+
+\paragraph{The seed, and why nothing is tuned after it.}
+The seed is the last cohort drawn at random. After that, patients are selected
+according to the score. Since the score depends only on the covariates,
+selection does not break identification: treatment remains randomized within
+the enrolled cohort, so the doubly robust methods of Chapter~2 remain valid.
+What changes is the distribution of the covariates. The enrolled patients are
+therefore a valid sample, but from a different population created by the
+selection mechanism itself.
+
+\vspace{10pt}
+
+For this reason, hyperparameter tuning is performed only on the seed. Tuning
+on a later cohort would estimate a valid AUTOC, but not the same AUTOC across
+configurations. If we were to tune on the cohort selected during the run,
+each configuration would be evaluated on the population that was able to select.
+One configuration could therefore appear better simply
+because it produced an easier cohort, rather than because it produced a better
+ranking.
+
+\vspace{10pt}
+
+Selecting patients with high
+scores can reduce the variation in treatment effects within the enrolled
+cohort, which lowers AUTOC. At the same time, the selected cohort may contain
+more patients in regions where the model is well supported by the data, making
+the ranking appear more accurate and increasing AUTOC. Cross-validation does
+not solve this problem because it is performed within the same selected
+cohort: every fold has already passed through the selection mechanism.
+
+\vspace{10pt}
+
+The problem is more serious in the online setting. A poor configuration does
+not only produce a poor model; it also determines which patients are enrolled.
+If that selected cohort is then used for further tuning, the model and the
+population influence each other. There is no randomly selected test cohort
+available to provide an independent reference.
+
+\vspace{10pt}
+
+Tuning is therefore performed once on the seed, using the same budget for every
+mechanism, and the resulting configuration is kept fixed throughout the run.
+This ensures that the mechanisms start from comparable models and that later
+differences are due to their selection rules rather than to different tuning
+procedures. The remaining limitation is that the seed is relatively small, so
+the AUTOC estimate is noisy and the tuning procedure may still select a
+configuration that performs well partly by chance.
+
+
+\paragraph{Mechanism 1: the full-pool information reference.}
+At every round this mechanism scores the entire not-yet-enrolled pool with the current
+model, selects a batch, refits on the enlarged cohort, and repeats over whoever remains.
+Greedy selection enrolls the highest-scoring patients outright; the reported analyses use
+the annealed Gumbel sampling specified below instead.
+Because no other mechanism below is ever shown more of the pool at once, it provides an
+information ceiling and is used as a reference to evaluate them; this wider visibility
+does not guarantee a mathematical upper bound on realized performance. It is also
+the natural setting in which to compare candidate scores or ranking rules against each
+other, since the ranking itself is never distorted by a restricted view of the pool. A
+stochastic form of the same ranking, annealing from randomized toward greedy as
+enrollment proceeds, is discussed alongside the other mechanisms' selection rules
+below.
+
+\paragraph{Mechanism 2: the partially random enrollment.}
+At every round a random sample is drawn from the remaining pool and ranked by the
+current model's score. The better half of the sample is enrolled; the worse half is
+discarded permanently, not returned to the pool for a later round. The model is then
+refit on the enlarged cohort and the next round draws a fresh sample. This mechanism is
+more realistic than the full-pool reference, since it never needs the score of the whole
+population at once, but it is still far from a real enrollment process, because a fresh
+random sample has to be assembled and scored before every round's decision.
+
+\paragraph{Mechanism 3: the duel.}
+At the start of each run the remaining pool is randomly permuted; at every step the next
+two patients in that fixed arrival stream form a pair. The model is refit every
+$r$ enrollments. How the pair is resolved, together with the uncertainty rule this
+mechanism uses, is described below once all five mechanisms are on the table.
+
+\paragraph{Mechanism 4: UCB-style uncertainty-bonus enrollment.}
+
+This mechanism is inspired by the optimism-under-uncertainty principle of
+upper-confidence-bound methods \citep{auer2002}. It keeps the duel of Mechanism~3 and
+changes only how the pair is resolved: an additive exploration bonus on top of the score,
+described below alongside the other mechanisms' uncertainty rules.
+
+\vspace{10pt}
+
+The distinction matters in this setting. This is not UCB1 in the classical multi-armed
+bandit sense: an arm is never pulled twice, each
+patient arrives once, and the reward is never observed, since the reward would be the
+individual treatment effect, which is precisely the quantity that Chapter~2 has
+established is unobservable. What is being explored is a region of the covariate space
+rather than an arm, and the feedback arrives only indirectly, through the refit: the
+enrolled patient contributes their real outcome to the next model, which then reports a
+smaller uncertainty in that region. The optimism-under-uncertainty rule is therefore
+borrowed as a selection heuristic, not as an algorithm whose regret guarantees carry over.
+
+\paragraph{Mechanism 5: Thompson enrollment.}
+Same duel as Mechanism~3, same two frames read from the current model, but the
+trade-off between exploration and exploitation is resolved by sampling instead of by an
+additive bonus, as described below alongside the other mechanisms' uncertainty rules.
+
+\vspace{10pt}
+
+Two limitations are declared here rather than discovered later. First, the normal
+distribution is a working approximation and not a posterior: the quantity used as its
+width is a frequentist standard error of the forest, and treating it as the spread of a
+belief is a modelling choice, defensible but not derived. Second, whether the mechanism
+actually explores is an empirical question and not a property of the rule: if the
+sampling scale is small relative to the spread of the scores, the draws almost always
+order the pair the same way the scores already did, and the rule approaches score-only
+pairwise selection. The experiments below report cohort composition, not the average uncertainty
+of the enrolled cohort relative to Random; that diagnostic remains a useful additional
+check rather than a result reported in this thesis.
+
+\vspace{10pt}
+
+\paragraph{The refit cadence.}
+Mechanisms 3, 4 and 5 share one more parameter: the refit cadence $r$, the number of
+enrollments between one fit of the model and the next; Mechanisms 1 and 2 refit every
+round by construction, since their round is already the batch being decided. The cadence
+is a computational choice rather than a statistical one, but it must be reported all the
+same, because it changes what each mechanism actually is: a mechanism that refits after every single
+enrollment and one that refits after a large batch are not the same mechanism, since the
+second spends long stretches of decisions guided by a model that is already stale.
+Batching itself is not a shortcut invented for this thesis --- a real adaptive trial
+would also retrain on batches rather than after every single participant, both for
+logistical reasons and because re-randomizing the assignment rule after each individual
+enrollment is itself a source of instability. What is specific to this work is the size
+of $r$: computational cost keeps it larger here than an operational trial would need, so
+the model guiding enrollment lags further behind what a smaller, more frequent batch
+would achieve. Any comparison between a guided mechanism and the random control arm is
+therefore made with the guided arm carrying this handicap, on top of whatever its own
+selection rule costs it.
+
+\vspace{10pt}
+
+\paragraph{How mechanisms use (or ignore) uncertainty.}
+A mechanism is fixed by two independent choices: how many candidates are visible at each
+decision, already described above, and whether the rule uses the model's own uncertainty
+when choosing among them. In the reported analyses, Mechanisms~3--5 use uncertainty;
+Mechanism~2 is score-only; and Mechanism~1 uses stochastic sampling from the score rather
+than uncertainty. Write $s(x)$ for the standardized acquisition score of the current model
+and $u(x)$ for its uncertainty on patient $x$: the forest's per-patient CATE standard
+errors, composited across endpoints on a z-scored scale. Concretely, the raw scalar is
+$s_{\mathrm{raw}}(x)=\text{bleed}(x)-\text{isch}(x)$ for the trade-off score used by the
+\emph{conflict} rule and
+$s_{\mathrm{raw}}(x)=\text{bleed}(x)+\text{isch}(x)$ for the win-win score used by
+\emph{net benefit}; the acquisition rule uses $s(x)=z(s_{\mathrm{raw}}(x))$.
+Here $\text{bleed}(x)$ is the rescaled bleeding CATE and $\text{isch}(x)$ the same
+$0.4/0.4/0.2$ weighted ischemic composite as the trade-off plane above. The two Angle rules
+read the identical $(x,y)$ plane coordinates instead of collapsing them to this scalar
+difference or sum, and target $\pm45^\circ$ on that plane. $u(x)$ is composited the same way:
+the z-scored bleeding standard error plus the same $0.4/0.4/0.2$-weighted sum of the
+z-scored ischemic standard errors. Since this composite is a z-score, it can be negative;
+the mechanisms that require a non-negative bonus or sampling scale apply the safeguards
+specified below.
+
+\vspace{10pt}
+
+\emph{Decaying uncertainty override} (Mechanism~3) replaces the score with an
+uncertainty-based choice on a schedule that falls rapidly but retains a small exploration
+rate. Applied to a pair, with probability
+$p(n) = \max(e^{-n/300}, 0.05)$, where $n$ counts patients enrolled past the seed, the
+pair is resolved by keeping whichever candidate carries the larger $u(x)$ instead of the
+higher-scoring one; otherwise the score decides. Thus Mechanism~3 never becomes purely
+exploitative: its uncertainty-based override remains active in 5\% of duels.
+
+Mechanism~1 uses a different form of exploration that does \emph{not} use $u(x)$. In the
+reported runs it samples batches by a Gumbel perturbation of the score ranking, with
+temperature
+\[
+  \tau(n_{\mathrm{tot}}) = 5\exp\!\left(-8n_{\mathrm{tot}}/N\right),
+\]
+where $n_{\mathrm{tot}}$ is the total number enrolled and $N=4{,}579$. Its uncertainty
+bonus is fixed at zero. A positive temperature permits lower-scoring candidates to enter
+the batch; as it becomes small the selection approaches greedy score ranking.
+
+\vspace{10pt}
+
+\emph{Additive exploration bonus} (Mechanism~4, with Mechanism~2 as its score-only
+special case):
+\[
+  \text{score}(x) \;=\; s(x) \;+\; c \cdot \max\{u(x),0\}.
+\]
+a fixed weight $c$ is added on top of the score. The bonus is floored at zero, so a patient
+the model is \emph{more} confident about than the cohort average receives no bonus, never
+a penalty. Mechanism~4 uses $c=1$ on every duel, while Mechanism~2 sets $c=0$ and falls
+back to score-only selection on the sample it draws each round. The rule is deterministic:
+for a given pair or sample the same candidate always wins, so a candidate that trails on
+the score can only win by having a large enough $u(x)$ to close the gap, every time.
+
+\vspace{10pt}
+
+For each candidate, \emph{Thompson-style rule} \citep{thompson1933} (Mechanism~5) draws one value from
+$\mathcal{N}(s(x),\max\{u(x),10^{-3}\})$ and enrolls the candidate with the higher draw.
+The second argument is used as a sampling scale, not as a Bayesian posterior standard
+deviation; it is a Thompson-style heuristic rather than classical posterior
+sampling. Unlike the additive bonus, this rule is not deterministic: a trailing candidate
+wins a fraction of the time proportional to how much the two sampling distributions
+overlap, so exploration is spread over many marginal decisions rather than concentrated on
+the pair with the largest gap. Two runs over the same arrival sequence therefore produce
+different cohorts; this is a property to report rather than a defect, and one more reason
+every mechanism is evaluated over many replicated cohorts instead of a single run.
+
+\vspace{10pt}
+
+Put together, the five mechanisms are five combinations of a visibility scheme and a
+selection rule:
+\begin{itemize}
+  \item Mechanism~1: the whole remaining pool, Gumbel-perturbed score sampling with
+  an annealed temperature and no use of $u(x)$.
+  \item Mechanism~2: a random sample of the pool, score-only in the results reported
+  here ($c=0$), built on the same additive-bonus form as Mechanism~4.
+  \item Mechanism~3: a pair, decaying uncertainty override with a 5\% floor.
+  \item Mechanism~4: a pair, additive uncertainty bonus ($c=1$).
+  \item Mechanism~5: a pair, Thompson-style sampling.
+\end{itemize}
+
+\vspace{10pt}
+
+\paragraph{Methodology of comparison.}
+To evaluate the five enrollment mechanisms, we must use an independent reference point.
+The model that guides selection updates as new data arrive, so it cannot also be the
+reference point by which one judges whether the cohort has moved. Even comparing the
+mechanisms against each other is not enough, because they share the same data-generating
+setting. The reference point that avoids this circularity is not a model at all: the
+mechanisms are evaluated on the patients' actual, observed trial outcomes.
+
+The evaluation endpoints are observed bleeding and observed \emph{any ischaemic event}.
+The latter is the proportion of patients with at least one of cardiovascular death,
+myocardial infarction or stroke, counted once per patient. These event rates are reported
+separately: the weighted combination of the three ischaemic CATEs is used to construct the
+selection score, but it is not used as the observed outcome metric. The evaluation thus
+asks whether the final selected cohort contains fewer observed events, not whether the
+CATE ranking has been validated causally or whether a clinical utility benefit has been
+shown.
+
+Two complementary contrasts are used. The first is the internal sorting contrast: it
+compares the post-seed enrolled cohort with the patients the same rule leaves out or
+discards, asking whether the final selected cohort contains fewer observed events. The
+second compares that post-seed enrolled cohort directly with the post-seed cohort produced
+by the mechanism-matched Random rule, paired by replication; it answers whether guidance
+changes cohort composition relative to unguided enrollment.
+Due to the seed- and
+luck-based nature of the enrollment process, a single run would not be enough to evaluate
+performance, so the enrollment process is repeated $N$ times for each mechanism and the
+results are averaged; Chapter~\ref{ch:guided-enrollment-applied} reports the exact value
+of $N$ used for MASTER DAPT, together with the resulting paired comparisons of event
+rates.
+
+\section{Chapter Summary}
+This chapter describes the five enrollment mechanisms used in this project and the
+reasons why they were chosen. It also defines the weighted-CATE trade-off plane used to
+construct the selection scores. The mechanisms are evaluated separately on the observed
+bleeding rate and the observed any-ischaemic-event rate (death, MI or stroke, once per
+patient), averaged over repeated enrollment runs. The selected cohort is compared with
+the rejected group and with a matched Random baseline. These comparisons assess observed
+cohort composition, not causal targeting or clinical utility.
+

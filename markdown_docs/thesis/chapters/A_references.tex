@@ -1,0 +1,175 @@
+% !TEX root = ../Thesis.tex
+
+This appendix lists the sources on which the thesis draws, grouped by the role
+they play in the work rather than alphabetically, together with the chapter
+that uses each one. Entries marked \emph{(preprint)} are cited from the version
+consulted; where a later peer-reviewed version exists, the published reference
+should replace it before submission.
+
+\section{Causal inference and CATE estimation}
+
+\begin{enumerate}
+  \item \citet{kennedy2020}.
+    \\\textit{Used in Ch.~2:} the doubly robust pseudo-outcome of
+    Eq.~\eqref{eq:aipw-pseudo-outcome} and the two-stage DR-learner
+    construction.
+
+  \item \citet{kennedy2023}.
+    \\\textit{Used in Ch.~2:} influence-function framing of the AIPW estimator
+    and the double-machine-learning nuisance structure behind the causal
+    forest.
+
+  \item \citet{salditt2024}.
+    \\\textit{Used in Ch.~2:} the meta-learner taxonomy, in particular the
+    T-learner and the S-learner families.
+\end{enumerate}
+
+\section{Validation of treatment prioritization rules}
+
+The evaluation machinery of Chapter~2, \S~\ref{sec:validation} --- the TOC curve, its AUTOC and QINI
+summaries, and the group calibration test --- is applied through the
+\texttt{econml} implementation (\texttt{econml.validate.DRTester}), which rests
+on the following sources.
+
+\begin{enumerate}\setcounter{enumi}{3}
+  \item \citet{chernozhukov2022}.
+    \\\textit{Used in Ch.~2:} the group average treatment effect (GATES) and
+    best-linear-predictor tests underlying group calibration.
+
+  \item \citet{dwivedi2020}.
+    \\\textit{Used in Ch.~2:} the calibration $R^2$ normalized against the
+    constant-effect baseline.
+
+  \item \citet{radcliffe2007}.
+    \\\textit{Used in Ch.~2:} the QINI curve and its group-size weighting.
+\end{enumerate}
+
+\section{Adaptive enrolment, active and online learning}
+
+\begin{enumerate}\setcounter{enumi}{6}
+  \item \citet{kato2024}.
+    \\\textit{Used in Ch.~3 and Ch.~7:} joint optimization of covariate density
+    and propensity score as the reference framework for guided enrolment.
+
+  \item \citet{cacciarelli2023survey}.
+    \\\textit{Used in Ch.~3:} the stream-based versus pool-based distinction
+    that frames sequential patient enrolment as an online problem.
+
+  \item \citet{cacciarelli2022stream}.
+    \\\textit{Used in Ch.~3:} informativeness thresholding on a stream of
+    incoming units.
+
+  \item \citet{cacciarelli2022soft}.
+    \\\textit{Used in Ch.~3:} adaptation of pool-based query strategies to the
+    stream-based setting.
+
+  \item \citet{fontaine2020}.
+    \\\textit{Used in Ch.~3:} optimal-experiment-design view of budget
+    allocation under heteroscedasticity.
+
+  \item \citet{riquelme2016}.
+    \\\textit{Used in Ch.~3:} threshold-based selection of the most informative
+    observations under a fixed experimentation budget.
+
+  \item \citet{auer2002}.
+    \\\textit{Used in Ch.~3 and Ch.~7:} the optimism-under-uncertainty principle
+    behind Mechanism~4's UCB-style uncertainty-bonus enrolment heuristic; the classical
+    UCB1 algorithm itself is not implemented.
+\end{enumerate}
+
+\section{Trial and dataset documentation}
+
+\begin{enumerate}\setcounter{enumi}{13}
+  \item \citet{valgimigli2021masterdapt}.
+    \\\textit{Used in Ch.~1, Ch.~4, Ch.~6 and Ch.~7:} trial design,
+    randomization at the one-month landmark visit, the NACE/MACCE composite
+    endpoints, and headline results.
+
+  \item \citet{valgimigli2021appendix}.
+    \\\textit{Used in Ch.~4 and Ch.~6:} high-bleeding-risk criteria, inclusion
+    and exclusion criteria, outcome definitions and the per-protocol
+    population.
+
+  \item \citet{maroni2026}.
+    \\\textit{Used in Ch.~5:} baseline predictive performance, SHAP-based
+    interpretation and the variable dictionary of the modelling dataset.
+
+  \item \citet{esc2023acs}.
+    \\\textit{Used in Ch.~4:} the 2023 ESC guidelines for acute coronary
+    syndromes, tailoring DAPT duration to bleeding and ischemic risk, framing
+    the clinical trade-off introduced in the opening section.
+\end{enumerate}
+
+\section{Additional methodological and clinical sources}
+
+\begin{enumerate}\setcounter{enumi}{17}
+  \item \citet{wager2018}.
+    \\\textit{Used in Ch.~2:} the causal forest, which estimates $\tau(x)$
+    directly by residualizing $Y$ and $T$ against fitted outcome and
+    propensity models and regressing the residuals within each leaf.
+
+  \item \citet{athey2019grf}.
+    \\\textit{Used in Ch.~2:} the generalized random forest framework and
+    honest splitting, which fits the tree structure and the within-leaf
+    effect estimate on separate data subsets.
+
+  \item \citet{hahn2020bcf}.
+    \\\textit{Used in Ch.~2:} the Bayesian causal forest, separating the
+    prognostic surface $\mu(x)$ from the effect surface $\tau(x)$ with
+    independent priors, and returning a posterior over $\tau(x)$.
+
+  \item \citet{balazadeh2025causalpfn}.
+    \\\textit{Used in Ch.~2:} CausalPFN, the in-context estimator
+    pre-trained on synthetic causal problems, which maps a cohort and a
+    query point to $\hat\tau(x)$ without further fitting.
+
+  \item \citet{thompson1933}.
+    \\\textit{Used in Ch.~3:} Thompson-style sampling, Mechanism~5's enrolment
+    rule, which draws from each candidate's belief distribution and enrols
+    whichever draw is higher.
+
+  \item \citet{shapley1953}.
+    \\\textit{Used in Ch.~5:} the Shapley value from cooperative game theory,
+    the additive-attribution concept that \citet{lundberg2017shap} generalize
+    into the SHAP feature attributions.
+
+  \item \citet{vandermaaten2008tsne}.
+    \\\textit{Used in Ch.~4:} t-SNE, one of the two nonlinear embeddings used
+    to check whether the covariate space separates by outcome.
+
+  \item \citet{mcinnes2018umap}.
+    \\\textit{Used in Ch.~4:} UMAP, the second nonlinear embedding used
+    alongside t-SNE for the same check.
+
+  \item \citet{bergstra2011tpe}.
+    \\\textit{Used in Ch.~5:} the Tree-structured Parzen Estimator behind
+    the Optuna hyperparameter search for each risk-model family.
+
+  \item \citet{akiba2019optuna}.
+    \\\textit{Used in Ch.~5:} Optuna, the hyperparameter optimization
+    framework implementing the tuning search of Ch.~5.
+
+  \item \citet{athey2021policylearning}.
+    \\\textit{Used in Ch.~6:} the doubly robust policy-learning framework
+    underlying \texttt{econml}'s \texttt{DRPolicyTree} and
+    \texttt{DRPolicyForest}.
+\end{enumerate}
+
+\section{Predictive modelling and interpretation}
+
+\begin{enumerate}\setcounter{enumi}{28}
+  \item \citet{platt1999}.
+    \\\textit{Used in Ch.~5:} Platt (sigmoid) calibration of the per-arm
+    T-learner outcome models, fitted by internal cross-validation on the
+    training fold.
+
+  \item \citet{lundberg2017shap}.
+    \\\textit{Used in Ch.~5:} SHAP feature attributions, averaged in
+    absolute value across logistic regression, random forest and gradient
+    boosting, used to characterize which covariates the risk models rely on.
+
+  \item \citet{costa2017precisedapt}.
+    \\\textit{Used in Ch.~5:} the PRECISE-DAPT score's derivation and
+    validation C-index for out-of-hospital bleeding (0.66--0.73), used as
+    a benchmark against the bleeding model's own discrimination.
+\end{enumerate}

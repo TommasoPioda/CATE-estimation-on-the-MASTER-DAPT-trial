@@ -1,0 +1,215 @@
+% !TEX root = ../Thesis.tex
+
+\section{Main Findings}
+
+This thesis asked whether treatment-effect heterogeneity in MASTER DAPT could be
+estimated reliably and then used to guide patient enrollment. The answer is mixed. The
+average treatment effect is recovered consistently, but the available data do not
+support a stable patient-level ranking of treatment benefit. Guided enrollment can
+nevertheless select cohorts whose observed event rates differ from random enrollment,
+although the differences are small, mechanism-dependent, and do not establish a
+clinically useful treatment-effect trade-off.
+
+\vspace{10pt}
+
+Across five estimator families, prolonged therapy increases overall bleeding by
+approximately $4$--$7$ percentage points, while effects on the individual ischemic
+endpoints are small and generally compatible with zero (Chapter~6). The cross-fitted
+AIPW analysis of NACE and MACCE leads to the same broad conclusion: abbreviated therapy
+reduces bleeding, whereas no net ischemic effect is detected. Agreement with the
+randomized comparison is an important positive control, but it validates average-effect
+estimation rather than the more difficult task of estimating heterogeneity.
+
+\vspace{10pt}
+
+The direct CATE analyses provide no reproducible evidence of an exploitable treatment-
+effect ranking. Estimated dispersion changes markedly with the estimator and model
+flexibility, and largely overlaps the dispersion obtained after permuting treatment
+labels. Held-out doubly robust validation is inconsistent across estimators and
+endpoints. One nominal result, the BCF AUTOC for bleeding ($p=0.04$ in
+Table~\ref{tab:drtester}), does not survive as a general finding: its sign is not shared
+by the causal forest, the other ranking metrics do not provide consistent support, and
+no correction was made for the many estimator--endpoint comparisons. The appropriate
+conclusion is therefore that no stable and independently supported CATE ranking was
+found, not that treatment effects are identical for all patients.
+
+\vspace{10pt}
+
+The treatment-policy analysis strengthens this practical conclusion. On NACE, neither
+the policy tree nor the policy forest improves on assigning abbreviated therapy to all
+patients; two learned policies are significantly worse than that fixed strategy. Within
+this cohort and for this endpoint, model-based personalization therefore adds no
+demonstrated clinical value over the simpler policy supported by the trial average.
+
+\vspace{10pt}
+
+The guided-enrollment experiments answer a related but distinct question. Several
+selection rules produce post-seed cohorts with observed event rates that differ
+significantly from mechanism-matched Random enrollment. For all mechanisms, the
+ischemic outcome is the observed any-ischaemic-event rate: at least one of death, MI or
+stroke, counted once per patient. Under Mechanism~2, reversing the weighted ischemic
+score changes the internal included-versus-discarded contrast from $+0.38$ percentage
+points ($p<0.001$) to $-0.40$ percentage points ($p=0.013$); in the direct comparison
+with Random, the corresponding differences are $+0.18$ and $-0.21$ percentage points
+($p=0.005$ and $p=0.014$). This mirror response indicates that the estimated ischemic
+axis contains a selection signal. Conflict lowers the direct any-ischaemic-event rate
+under Mechanisms~1 and 2, but the direction is not robust in the pairwise-duel designs:
+the corresponding difference is non-significant under Mechanism~3 ($p=0.335$),
+non-significantly positive under the UCB-style heuristic ($p=0.056$), and
+non-significantly negative under the Thompson-style rule ($p=0.139$). The internal
+Mechanism~4--5 comparison is no more favourable: UCB selects more any-ischaemic events
+than its rejected duel partners under conflict ($+0.20$ pp, $p=0.014$) and net-benefit
+($+0.36$ pp, $p<0.001$), while neither Thompson comparison is significant. A CATE
+ranking can thus be too weak or unstable for held-out causal validation and still be
+associated with cohort composition when repeatedly used as a selection score.
+
+\vspace{10pt}
+
+That association should not be overinterpreted. The largest internal single-axis
+separation is observed under Mechanism~1 with Angle conflict: the enrolled cohort's
+any-ischaemic-event rate is $0.67$ percentage points lower than that of the left-out
+group ($p<0.001$). Against Random enrollment, the difference for the same rule is
+$-0.20$ percentage points. Three policy--mechanism combinations move both axes
+significantly in a direct comparison with Random: Angle conflict under Mechanism~1, and
+$+$isch under Mechanisms~2 and 3. The largest absolute changes in those comparisons are
+$0.20$ percentage points for any-ischaemic events under Mechanism~1 and $0.19$ percentage
+points for bleeding under Mechanism~3. Directions vary across policies and mechanisms,
+and some significant movements oppose the intended clinical objective. Guided enrollment
+is distinguishable from Random selection in these simulations, but the thesis does not
+show that it identifies patients with larger causal benefit, improves trial precision at
+equal sample size, or produces a clinically preferable cohort.
+
+\section{Interpretation of the Heterogeneity Results}
+
+For overall bleeding, the minimum reliably detectable heterogeneity is $0.10$ on the
+absolute-risk scale, more than twice the average effect; for BARC 2/3/5 bleeding it is
+$0.10$, more than three times the average effect. The data therefore argue against large,
+readily exploitable bleeding-effect heterogeneity, while remaining compatible with
+smaller heterogeneity.
+
+\vspace{10pt}
+
+For myocardial infarction and cardiovascular death, the sensitivity protocol fails its
+null-calibration check, so it does not yield interpretable detection thresholds. Stroke,
+with 35 observed events, also fails to reach the required detection rate and has an
+unstable null calibration. These endpoints should consequently be described as
+underpowered or non-interpretable for heterogeneity, rather than as showing evidence of
+a constant effect.
+
+\vspace{10pt}
+
+Two features of MASTER DAPT offer a plausible explanation for the limited signal. First,
+eligibility required high bleeding risk, restricting the range of covariates from which
+variation in bleeding benefit would need to be learned. This is consistent with the
+modest discrimination for bleeding (AUROC 0.62 despite 506 events) compared with
+cardiovascular death (AUROC 0.76 with 81 events). Second, the weighted ischemic axis
+combines rare components whose estimated effects can have opposite signs, allowing
+cancellation in the aggregate. These observations explain the results coherently, but
+they do not prove that range restriction and aggregation are their sole causes;
+unmeasured modifiers, outcome noise and limited sample size remain possible contributors.
+
+\section{Methodological Implications}
+
+Three lessons extend beyond this case study. First, CATE dispersion is not evidence of
+heterogeneity unless it is compared with the variation generated by the same pipeline
+under a null effect and validated on held-out randomized data. This is motivated by the
+null simulations in this study: non-zero patient-level variation can be produced even
+when treatment labels are randomized, so dispersion alone cannot distinguish signal
+from estimation noise. Second, estimator agreement on the ATE cannot substitute for
+validation of the patient ranking: average effects and effect modification are different
+targets with very different power requirements. This is motivated by the present
+results, where the estimator families consistently recovered the trial ATE but did not
+produce a stable, reproducible CATE ranking. Third, selecting patients using
+pre-randomization covariates preserves treatment randomization within the selected
+cohort, whereas assigning treatment deterministically from the same score does not; an
+allocation rule must retain positive treatment probability in both arms to preserve
+identification. This distinction is motivated by causal identification: baseline-based
+selection only restricts the study population, while deterministic allocation removes
+the treated--control comparison for patients assigned with certainty to one arm.
+
+\vspace{10pt}
+
+The enrollment results add a further caution. A detectable change in the event rate of a
+selected cohort does not by itself demonstrate successful causal targeting. Selection
+scores may track baseline prognosis, correlated outcomes, or unstable model variation as
+well as treatment-effect heterogeneity. Evaluation should therefore include both cohort
+composition and an independent causal target, ideally trial precision or policy value at
+a fixed enrolled sample size.
+
+\section{Limitations}
+
+Probably the biggest limitation of this thesis is the available data. The MASTER DAPT 
+preselected high-bleeding risk patients limits the view of the population and constrained 
+the models to a narrow region of the covariate space. In addition, the number of ischemic 
+events is very limited, which makes it difficult to detect heterogeneity in those endpoints.
+Including more patients with a wider range of baseline risk and more ischemic events would be
+very beneficial to future analyses.
+
+There is no external validation cohort. Multiple endpoints, estimators, scores and
+mechanisms are compared without formal multiplicity correction, so isolated nominal
+$p$-values are exploratory. The conflict subgroup of Chapter~6 is in-sample and
+descriptive because the same outcomes contributed to fitting the score and defining the
+subgroup.
+
+\vspace{10pt}
+
+The guided-enrollment experiments have design-specific limitations. Mechanism~1 is
+evaluated after approximately 76\% of the cohort has been enrolled, leaving limited scope
+for selection to change cohort composition. Mechanisms~2--5 operate at a smaller final
+cohort but do not provide the matched-size, non-adaptive randomized-arrival baseline
+needed to determine whether target precision can be reached with fewer patients. The
+experiments also reuse a completed trial: they simulate who would have been enrolled
+while retaining observed assignments and outcomes, rather than prospectively validating
+an adaptive design.
+
+\vspace{10pt}
+
+Finally, the sensitivity calculation is complete only for the causal forest. Its bleeding
+baseline-risk model underestimates prevalence, making the threshold conservative in an
+unquantified direction, and the stroke simulation does not reproduce a usable null
+distribution. The computational environment is not yet fully packaged for independent
+reproduction.
+
+\section{Further Work}
+
+The most informative next study would apply the complete protocol to a larger cohort that
+is not restricted to high-bleeding-risk patients and contains more ischemic events. Such
+a dataset would test the range-restriction explanation directly and provide enough power
+to evaluate ischemic components separately rather than only through a weighted aggregate.
+External validation should pre-specify estimators, endpoints and multiplicity adjustment.
+
+\vspace{10pt}
+The weighted ischemic CATE used in the selection score fixes the weights on death, MI and
+stroke before enrollment begins. An adaptive variant that updates these weights during
+enrollment, based on the endpoint-specific event rates observed so far in the trial, could
+track which component is driving risk in the enrolling cohort and adjust patient selection
+accordingly.
+\vspace{10pt}
+
+Within the present data, the sensitivity analysis should be extended to all five
+estimators, the bleeding prevalence model recalibrated, and the rare-event simulation
+redesigned before reporting a stroke threshold. Guided enrollment should be compared at
+earlier checkpoints against a matched-size random-arrival baseline, using precision of
+the treatment-effect estimate as the primary outcome. This would answer the original
+design question: whether guided enrollment reaches the same inferential precision with
+fewer patients, rather than only whether it changes cohort composition.
+
+\section{Conclusion}
+
+MASTER DAPT provides strong evidence for an average bleeding benefit of abbreviated DAPT,
+but this thesis finds no stable evidence that the magnitude of that causal benefit can be
+ranked reliably across individual patients using the available baseline covariates. Large
+bleeding-effect heterogeneity is not supported; smaller heterogeneity remains possible,
+and heterogeneity in the rare ischemic endpoints is not measurable with adequate power.
+
+\vspace{10pt}
+
+Guided enrollment is not equivalent to random enrollment: several mechanisms produce
+small but reproducible changes in observed bleeding and any-ischaemic-event rates, and
+the ischemic mirror test shows that the weighted ischemic score carries selection signal
+for the observed union of death, MI and stroke. However, these changes do not establish
+causal targeting, clinical benefit, or improved trial efficiency. The central result is
+therefore neither that personalization is impossible nor that guided enrollment succeeds,
+but that reliable personalization requires a population with sufficient risk variation,
+enough endpoint events, and validation criteria aligned with the decision the model is
+intended to support.
